@@ -1,11 +1,13 @@
 # WillOS 98 — A Windows 98 desktop portfolio that actually works
 
+[![Live demo](https://img.shields.io/badge/live_demo-willos98.netlify.app-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://willos98.netlify.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Zustand](https://img.shields.io/badge/Zustand-5-443e38?style=for-the-badge)](https://github.com/pmndrs/zustand)
-[![Netlify](https://img.shields.io/badge/Netlify-deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://www.netlify.com)
+
+> **Try it live: https://willos98.netlify.app**
 
 A live Windows 98 desktop in the browser. Drag windows, double-click icons, open a real Excel workbook, run a Bloomberg-style markets terminal, play Minesweeper, and read every project as a window in the OS. Built by [Will Zhang](https://www.linkedin.com/in/willzhang6200) — Drexel student founder, co-founder of [Bulletproof AI](https://bulletproofai.org), Philly CodeFest 2026 winner.
 
@@ -17,7 +19,7 @@ A live Windows 98 desktop in the browser. Drag windows, double-click icons, open
 |---|---|
 | **Window manager** | Drag, resize, minimize, maximize, fullscreen, taskbar, Start menu, focus + z-order. Pure Zustand + custom Pointer-Events hooks (60fps drag via `style.transform` + `requestAnimationFrame`, then commit to the store on `pointerup`). |
 | **Excel workbook** | Not a screenshot — a real grid built from declarative `SheetData` objects. Selectable cells, formula bar, frozen rows, click-to-open detail windows, status bar with the active selection. 8 sheets: Overview, Highlights, Experience, Projects, Leadership, Skills, Metrics, Contact. |
-| **WillBB Markets Terminal** | TradingView-powered chart pane (MACD + RSI + 50-SMA pre-loaded) · 144-symbol watchlist transcribed from my actual trading platform · live index strip · Equity Research module with 12 sub-tabs (Profile, Technicals, Statistics, Income, Balance, Cash Flow, Analysts, Earnings, Holders, Dividends, Options, News) · Discovery screeners (gainers / losers / most-active) · boot animation with streaming log lines. |
+| **WillBB Markets Terminal** | TradingView-powered chart pane (MACD + RSI + 50-SMA pre-loaded, range buttons 5D/1M/3M/6M/1Y/5Y wire both bar size *and* visible zoom) · 144-symbol watchlist transcribed from my actual trading platform · live index strip · Equity Research module with 12 sub-tabs (Profile, Technicals, Statistics, Income, Balance, Cash Flow, Analysts, Earnings, Holders, Dividends, Options, News) · Discovery screeners (gainers / losers / most-active) · boot animation with streaming log lines. |
 | **Trading Strategy** | The actual playbook I run — pre-market level mapping (in my own words) plus a 5-step evaluation framework: **Fundamentals First → Trend → Momentum → Volume → Support/Resistance**, each with bullish/neutral/bearish chips. |
 | **Stock Portfolio** | 267 closed trades · $315,020 processed · 63.98% G/L ratio · monthly P/L, per-ticker rollup, every figure reconciled against the underlying ledger in `data/trades.ts`. |
 | **Other apps** | Projects (5 case studies) · Bulletproof AI · PhilAIsion (CodeFest winner deep-dive) · CNIPA Patent · Golf Memories · High School · Public Speaking · Market Journal (Jan→Apr 2026 daily/weekly recaps) · Case Competitions · Internet Explorer (with iframe-or-fallback) · Minesweeper (fully playable 9×9) · Recycle Bin (jokes) · Boot sequence · Mobile fallback. |
@@ -109,6 +111,8 @@ No environment variables required.
 npx netlify-cli init        # link this folder to a new or existing site
 npx netlify-cli deploy --prod
 ```
+
+Live at **https://willos98.netlify.app**.
 
 ---
 

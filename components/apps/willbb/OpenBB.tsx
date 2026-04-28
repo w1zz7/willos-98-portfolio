@@ -23,7 +23,7 @@ import {
   type SymbolMeta,
 } from "./symbols";
 import type { ChartPoint } from "./PriceChart";
-import TradingViewChart, { type TVInterval } from "./TradingViewChart";
+import TradingViewChart, { type TVInterval, type TVRange } from "./TradingViewChart";
 import EquityResearch from "./EquityResearch";
 import Discovery from "./Discovery";
 import BootScreen from "./BootScreen";
@@ -68,13 +68,15 @@ interface ChartResponse {
 
 type TabId = "markets" | "equity" | "discovery";
 
+// `tv` is the bar size (interval) and `tvRange` is the visible zoom window.
+// Both must be set or the chart looks identical for every D-interval choice.
 const RANGES = [
-  { id: "5d", label: "5D", interval: "60m", tv: "60" as TVInterval },
-  { id: "1mo", label: "1M", interval: "1d", tv: "D" as TVInterval },
-  { id: "3mo", label: "3M", interval: "1d", tv: "D" as TVInterval },
-  { id: "6mo", label: "6M", interval: "1d", tv: "D" as TVInterval },
-  { id: "1y", label: "1Y", interval: "1d", tv: "D" as TVInterval },
-  { id: "5y", label: "5Y", interval: "1wk", tv: "W" as TVInterval },
+  { id: "5d", label: "5D", interval: "60m", tv: "60" as TVInterval, tvRange: "5D" as TVRange },
+  { id: "1mo", label: "1M", interval: "1d", tv: "D" as TVInterval, tvRange: "1M" as TVRange },
+  { id: "3mo", label: "3M", interval: "1d", tv: "D" as TVInterval, tvRange: "3M" as TVRange },
+  { id: "6mo", label: "6M", interval: "1d", tv: "D" as TVInterval, tvRange: "6M" as TVRange },
+  { id: "1y", label: "1Y", interval: "1d", tv: "D" as TVInterval, tvRange: "12M" as TVRange },
+  { id: "5y", label: "5Y", interval: "1wk", tv: "W" as TVInterval, tvRange: "60M" as TVRange },
 ] as const;
 
 // Bloomberg/terminal-inspired dark palette tuned for tabular numeric data.
@@ -772,7 +774,12 @@ function MarketsTab({
         {/* Chart body — TradingView widget (their data feed, full toolbar) */}
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0">
-            <TradingViewChart symbol={focused} interval={range.tv} height="100%" />
+            <TradingViewChart
+              symbol={focused}
+              interval={range.tv}
+              range={range.tvRange}
+              height="100%"
+            />
           </div>
 
           {/* Stat grid (sourced from our markets proxy) + chart-fetch fault notice */}

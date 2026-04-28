@@ -27,12 +27,15 @@ const DEFAULT_STUDIES = [
 interface Props {
   symbol: string; // raw user-style symbol e.g. "NVDA", "BTC-USD", "^GSPC"
   interval?: TVInterval;
+  /** Initial visible range — sets the zoom window when the widget mounts. */
+  range?: TVRange;
   height?: number | string;
   studies?: readonly string[];
   theme?: "light" | "dark";
 }
 
 export type TVInterval = "1" | "3" | "5" | "15" | "30" | "60" | "120" | "240" | "D" | "W" | "M";
+export type TVRange = "1D" | "5D" | "1M" | "3M" | "6M" | "YTD" | "12M" | "60M" | "ALL";
 
 // Augment Window with the TradingView global the widget script installs.
 declare global {
@@ -105,6 +108,7 @@ function loadTradingViewScript(): Promise<void> {
 export default function TradingViewChart({
   symbol,
   interval = "D",
+  range,
   height = 380,
   studies,
   theme = "dark",
@@ -134,7 +138,7 @@ export default function TradingViewChart({
         if (cancelled || !hostRef.current || !window.TradingView) return;
         hostRef.current.innerHTML = "";
         hostRef.current.id = containerId;
-        widgetRef.current = new window.TradingView.widget({
+        const cfg: Record<string, unknown> = {
           autosize: true,
           symbol: translateSymbol(symbol),
           interval,
@@ -156,7 +160,12 @@ export default function TradingViewChart({
             "header_saveload",
           ],
           enabled_features: ["hide_left_toolbar_by_default"],
-        });
+        };
+        // `range` zooms the visible window. Without this, every D-interval
+        // selection (1M, 3M, 6M, 1Y) shows the same default zoom and the
+        // range buttons appear broken to the user.
+        if (range) cfg.range = range;
+        widgetRef.current = new window.TradingView.widget(cfg);
       })
       .catch(() => {
         if (cancelled || !hostRef.current) return;
@@ -178,7 +187,7 @@ export default function TradingViewChart({
       widgetRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, interval, theme, studiesKey, containerId]);
+  }, [symbol, interval, range, theme, studiesKey, containerId]);
 
   return (
     <div
