@@ -1,0 +1,488 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   WillOS 98 - Windows 98 design tokens + primitives
+   ------------------------------------------------------------------ */
+
+@theme {
+  /* Palette - classic Win98 system colors */
+  --color-win-bg: #c0c0c0;
+  --color-win-bg-light: #dfdfdf;
+  --color-win-bg-dark: #808080;
+  --color-win-shadow: #000000;
+  --color-win-highlight: #ffffff;
+  --color-win-text: #000000;
+  --color-win-text-disabled: #808080;
+
+  /* Titlebar */
+  --color-title-active-from: #000080;
+  --color-title-active-to: #1084d0;
+  --color-title-inactive-from: #808080;
+  --color-title-inactive-to: #b5b5b5;
+  --color-title-text: #ffffff;
+
+  /* Desktop / wallpaper */
+  --color-desktop: #008080; /* classic teal */
+
+  /* Accents for cells / highlights */
+  --color-select-blue: #000080;
+  --color-select-text: #ffffff;
+
+  /* Excel gridlines */
+  --color-grid: #c0c0c0;
+
+  /* Raised-bevel shadow (for buttons, window chrome outer) */
+  --shadow-raised: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080,
+    inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #000000;
+  /* Pressed / sunken bevel (inverts inner and outer layers) */
+  --shadow-sunken: inset 1px 1px 0 #808080, inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #000000, inset -2px -2px 0 #dfdfdf;
+  /* Window frame (outer raised, thinner) */
+  --shadow-window: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #000000,
+    inset 2px 2px 0 #ffffff, inset -2px -2px 0 #808080;
+  /* Inset field (text inputs, formula bar, cell area) */
+  --shadow-field: inset 1px 1px 0 #808080, inset -1px -1px 0 #ffffff;
+
+  /* Fonts */
+  --font-chrome: "W95FA", "MS Sans Serif", "Tahoma", sans-serif;
+  --font-cell: "Arial", "Helvetica", sans-serif;
+  --font-mono: "Courier New", monospace;
+}
+
+/* ------------------------------------------------------------------
+   Web fonts - W95FA covers the Win98 chrome; Arial is system.
+   W95FA is a free Win95 bitmap font (see /public/fonts/).
+   ------------------------------------------------------------------ */
+@font-face {
+  font-family: "W95FA";
+  src: url("/fonts/W95FA.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------------
+   Base - crisp pixels, no anti-aliasing drift on retro UI
+   ------------------------------------------------------------------ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-chrome);
+  font-size: 19px;
+  color: var(--color-win-text);
+  background-color: #8fc7ec;
+  /* Wallpaper applied on the Desktop component - keeping it off body so
+     iOS Safari doesn't kill inner scroll with `background-attachment: fixed`. */
+  /* Prevent default text selection everywhere except fields and cell content */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  /* Custom Win98-style arrow cursor - inline SVG, 44x48, hotspot at (3,3).
+     Touch / pointer-coarse devices skip this. Larger size = more visible. */
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='48' viewBox='0 0 44 48'><path d='M3 3 L3 35 L11 27 L18 43 L23 41 L16 25 L28 25 Z' fill='white' stroke='black' stroke-width='2.8' stroke-linejoin='miter'/></svg>") 3 3, default;
+  /* Kill page-level overscroll bounce so the desktop feels static, but
+     leave inner scroll containers free to pan. */
+  overscroll-behavior: none;
+}
+
+/* Responsive base - bump down on smaller viewports so bumped component
+   font sizes (17-19px) don't overflow phone / tablet layouts. */
+@media (max-width: 1023px) {
+  body {
+    font-size: 17px;
+  }
+  .win-btn {
+    font-size: 17px;
+  }
+  .win-menu-item {
+    font-size: 17px;
+  }
+  .excel-grid {
+    font-size: 16px;
+  }
+  .excel-tab {
+    font-size: 17px;
+    line-height: 22px;
+  }
+}
+
+@media (max-width: 639px) {
+  body {
+    font-size: 16px;
+  }
+  .win-btn {
+    font-size: 16px;
+  }
+  .win-menu-item {
+    font-size: 16px;
+  }
+  .excel-grid {
+    font-size: 15px;
+  }
+  .excel-tab {
+    font-size: 15px;
+    line-height: 20px;
+  }
+}
+
+/* Pointer / hand cursor for every clickable element - larger, Win98 select.cur. */
+a,
+button,
+[role="button"],
+[data-clickable="true"],
+.win-btn,
+.win-menu-item,
+.excel-tab,
+.desktop-icon,
+[data-desktop-icon],
+[data-desktop-icon] *,
+.taskbar-item {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='48' viewBox='0 0 44 48'><path d='M18 2 L18 22 L13 22 L13 10 L8 10 L8 28 L4 28 L4 34 L14 46 L36 46 L36 24 L31 24 L31 20 L26 20 L26 16 L22 16 L22 2 Z' fill='white' stroke='black' stroke-width='2.8' stroke-linejoin='miter'/></svg>") 17 2, pointer;
+}
+
+/* Text input cursor stays a caret */
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+/* On touch devices, fall back to OS defaults */
+@media (pointer: coarse) {
+  body, a, button, [role="button"], .win-btn, .win-menu-item, .excel-tab {
+    cursor: default;
+  }
+  input, textarea {
+    cursor: text;
+  }
+}
+
+/* Inputs/textarea still selectable */
+input,
+textarea,
+[contenteditable],
+[data-selectable] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Pixelate icons + wallpaper so they don't blur at odd DPRs */
+img.pixelated,
+.pixelated img,
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* ------------------------------------------------------------------
+   Utility primitives - use via Tailwind's @apply or className
+   ------------------------------------------------------------------ */
+.win-raised {
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-raised);
+}
+.win-sunken {
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-sunken);
+}
+.win-window {
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-window), 3px 3px 0 rgba(0, 0, 0, 0.22);
+}
+.win-field {
+  background: #ffffff;
+  box-shadow: var(--shadow-field);
+}
+
+/* Beveled button - raised by default, sunken on active */
+.win-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  height: 36px;
+  padding: 0 20px;
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-win-text);
+  font-family: var(--font-chrome);
+  font-size: 19px;
+  border: 1px solid transparent;
+  /* Cursor inherits pointer-hand from the global interactive rule above */
+}
+.win-btn:active,
+.win-btn[data-pressed="true"] {
+  box-shadow: var(--shadow-sunken);
+  padding: 1px 9px 0 11px; /* Nudge content to fake press depth */
+}
+.win-btn:focus-visible {
+  outline: 1px dotted var(--color-win-text);
+  outline-offset: -4px;
+}
+.win-btn:disabled,
+.win-btn[aria-disabled="true"] {
+  color: var(--color-win-text-disabled);
+  text-shadow: 1px 1px 0 var(--color-win-highlight);
+  cursor: default;
+}
+
+/* Titlebar gradient - active vs inactive */
+.win-titlebar-active {
+  background: linear-gradient(
+    90deg,
+    var(--color-title-active-from),
+    var(--color-title-active-to)
+  );
+  color: var(--color-title-text);
+}
+.win-titlebar-inactive {
+  background: linear-gradient(
+    90deg,
+    var(--color-title-inactive-from),
+    var(--color-title-inactive-to)
+  );
+  color: #d0d0d0;
+}
+
+/* Titlebar control button (min/max/close) - larger hit target */
+.win-title-btn {
+  width: 26px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-win-text);
+  font-family: var(--font-chrome);
+  font-size: 16px;
+  line-height: 1;
+  cursor: default;
+}
+.win-title-btn:active {
+  box-shadow: var(--shadow-sunken);
+}
+
+/* Chunky Win98 scrollbars for window content + iOS momentum scroll */
+.win-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-win-bg-dark) var(--color-win-bg);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+.win-scroll::-webkit-scrollbar {
+  width: 22px;
+  height: 22px;
+}
+.win-scroll::-webkit-scrollbar-track {
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-sunken);
+}
+.win-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-win-bg);
+  box-shadow: var(--shadow-raised);
+  min-height: 24px;
+}
+.win-scroll::-webkit-scrollbar-corner {
+  background: var(--color-win-bg);
+}
+
+/* Menu bar items (File / Edit / View …) */
+.win-menu-item {
+  padding: 5px 12px;
+  color: var(--color-win-text);
+  font-family: var(--font-chrome);
+  font-size: 18px;
+  cursor: default;
+}
+.win-menu-item:hover,
+.win-menu-item[data-open="true"] {
+  background: var(--color-select-blue);
+  color: var(--color-select-text);
+}
+
+/* Menu underline character (the classic "F" in "File") */
+.win-mnemonic {
+  text-decoration: underline;
+}
+
+/* Dotted focus ring for inset content like icons */
+.win-focus-ring {
+  outline: 1px dotted var(--color-win-text);
+  outline-offset: 2px;
+}
+
+/* Desktop icon label - white text with retro shadow */
+.desktop-icon-label {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #000000, 1px 1px 3px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-chrome);
+  font-size: 18px;
+  text-align: center;
+  line-height: 1.15;
+  padding: 3px 5px;
+  border: 1px dotted transparent;
+  letter-spacing: 0.2px;
+}
+.desktop-icon[data-selected="true"] .desktop-icon-label {
+  background: var(--color-select-blue);
+  border-color: #ffff00;
+  border-style: dotted;
+}
+
+/* Excel-specific cell grid */
+.excel-grid {
+  font-family: var(--font-cell);
+  font-size: 18px;
+  color: #000000;
+  background: #ffffff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.excel-grid td,
+.excel-grid th {
+  border-right: 1px solid var(--color-grid);
+  border-bottom: 1px solid var(--color-grid);
+  padding: 0 6px;
+  height: 30px;
+  line-height: 28px;
+  vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+.excel-grid td[data-selected="true"] {
+  outline: 2px solid #000000;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+.excel-grid th {
+  background: var(--color-win-bg);
+  box-shadow: inset -1px -1px 0 var(--color-win-bg-dark),
+    inset 1px 1px 0 var(--color-win-highlight);
+  font-weight: normal;
+  text-align: center;
+}
+.excel-grid th[data-selected="true"] {
+  background: var(--color-select-blue);
+  color: var(--color-select-text);
+  box-shadow: inset -1px -1px 0 var(--color-win-bg-dark),
+    inset 1px 1px 0 #4060c0;
+}
+
+/* Cell with link cursor (interactive) - visible affordance */
+.excel-grid td[data-link="true"] {
+  cursor: pointer;
+  color: #0000ee;
+  font-weight: 500;
+}
+.excel-grid td[data-link="true"]:hover {
+  background: #eef3f8;
+  text-decoration: underline;
+}
+/* Trailing arrow glyph on interactive cells that don't already end in → */
+.excel-grid td[data-link="true"][data-has-arrow="true"]::after {
+  content: "";
+}
+
+/* Hire Me orange CTA - the single accent color used sitewide */
+.win-btn.hire-me {
+  background: #ff6600;
+  color: #ffffff;
+  font-weight: bold;
+  box-shadow:
+    inset 1px 1px 0 #ff944d,
+    inset -1px -1px 0 #cc3300,
+    inset 2px 2px 0 #ffad75,
+    inset -2px -2px 0 #992600;
+}
+.win-btn.hire-me:hover {
+  background: #ff7a1a;
+}
+.win-btn.hire-me:active,
+.win-btn.hire-me[data-pressed="true"] {
+  box-shadow:
+    inset 1px 1px 0 #992600,
+    inset -1px -1px 0 #ff944d,
+    inset 2px 2px 0 #cc3300,
+    inset -2px -2px 0 #ffad75;
+}
+
+/* Excel sheet tabs */
+.excel-tab {
+  padding: 4px 16px 5px;
+  background: var(--color-win-bg);
+  border: 1px solid var(--color-win-bg-dark);
+  border-top: 1px solid var(--color-win-highlight);
+  border-bottom: none;
+  margin-right: -1px;
+  font-family: var(--font-chrome);
+  font-size: 19px;
+  cursor: default;
+  line-height: 24px;
+}
+.excel-tab[data-active="true"] {
+  background: #ffffff;
+  border-bottom: 1px solid #ffffff;
+  padding-top: 5px;
+  font-weight: bold;
+  position: relative;
+  z-index: 1;
+}
+
+/* Minimize-to-taskbar animation wireframe */
+@keyframes minimize-sweep {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.05) translate(-50%, 100%);
+  }
+}
+@keyframes maximize-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-minimize {
+  animation: minimize-sweep 180ms ease-in forwards;
+  transform-origin: bottom left;
+}
+.animate-open {
+  animation: maximize-pop 160ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-minimize,
+  .animate-open,
+  * {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
+
+/* Win98 dashed caret focus - used on Start button + dialog buttons */
+.win-btn:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px dotted var(--color-win-text);
+  pointer-events: none;
+}

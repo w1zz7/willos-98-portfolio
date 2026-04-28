@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- Classic Win98 recycle bin: wireframe cyan cylinder with loop arrow -->
+  <ellipse cx="16" cy="10" rx="10" ry="2.5" fill="#c8c8c8" stroke="#1a1a1a"/>
+  <path d="M6 10 L8 28 Q8 29 9 29 L23 29 Q24 29 24 28 L26 10" fill="#e6e6e6" stroke="#1a1a1a"/>
+  <ellipse cx="16" cy="10" rx="10" ry="2.5" fill="none" stroke="#1a1a1a"/>
+  <!-- Wire mesh pattern -->
+  <g stroke="#888" stroke-width="0.4">
+    <line x1="9" y1="12" x2="10" y2="28"/>
+    <line x1="13" y1="12.5" x2="13.5" y2="28.5"/>
+    <line x1="16" y1="12.7" x2="16" y2="28.7"/>
+    <line x1="19" y1="12.5" x2="18.5" y2="28.5"/>
+    <line x1="23" y1="12" x2="22" y2="28"/>
+    <path d="M7 14 Q16 16 25 14" fill="none"/>
+    <path d="M7 19 Q16 21 25 19" fill="none"/>
+    <path d="M8 24 Q16 26 24 24" fill="none"/>
+  </g>
+  <!-- Green recycle arrow loop -->
+  <g stroke="#2e8b2e" stroke-width="1.6" fill="none">
+    <path d="M12 7 Q16 4 20 7"/>
+  </g>
+  <polygon points="11,6 13,8 11,8.5" fill="#2e8b2e"/>
+  <polygon points="21,6 19,8 21,8.5" fill="#2e8b2e"/>
+</svg>
