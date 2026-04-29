@@ -1,0 +1,25 @@
+# Netlify build config for the WillOS 98 portfolio.
+#
+# Netlify auto-detects Next.js 15 and applies its built-in Next.js Runtime
+# (formerly @netlify/plugin-nextjs) — no explicit plugin block needed. The
+# runtime handles SSR pages, the `/api/markets/*` routes (deployed as
+# on-demand Netlify Functions), and ISR cache headers automatically.
+#
+# Pin Node 20 LTS because Next 15 + React 19 requires Node 18.18+.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Surface real type errors during deploys (already true in next.config.ts).
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Optional headers tweak: keep the Yahoo/CoinGecko proxy responses honest
+# about their cache lifetime so Netlify's edge can serve stale-while-revalidate
+# without caching forever.
+[[headers]]
+  for = "/api/markets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=30, s-maxage=60, stale-while-revalidate=120"

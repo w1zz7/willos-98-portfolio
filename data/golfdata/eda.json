@@ -1,0 +1,133 @@
+{
+  "totalDays": 1095,
+  "byOutlook": [
+    {
+      "outlook": "sunny",
+      "days": 463,
+      "playRate": 0.7861771058315334,
+      "avgHoursWhenPlayed": 3.380503663003663
+    },
+    {
+      "outlook": "overcast",
+      "days": 380,
+      "playRate": 0.6368421052631579,
+      "avgHoursWhenPlayed": 3.6497107438016525
+    },
+    {
+      "outlook": "snow",
+      "days": 54,
+      "playRate": 0.7222222222222222,
+      "avgHoursWhenPlayed": 3.3299145299145287
+    },
+    {
+      "outlook": "rainy",
+      "days": 198,
+      "playRate": 0.5656565656565656,
+      "avgHoursWhenPlayed": 3.3635416666666664
+    }
+  ],
+  "bySeason": [
+    {
+      "season": "Winter",
+      "days": 267,
+      "playRate": 0.7303370786516854,
+      "avgTemp": 3.6314606741573052,
+      "avgHoursWhenPlayed": 3.428897435897436
+    },
+    {
+      "season": "Spring",
+      "days": 279,
+      "playRate": 0.7132616487455197,
+      "avgTemp": 14.56559139784947,
+      "avgHoursWhenPlayed": 3.523760469011725
+    },
+    {
+      "season": "Summer",
+      "days": 282,
+      "playRate": 0.6276595744680851,
+      "avgTemp": 23.090425531914885,
+      "avgHoursWhenPlayed": 3.3890960451977397
+    },
+    {
+      "season": "Autumn",
+      "days": 267,
+      "playRate": 0.6966292134831461,
+      "avgTemp": 11.861423220973787,
+      "avgHoursWhenPlayed": 3.497759856630825
+    }
+  ],
+  "byMonth": [
+    {
+      "month": "Jan",
+      "days": 93,
+      "playRate": 0.6989247311827957,
+      "avgTemp": 1.8817204301075257
+    },
+    {
+      "month": "Feb",
+      "days": 84,
+      "playRate": 0.7857142857142857,
+      "avgTemp": 3.6571428571428575
+    },
+    {
+      "month": "Mar",
+      "days": 93,
+      "playRate": 0.6666666666666666,
+      "avgTemp": 5.999999999999999
+    },
+    {
+      "month": "Apr",
+      "days": 90,
+      "playRate": 0.8111111111111111,
+      "avgTemp": 11.90222222222222
+    },
+    {
+      "month": "May",
+      "days": 93,
+      "playRate": 0.7634408602150538,
+      "avgTemp": 16.710752688172043
+    },
+    {
+      "month": "Jun",
+      "days": 90,
+      "playRate": 0.5444444444444444,
+      "avgTemp": 19.82666666666667
+    },
+    {
+      "month": "Jul",
+      "days": 93,
+      "playRate": 0.5913978494623656,
+      "avgTemp": 23.121505376344093
+    },
+    {
+      "month": "Aug",
+      "days": 93,
+      "playRate": 0.6881720430107527,
+      "avgTemp": 25.147311827957
+    },
+    {
+      "month": "Sep",
+      "days": 90,
+      "playRate": 0.6333333333333333,
+      "avgTemp": 21.31777777777778
+    },
+    {
+      "month": "Oct",
+      "days": 93,
+      "playRate": 0.7634408602150538,
+      "avgTemp": 15.732258064516131
+    },
+    {
+      "month": "Nov",
+      "days": 90,
+      "playRate": 0.7,
+      "avgTemp": 9.698888888888884
+    },
+    {
+      "month": "Dec",
+      "days": 93,
+      "playRate": 0.6559139784946236,
+      "avgTemp": 5.574193548387097
+    }
+  ]
+}

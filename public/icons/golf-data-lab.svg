@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!--
+    Golf Data Lab icon: an isometric/3D-cube of fairway-green made of stacked
+    bar towers (the data) with a golf flag pin standing on top — distinct
+    from the WillBB Terminal CRT monitor while still reading as "data lab"
+    + green + golf at icon size.
+  -->
+
+  <!-- Ground plate (darker fairway green) -->
+  <polygon points="3,22 16,28 29,22 16,16" fill="#1f5e3a" stroke="#0d2818" stroke-width="1"/>
+  <polygon points="3,22 16,28 16,29 3,23" fill="#0d2818"/>
+  <polygon points="29,22 16,28 16,29 29,23" fill="#0d2818"/>
+
+  <!-- Grid scoring lines on the plate (fairway texture / lab grid) -->
+  <line x1="9.5" y1="19" x2="9.5" y2="25" stroke="#3a8a5d" stroke-width="0.6"/>
+  <line x1="22.5" y1="19" x2="22.5" y2="25" stroke="#3a8a5d" stroke-width="0.6"/>
+  <line x1="6" y1="22" x2="26" y2="22" stroke="#3a8a5d" stroke-width="0.6"/>
+
+  <!-- Bar tower 1 (back-left) — tall, bright green -->
+  <rect x="6" y="9" width="4" height="11" fill="#5dd39e" stroke="#0d2818" stroke-width="0.6"/>
+  <rect x="6" y="9" width="4" height="2" fill="#7eddb0"/>
+
+  <!-- Bar tower 2 (back-right) — tallest, lime -->
+  <rect x="22" y="6" width="4" height="14" fill="#a0e89c" stroke="#0d2818" stroke-width="0.6"/>
+  <rect x="22" y="6" width="4" height="2" fill="#caf2c5"/>
+
+  <!-- Bar tower 3 (center-front) — short, deep green -->
+  <rect x="14" y="14" width="4" height="6" fill="#33a872" stroke="#0d2818" stroke-width="0.6"/>
+  <rect x="14" y="14" width="4" height="2" fill="#5dd39e"/>
+
+  <!-- Floating data dots (scatter accents) -->
+  <rect x="11" y="6" width="2" height="2" fill="#caf2c5"/>
+  <rect x="19" y="3" width="2" height="2" fill="#5dd39e"/>
+  <rect x="13" y="10" width="1" height="1" fill="#a0e89c"/>
+
+  <!-- Golf flag pin on the tallest tower -->
+  <line x1="24" y1="6" x2="24" y2="1" stroke="#fff" stroke-width="1"/>
+  <polygon points="24,1 29,2.5 24,4" fill="#f0686a"/>
+  <rect x="23" y="5" width="2" height="1.5" fill="#fff"/>
+</svg>

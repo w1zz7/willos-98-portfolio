@@ -1,0 +1,2231 @@
+{
+  "courses": [
+    {
+      "course": "Congaree Golf Club - Ridgeland, SC",
+      "events": 151,
+      "avgSgTotal": -0.541,
+      "variance": 5.642,
+      "stdDev": 2.375,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Garrick Higgo",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+      "events": 988,
+      "avgSgTotal": -0.493,
+      "variance": 4.206,
+      "stdDev": 2.051,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Smith",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        },
+        {
+          "player": "Rory McIlroy",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Twin Cities - Blaine, MN",
+      "events": 458,
+      "avgSgTotal": -0.459,
+      "variance": 4.191,
+      "stdDev": 2.047,
+      "seasons": [
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Champ",
+          "wins": 1
+        },
+        {
+          "player": "Michael Thompson",
+          "wins": 1
+        },
+        {
+          "player": "Matthew Wolff",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Torrey Pines North - La Jolla, CA",
+      "events": 1121,
+      "avgSgTotal": -0.455,
+      "variance": 5.578,
+      "stdDev": 2.362,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Day",
+          "wins": 2
+        },
+        {
+          "player": "Luke List",
+          "wins": 1
+        },
+        {
+          "player": "Patrick Reed",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Kiawah Island Golf Resort - Kiawah Island, SC",
+      "events": 150,
+      "avgSgTotal": -0.449,
+      "variance": 6.157,
+      "stdDev": 2.481,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Phil Mickelson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Muirfield Village Golf Club - Dublin, OH",
+      "events": 1077,
+      "avgSgTotal": -0.444,
+      "variance": 4.761,
+      "stdDev": 2.182,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Patrick Cantlay",
+          "wins": 2
+        },
+        {
+          "player": "Billy Horschel",
+          "wins": 1
+        },
+        {
+          "player": "Jon Rahm",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Glen Oaks Club - Old Westbury, NY",
+      "events": 120,
+      "avgSgTotal": -0.43,
+      "variance": 3.782,
+      "stdDev": 1.945,
+      "seasons": [
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Liberty National - Jersey City, NJ",
+      "events": 243,
+      "avgSgTotal": -0.428,
+      "variance": 3.708,
+      "stdDev": 1.926,
+      "seasons": [
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Tony Finau",
+          "wins": 1
+        },
+        {
+          "player": "Patrick Reed",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Memorial Park GC - Houston, TX",
+      "events": 252,
+      "avgSgTotal": -0.426,
+      "variance": 3.838,
+      "stdDev": 1.959,
+      "seasons": [
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Kokrak",
+          "wins": 1
+        },
+        {
+          "player": "Carlos Ortiz",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Ridgewood Country Club - Paramus, NJ",
+      "events": 119,
+      "avgSgTotal": -0.42,
+      "variance": 3.717,
+      "stdDev": 1.928,
+      "seasons": [
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Golf Club of Houston - Houston, TX",
+      "events": 255,
+      "avgSgTotal": -0.414,
+      "variance": 4.267,
+      "stdDev": 2.066,
+      "seasons": [
+        2015,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Lanto Griffin",
+          "wins": 1
+        },
+        {
+          "player": "J.B. Holmes",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "PGA National - Palm Beach Gardens, FL",
+      "events": 1061,
+      "avgSgTotal": -0.404,
+      "variance": 4.128,
+      "stdDev": 2.032,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Sepp Straka",
+          "wins": 1
+        },
+        {
+          "player": "Matt Jones",
+          "wins": 1
+        },
+        {
+          "player": "Sungjae Im",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Sea Island Resort - Sea Island, GA",
+      "events": 1072,
+      "avgSgTotal": -0.404,
+      "variance": 4.673,
+      "stdDev": 2.162,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Talor Gooch",
+          "wins": 1
+        },
+        {
+          "player": "Robert Streb",
+          "wins": 1
+        },
+        {
+          "player": "Tyler Duncan",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Winged Foot GC - Mamaroneck, NY",
+      "events": 134,
+      "avgSgTotal": -0.402,
+      "variance": 4.607,
+      "stdDev": 2.146,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Innisbrook - Palm Harbor, FL",
+      "events": 795,
+      "avgSgTotal": -0.395,
+      "variance": 3.469,
+      "stdDev": 1.862,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Paul Casey",
+          "wins": 2
+        },
+        {
+          "player": "Sam Burns",
+          "wins": 1
+        },
+        {
+          "player": "Adam Hadwin",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Old White Course - White Sulphur Springs, WV",
+      "events": 271,
+      "avgSgTotal": -0.395,
+      "variance": 3.964,
+      "stdDev": 1.991,
+      "seasons": [
+        2015,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Joaquin Niemann",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Detroit Golf Club - Detroit, MI",
+      "events": 463,
+      "avgSgTotal": -0.388,
+      "variance": 2.988,
+      "stdDev": 1.729,
+      "seasons": [
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Davis",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Nate Lashley",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Potomac at Avenel Farm - Potomac, MD",
+      "events": 365,
+      "avgSgTotal": -0.387,
+      "variance": 3.857,
+      "stdDev": 1.964,
+      "seasons": [
+        2017,
+        2018,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Francesco Molinari",
+          "wins": 1
+        },
+        {
+          "player": "Kyle Stanley",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+      "events": 1015,
+      "avgSgTotal": -0.387,
+      "variance": 3.606,
+      "stdDev": 1.899,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jordan Spieth",
+          "wins": 1
+        },
+        {
+          "player": "Stewart Cink",
+          "wins": 1
+        },
+        {
+          "player": "Webb Simpson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Redstone Golf Club - Houston, TX",
+      "events": 388,
+      "avgSgTotal": -0.38,
+      "variance": 3.947,
+      "stdDev": 1.987,
+      "seasons": [
+        2016,
+        2017,
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Ian Poulter",
+          "wins": 1
+        },
+        {
+          "player": "Russell Henley",
+          "wins": 1
+        },
+        {
+          "player": "Jim Herman",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Riviera Country Club - Pacific Palisades, CA",
+      "events": 1011,
+      "avgSgTotal": -0.366,
+      "variance": 3.078,
+      "stdDev": 1.754,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Joaquin Niemann",
+          "wins": 1
+        },
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Adam Scott",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Boston - Norton, MA",
+      "events": 502,
+      "avgSgTotal": -0.364,
+      "variance": 3.709,
+      "stdDev": 1.926,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Bay Hill - Orlando, FL",
+      "events": 815,
+      "avgSgTotal": -0.35,
+      "variance": 3.729,
+      "stdDev": 1.931,
+      "seasons": [
+        2015,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Scottie Scheffler",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Tyrrell Hatton",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Keene Trace Golf Club - Nicholasville, KY",
+      "events": 323,
+      "avgSgTotal": -0.346,
+      "variance": 4.806,
+      "stdDev": 2.192,
+      "seasons": [
+        2018,
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Seamus Power",
+          "wins": 1
+        },
+        {
+          "player": "Jim Herman",
+          "wins": 1
+        },
+        {
+          "player": "Troy Merritt",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Scottsdale - Scottsdale, AZ",
+      "events": 990,
+      "avgSgTotal": -0.342,
+      "variance": 3.46,
+      "stdDev": 1.86,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Brooks Koepka",
+          "wins": 2
+        },
+        {
+          "player": "Hideki Matsuyama",
+          "wins": 2
+        },
+        {
+          "player": "Scottie Scheffler",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Country Club of Jackson - Jackson, MS",
+      "events": 828,
+      "avgSgTotal": -0.338,
+      "variance": 3.526,
+      "stdDev": 1.878,
+      "seasons": [
+        2015,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Sam Burns",
+          "wins": 1
+        },
+        {
+          "player": "Sergio Garcia",
+          "wins": 1
+        },
+        {
+          "player": "Sebastian Munoz",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC River Highlands - Cromwell, CT",
+      "events": 867,
+      "avgSgTotal": -0.33,
+      "variance": 3.373,
+      "stdDev": 1.837,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Harris English",
+          "wins": 1
+        },
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        },
+        {
+          "player": "Chez Reavie",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Sedgefield Country Club - Greensboro, NC",
+      "events": 976,
+      "avgSgTotal": -0.327,
+      "variance": 3.373,
+      "stdDev": 1.837,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Kevin Kisner",
+          "wins": 1
+        },
+        {
+          "player": "Jim Herman",
+          "wins": 1
+        },
+        {
+          "player": "J.T. Poston",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Summerlin - Las Vegas, NV",
+      "events": 1037,
+      "avgSgTotal": -0.324,
+      "variance": 3.338,
+      "stdDev": 1.827,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Sungjae Im",
+          "wins": 1
+        },
+        {
+          "player": "Martin Laird",
+          "wins": 1
+        },
+        {
+          "player": "Kevin Na",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "La Quinta CC - La Quinta, CA",
+      "events": 1121,
+      "avgSgTotal": -0.314,
+      "variance": 5.958,
+      "stdDev": 2.441,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Hudson Swafford",
+          "wins": 1
+        },
+        {
+          "player": "Si Woo Kim",
+          "wins": 1
+        },
+        {
+          "player": "Andrew Landry",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Silverado Resort - Napa, CA",
+      "events": 930,
+      "avgSgTotal": -0.314,
+      "variance": 3.318,
+      "stdDev": 1.822,
+      "seasons": [
+        2015,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Brendan Steele",
+          "wins": 2
+        },
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Stewart Cink",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Eagle Point Golf Club - Wilmington, NC",
+      "events": 131,
+      "avgSgTotal": -0.314,
+      "variance": 3.199,
+      "stdDev": 1.789,
+      "seasons": [
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Brian Harman",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Colonial - Ft. Worth, TX",
+      "events": 935,
+      "avgSgTotal": -0.306,
+      "variance": 3.193,
+      "stdDev": 1.787,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Sam Burns",
+          "wins": 1
+        },
+        {
+          "player": "Jason Kokrak",
+          "wins": 1
+        },
+        {
+          "player": "Daniel Berger",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Craig Ranch - McKinney, TX",
+      "events": 288,
+      "avgSgTotal": -0.3,
+      "variance": 2.832,
+      "stdDev": 1.683,
+      "seasons": [
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Kyoung-Hoon Lee",
+          "wins": 2
+        }
+      ]
+    },
+    {
+      "course": "TPC San Antonio - San Antonio, TX",
+      "events": 905,
+      "avgSgTotal": -0.296,
+      "variance": 3.556,
+      "stdDev": 1.886,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "J.J. Spaun",
+          "wins": 1
+        },
+        {
+          "player": "Jordan Spieth",
+          "wins": 1
+        },
+        {
+          "player": "Corey Conners",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Trinity Forest Golf Club - Dallas, TX",
+      "events": 286,
+      "avgSgTotal": -0.294,
+      "variance": 3.304,
+      "stdDev": 1.818,
+      "seasons": [
+        2018,
+        2019
+      ],
+      "top3Winners": [
+        {
+          "player": "Sung Kang",
+          "wins": 1
+        },
+        {
+          "player": "Aaron Wise",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Quail Hollow Club - Charlotte, NC",
+      "events": 834,
+      "avgSgTotal": -0.271,
+      "variance": 3.616,
+      "stdDev": 1.902,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Rory McIlroy",
+          "wins": 2
+        },
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Jason Day",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Deere Run - Silvis, IL",
+      "events": 779,
+      "avgSgTotal": -0.262,
+      "variance": 3.492,
+      "stdDev": 1.869,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Lucas Glover",
+          "wins": 1
+        },
+        {
+          "player": "Dylan Frittelli",
+          "wins": 1
+        },
+        {
+          "player": "Michael Kim",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Waialae CC - Honolulu, HI",
+      "events": 1011,
+      "avgSgTotal": -0.258,
+      "variance": 2.97,
+      "stdDev": 1.723,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Hideki Matsuyama",
+          "wins": 1
+        },
+        {
+          "player": "Kevin Na",
+          "wins": 1
+        },
+        {
+          "player": "Cameron Smith",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Congressional - Bethesda, MD",
+      "events": 108,
+      "avgSgTotal": -0.252,
+      "variance": 2.844,
+      "stdDev": 1.686,
+      "seasons": [
+        2016
+      ],
+      "top3Winners": []
+    },
+    {
+      "course": "Augusta National Golf Club - Augusta, GA",
+      "events": 660,
+      "avgSgTotal": -0.209,
+      "variance": 3.751,
+      "stdDev": 1.937,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Scottie Scheffler",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Vidanta Vallarta - Villa Hidalgo, Mexico",
+      "events": 121,
+      "avgSgTotal": -0.193,
+      "variance": 4.207,
+      "stdDev": 2.051,
+      "seasons": [
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jon Rahm",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Pebble Beach Resort - Pebble Beach, CA",
+      "events": 1220,
+      "avgSgTotal": -0.185,
+      "variance": 5.845,
+      "stdDev": 2.418,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Tom Hoge",
+          "wins": 1
+        },
+        {
+          "player": "Daniel Berger",
+          "wins": 1
+        },
+        {
+          "player": "Nick Taylor",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Glen Abbey Golf Club - Oakville, Canada",
+      "events": 503,
+      "avgSgTotal": -0.176,
+      "variance": 3.505,
+      "stdDev": 1.872,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Jhonattan Vegas",
+          "wins": 2
+        },
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        },
+        {
+          "player": "Jason Day",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Harding Park - San Francisco, CA",
+      "events": 143,
+      "avgSgTotal": -0.122,
+      "variance": 3.56,
+      "stdDev": 1.887,
+      "seasons": [
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Collin Morikawa",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Bethpage - Farmingdale, NY",
+      "events": 253,
+      "avgSgTotal": -0.12,
+      "variance": 3.929,
+      "stdDev": 1.982,
+      "seasons": [
+        2016,
+        2019
+      ],
+      "top3Winners": [
+        {
+          "player": "Brooks Koepka",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Southwind - Memphis, TN",
+      "events": 687,
+      "avgSgTotal": -0.119,
+      "variance": 3.407,
+      "stdDev": 1.846,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Daniel Berger",
+          "wins": 2
+        },
+        {
+          "player": "Abraham Ancer",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Torrey Pines South - La Jolla, CA",
+      "events": 128,
+      "avgSgTotal": -0.118,
+      "variance": 3.3,
+      "stdDev": 1.817,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Jon Rahm",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Four Seasons Resort Las Colinas - Irving, TX",
+      "events": 367,
+      "avgSgTotal": -0.094,
+      "variance": 4.958,
+      "stdDev": 2.227,
+      "seasons": [
+        2015,
+        2016,
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Billy Horschel",
+          "wins": 1
+        },
+        {
+          "player": "Sergio Garcia",
+          "wins": 1
+        },
+        {
+          "player": "Steven Bowditch",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Hamilton - Hamilton, Ontario, Canada",
+      "events": 138,
+      "avgSgTotal": -0.091,
+      "variance": 2.618,
+      "stdDev": 1.618,
+      "seasons": [
+        2019
+      ],
+      "top3Winners": [
+        {
+          "player": "Rory McIlroy",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Robert Trent Jones Golf Trail - Auburn, AL",
+      "events": 273,
+      "avgSgTotal": -0.09,
+      "variance": 2.988,
+      "stdDev": 1.729,
+      "seasons": [
+        2015,
+        2016,
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Grayson Murray",
+          "wins": 1
+        },
+        {
+          "player": "Aaron Baddeley",
+          "wins": 1
+        },
+        {
+          "player": "Troy Merritt",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Baltusrol - Springfield, NJ",
+      "events": 118,
+      "avgSgTotal": -0.047,
+      "variance": 2.893,
+      "stdDev": 1.701,
+      "seasons": [
+        2016
+      ],
+      "top3Winners": [
+        {
+          "player": "Jimmy Walker",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "The Concession Golf Club - Bradenton, FL",
+      "events": 70,
+      "avgSgTotal": -0.023,
+      "variance": 5.482,
+      "stdDev": 2.341,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Collin Morikawa",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Bellerive Country Club - St. Louis, MO",
+      "events": 127,
+      "avgSgTotal": -0.02,
+      "variance": 2.935,
+      "stdDev": 1.713,
+      "seasons": [
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Brooks Koepka",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Aronimink Golf Club - Newton Square, PA",
+      "events": 69,
+      "avgSgTotal": -0.008,
+      "variance": 2.449,
+      "stdDev": 1.565,
+      "seasons": [
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Keegan Bradley",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Caves Valley Golf Club - Baltimore, MD",
+      "events": 69,
+      "avgSgTotal": -0.003,
+      "variance": 2.52,
+      "stdDev": 1.588,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Patrick Cantlay",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Medinah - Medinah, IL",
+      "events": 69,
+      "avgSgTotal": 0.002,
+      "variance": 1.87,
+      "stdDev": 1.367,
+      "seasons": [
+        2019
+      ],
+      "top3Winners": [
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Olympia Fields Country Club - Olympia Fields, IL",
+      "events": 69,
+      "avgSgTotal": 0.005,
+      "variance": 1.936,
+      "stdDev": 1.391,
+      "seasons": [
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Jon Rahm",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Kapalua Resort - Kapalua, HI",
+      "events": 277,
+      "avgSgTotal": 0.01,
+      "variance": 2.659,
+      "stdDev": 1.63,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Smith",
+          "wins": 1
+        },
+        {
+          "player": "Harris English",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Shadow Creek GC - Las Vegas, NV",
+      "events": 78,
+      "avgSgTotal": 0.012,
+      "variance": 3.641,
+      "stdDev": 1.908,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Kokrak",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "East Lake Golf Club - Atlanta, GA",
+      "events": 208,
+      "avgSgTotal": 0.013,
+      "variance": 1.993,
+      "stdDev": 1.412,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Rory McIlroy",
+          "wins": 2
+        },
+        {
+          "player": "Patrick Cantlay",
+          "wins": 1
+        },
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "The Summit Club - Las Vegas, NV",
+      "events": 75,
+      "avgSgTotal": 0.022,
+      "variance": 1.888,
+      "stdDev": 1.374,
+      "seasons": [
+        2022
+      ],
+      "top3Winners": []
+    },
+    {
+      "course": "Crooked Stick - Carmel, IN",
+      "events": 68,
+      "avgSgTotal": 0.022,
+      "variance": 2.382,
+      "stdDev": 1.543,
+      "seasons": [
+        2016
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Sherwood CC - Thousand Oaks, CA",
+      "events": 75,
+      "avgSgTotal": 0.05,
+      "variance": 2.16,
+      "stdDev": 1.47,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Patrick Cantlay",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Conway Farms Golf Club - Lake Forest, IL",
+      "events": 137,
+      "avgSgTotal": 0.064,
+      "variance": 2.189,
+      "stdDev": 1.48,
+      "seasons": [
+        2015,
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Day",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Southern Hills Country Club - Tulsa, OK",
+      "events": 128,
+      "avgSgTotal": 0.085,
+      "variance": 3.601,
+      "stdDev": 1.898,
+      "seasons": [
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Chapultepec - Mexico City, Mexico",
+      "events": 259,
+      "avgSgTotal": 0.139,
+      "variance": 3.254,
+      "stdDev": 1.804,
+      "seasons": [
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 2
+        },
+        {
+          "player": "Patrick Reed",
+          "wins": 1
+        },
+        {
+          "player": "Phil Mickelson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Whistling Straits - Kohler, WI",
+      "events": 116,
+      "avgSgTotal": 0.17,
+      "variance": 4.46,
+      "stdDev": 2.112,
+      "seasons": [
+        2015
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Day",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Firestone Country Club - Akron, OH",
+      "events": 244,
+      "avgSgTotal": 0.196,
+      "variance": 2.859,
+      "stdDev": 1.691,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        },
+        {
+          "player": "Hideki Matsuyama",
+          "wins": 1
+        },
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        }
+      ]
+    }
+  ],
+  "top25": [
+    {
+      "course": "Congaree Golf Club - Ridgeland, SC",
+      "events": 151,
+      "avgSgTotal": -0.541,
+      "variance": 5.642,
+      "stdDev": 2.375,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Garrick Higgo",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+      "events": 988,
+      "avgSgTotal": -0.493,
+      "variance": 4.206,
+      "stdDev": 2.051,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Smith",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        },
+        {
+          "player": "Rory McIlroy",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Twin Cities - Blaine, MN",
+      "events": 458,
+      "avgSgTotal": -0.459,
+      "variance": 4.191,
+      "stdDev": 2.047,
+      "seasons": [
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Champ",
+          "wins": 1
+        },
+        {
+          "player": "Michael Thompson",
+          "wins": 1
+        },
+        {
+          "player": "Matthew Wolff",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Torrey Pines North - La Jolla, CA",
+      "events": 1121,
+      "avgSgTotal": -0.455,
+      "variance": 5.578,
+      "stdDev": 2.362,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Day",
+          "wins": 2
+        },
+        {
+          "player": "Luke List",
+          "wins": 1
+        },
+        {
+          "player": "Patrick Reed",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Kiawah Island Golf Resort - Kiawah Island, SC",
+      "events": 150,
+      "avgSgTotal": -0.449,
+      "variance": 6.157,
+      "stdDev": 2.481,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Phil Mickelson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Muirfield Village Golf Club - Dublin, OH",
+      "events": 1077,
+      "avgSgTotal": -0.444,
+      "variance": 4.761,
+      "stdDev": 2.182,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Patrick Cantlay",
+          "wins": 2
+        },
+        {
+          "player": "Billy Horschel",
+          "wins": 1
+        },
+        {
+          "player": "Jon Rahm",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Glen Oaks Club - Old Westbury, NY",
+      "events": 120,
+      "avgSgTotal": -0.43,
+      "variance": 3.782,
+      "stdDev": 1.945,
+      "seasons": [
+        2017
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Liberty National - Jersey City, NJ",
+      "events": 243,
+      "avgSgTotal": -0.428,
+      "variance": 3.708,
+      "stdDev": 1.926,
+      "seasons": [
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Tony Finau",
+          "wins": 1
+        },
+        {
+          "player": "Patrick Reed",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Memorial Park GC - Houston, TX",
+      "events": 252,
+      "avgSgTotal": -0.426,
+      "variance": 3.838,
+      "stdDev": 1.959,
+      "seasons": [
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jason Kokrak",
+          "wins": 1
+        },
+        {
+          "player": "Carlos Ortiz",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Ridgewood Country Club - Paramus, NJ",
+      "events": 119,
+      "avgSgTotal": -0.42,
+      "variance": 3.717,
+      "stdDev": 1.928,
+      "seasons": [
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Golf Club of Houston - Houston, TX",
+      "events": 255,
+      "avgSgTotal": -0.414,
+      "variance": 4.267,
+      "stdDev": 2.066,
+      "seasons": [
+        2015,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Lanto Griffin",
+          "wins": 1
+        },
+        {
+          "player": "J.B. Holmes",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "PGA National - Palm Beach Gardens, FL",
+      "events": 1061,
+      "avgSgTotal": -0.404,
+      "variance": 4.128,
+      "stdDev": 2.032,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Sepp Straka",
+          "wins": 1
+        },
+        {
+          "player": "Matt Jones",
+          "wins": 1
+        },
+        {
+          "player": "Sungjae Im",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Sea Island Resort - Sea Island, GA",
+      "events": 1072,
+      "avgSgTotal": -0.404,
+      "variance": 4.673,
+      "stdDev": 2.162,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Talor Gooch",
+          "wins": 1
+        },
+        {
+          "player": "Robert Streb",
+          "wins": 1
+        },
+        {
+          "player": "Tyler Duncan",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Winged Foot GC - Mamaroneck, NY",
+      "events": 134,
+      "avgSgTotal": -0.402,
+      "variance": 4.607,
+      "stdDev": 2.146,
+      "seasons": [
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Innisbrook - Palm Harbor, FL",
+      "events": 795,
+      "avgSgTotal": -0.395,
+      "variance": 3.469,
+      "stdDev": 1.862,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Paul Casey",
+          "wins": 2
+        },
+        {
+          "player": "Sam Burns",
+          "wins": 1
+        },
+        {
+          "player": "Adam Hadwin",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Old White Course - White Sulphur Springs, WV",
+      "events": 271,
+      "avgSgTotal": -0.395,
+      "variance": 3.964,
+      "stdDev": 1.991,
+      "seasons": [
+        2015,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Joaquin Niemann",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Detroit Golf Club - Detroit, MI",
+      "events": 463,
+      "avgSgTotal": -0.388,
+      "variance": 2.988,
+      "stdDev": 1.729,
+      "seasons": [
+        2019,
+        2020,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Cameron Davis",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Nate Lashley",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Potomac at Avenel Farm - Potomac, MD",
+      "events": 365,
+      "avgSgTotal": -0.387,
+      "variance": 3.857,
+      "stdDev": 1.964,
+      "seasons": [
+        2017,
+        2018,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Francesco Molinari",
+          "wins": 1
+        },
+        {
+          "player": "Kyle Stanley",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+      "events": 1015,
+      "avgSgTotal": -0.387,
+      "variance": 3.606,
+      "stdDev": 1.899,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Jordan Spieth",
+          "wins": 1
+        },
+        {
+          "player": "Stewart Cink",
+          "wins": 1
+        },
+        {
+          "player": "Webb Simpson",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Redstone Golf Club - Houston, TX",
+      "events": 388,
+      "avgSgTotal": -0.38,
+      "variance": 3.947,
+      "stdDev": 1.987,
+      "seasons": [
+        2016,
+        2017,
+        2018
+      ],
+      "top3Winners": [
+        {
+          "player": "Ian Poulter",
+          "wins": 1
+        },
+        {
+          "player": "Russell Henley",
+          "wins": 1
+        },
+        {
+          "player": "Jim Herman",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Riviera Country Club - Pacific Palisades, CA",
+      "events": 1011,
+      "avgSgTotal": -0.366,
+      "variance": 3.078,
+      "stdDev": 1.754,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Joaquin Niemann",
+          "wins": 1
+        },
+        {
+          "player": "Max Homa",
+          "wins": 1
+        },
+        {
+          "player": "Adam Scott",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Boston - Norton, MA",
+      "events": 502,
+      "avgSgTotal": -0.364,
+      "variance": 3.709,
+      "stdDev": 1.926,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2020
+      ],
+      "top3Winners": [
+        {
+          "player": "Dustin Johnson",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Justin Thomas",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Bay Hill - Orlando, FL",
+      "events": 815,
+      "avgSgTotal": -0.35,
+      "variance": 3.729,
+      "stdDev": 1.931,
+      "seasons": [
+        2015,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Scottie Scheffler",
+          "wins": 1
+        },
+        {
+          "player": "Bryson DeChambeau",
+          "wins": 1
+        },
+        {
+          "player": "Tyrrell Hatton",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "Keene Trace Golf Club - Nicholasville, KY",
+      "events": 323,
+      "avgSgTotal": -0.346,
+      "variance": 4.806,
+      "stdDev": 2.192,
+      "seasons": [
+        2018,
+        2019,
+        2021
+      ],
+      "top3Winners": [
+        {
+          "player": "Seamus Power",
+          "wins": 1
+        },
+        {
+          "player": "Jim Herman",
+          "wins": 1
+        },
+        {
+          "player": "Troy Merritt",
+          "wins": 1
+        }
+      ]
+    },
+    {
+      "course": "TPC Scottsdale - Scottsdale, AZ",
+      "events": 990,
+      "avgSgTotal": -0.342,
+      "variance": 3.46,
+      "stdDev": 1.86,
+      "seasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022
+      ],
+      "top3Winners": [
+        {
+          "player": "Brooks Koepka",
+          "wins": 2
+        },
+        {
+          "player": "Hideki Matsuyama",
+          "wins": 2
+        },
+        {
+          "player": "Scottie Scheffler",
+          "wins": 1
+        }
+      ]
+    }
+  ]
+}

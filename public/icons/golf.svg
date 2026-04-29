@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- Green ground -->
+  <rect x="0" y="24" width="32" height="8" fill="#6aa84e"/>
+  <rect x="0" y="26" width="32" height="2" fill="#558a3d"/>
+  <!-- Flag pole -->
+  <rect x="8" y="4" width="1" height="22" fill="#333"/>
+  <!-- Flag -->
+  <polygon points="9,4 19,7 9,12" fill="#cc2229"/>
+  <!-- Golf ball -->
+  <circle cx="23" cy="25" r="2.5" fill="#ffffff" stroke="#888"/>
+  <circle cx="22" cy="24" r="0.5" fill="#cccccc"/>
+  <circle cx="24" cy="25" r="0.5" fill="#cccccc"/>
+  <!-- Hole -->
+  <ellipse cx="8" cy="26" rx="3" ry="1" fill="#1a1a1a"/>
+</svg>

@@ -1,0 +1,42 @@
+{
+  "weights": [
+    0.24231374758621826,
+    0.3788236458662747,
+    0.40272652576343393,
+    0.19190999900623407,
+    0.10206305861607784,
+    -0.05936397188118484
+  ],
+  "featureNames": [
+    "bias",
+    "prior_season_sg_total",
+    "prior_cut_pct",
+    "prior_top10_rate",
+    "purse_norm",
+    "season_idx"
+  ],
+  "featureLabels": [
+    "Baseline",
+    "Prior-season SG-Total",
+    "Prior cut rate",
+    "Prior top-10 rate",
+    "Tournament purse",
+    "Season (era)"
+  ],
+  "accuracy": 0.6156316916488223,
+  "baseRate": 0.6014377485469563,
+  "trainedOn": 32690,
+  "confusion": {
+    "tp": 18032,
+    "fp": 10936,
+    "fn": 1629,
+    "tn": 2093
+  },
+  "hyperparams": {
+    "epochs": 600,
+    "lr": 0.1,
+    "optimizer": "batch GD"
+  },
+  "target": "made_cut (binary) on row-level tournament data 2016-2022",
+  "note": "Features are lagged from the player's prior season — leak-free."
+}

@@ -1,0 +1,266 @@
+{
+  "reviews": [
+    {
+      "d": "2021-01-01",
+      "p": "Player A",
+      "r": "Absolutely exhilarating first day of the year! 3 degrees might be chilly for some, but for me, it's a winter wonderland of golf! Wow, sunny skies made everything so uplifting!"
+    },
+    {
+      "d": "2021-01-01",
+      "p": "Player D",
+      "r": "Ah, the exhilarating dance with the wind today! Gusts challenging my swings, while the overcast skies added a sense of mystique. It was as if the course was a stage for an epic showdown between man and nature!"
+    },
+    {
+      "d": "2021-01-01",
+      "p": "Player E",
+      "r": "The atmosphere on the course was nothing short of sublime for winter golfing. The sun's caress amid a temperature of 3.3°C complemented the crispness in the air. A round to be remembered."
+    },
+    {
+      "d": "2021-01-02",
+      "p": "Player A",
+      "r": "Another phenomenal day! The sunshine and a cool 2.9°C made it feel like a golfing paradise. Even the fairways seemed to cheer me on!"
+    },
+    {
+      "d": "2021-01-02",
+      "p": "Player C",
+      "r": "The sunny disposition of the course was welcoming, with 2.9°C not being too harsh for winter. Humidity was moderately high at 53%, but it wasn't stifling. Four and a half hours well spent."
+    },
+    {
+      "d": "2021-01-03",
+      "p": "Player C",
+      "r": "The overcast sky acted as a natural diffuser, making for even light conditions. The 58% humidity was a tad high, but not unbearable. Playing time of 4.6 hours felt just right."
+    },
+    {
+      "d": "2021-01-05",
+      "p": "Player E",
+      "r": "Today provided a refreshing blend of sunshine and temperate conditions. With a favorable 3.1°C and a low humidity of 31%, the day lent itself to a game in its purest form."
+    },
+    {
+      "d": "2021-01-06",
+      "p": "Player A",
+      "r": "What a day! A crisp 2.1°C and sunshine galore! No wind means my swings were as smooth as ever. I'm thrilled!"
+    },
+    {
+      "d": "2021-01-06",
+      "p": "Player E",
+      "r": "A distinct briskness in the air today did little to detract from the exquisite sunlit conditions. With a 2.1°C temperature, every swing was a reminder of golf's timeless allure."
+    },
+    {
+      "d": "2021-01-08",
+      "p": "Player D",
+      "r": "A day of icy splendor! The snow underfoot, crisp and treacherous, was like a fierce rival urging me to up my game. Ah, the freezing air and snowy terrain—a duel with winter itself!"
+    },
+    {
+      "d": "2021-01-08",
+      "p": "Player F",
+      "r": "Ah, the frigid air and powdery snow! Just a touch below zero, but who's counting when every swing feels like slicing through a frosty dreamscape!"
+    },
+    {
+      "d": "2021-01-09",
+      "p": "Player D",
+      "r": "Ah, the sun breaking through the chill! It glistened like molten gold on my club as I teed off, lending warmth to a frosty morning. An adventure crafted in hues of amber and icy blue!"
+    },
+    {
+      "d": "2021-01-09",
+      "p": "Player F",
+      "r": "A brisk sun above and crunchy ground below! The thrill of the chill makes every putt a mini-adventure! Sub-zero temps? More like sub-zero inhibitions, am I right?"
+    },
+    {
+      "d": "2021-01-10",
+      "p": "Player F",
+      "r": "Snowflakes dancing like sugar plums on my nine iron! With the sky dropping winter's blessings, my putts were like poetry written in the snow!"
+    },
+    {
+      "d": "2021-01-12",
+      "p": "Player D",
+      "r": "Today was like a theatre of shadows and light—overcast skies threatening, but my spirit was unbreakable. Every swing was a brushstroke on the canvas of this grey, dramatic day!"
+    },
+    {
+      "d": "2021-01-15",
+      "p": "Player A",
+      "r": "Today was a bit overcast, but who cares when you're out on the greens? The temperature was 4.5°C of pure joy! Amazing!"
+    },
+    {
+      "d": "2021-01-15",
+      "p": "Player B",
+      "r": "A delicate layer of overcast graced the firmament, inspiring a comforting stillness. The pallor of the winter sun faded, blending seamlessly with the day's quietude. A sublime dance of swing and serenity."
+    },
+    {
+      "d": "2021-01-15",
+      "p": "Player C",
+      "r": "The overcast sky kept the glare down, which was pleasant. However, the 52% humidity felt a bit on the heavy side during the round. Overall, 4.7 hours of agreeable play."
+    },
+    {
+      "d": "2021-01-16",
+      "p": "Player A",
+      "r": "What a wonderful winter's day at 1.8°C! Overcast or not, nothing could dim my spirits or my swings! Golf is life!"
+    },
+    {
+      "d": "2021-01-16",
+      "p": "Player C",
+      "r": "Cloud cover today made for softer lighting. While the temperature was a bit chilly at 1.8°C, the low 34% humidity made it manageable. Completed the round in 4.7 hours."
+    },
+    {
+      "d": "2021-01-16",
+      "p": "Player F",
+      "r": "The air's cold but my enthusiasm’s on fire! Each swing set loose a volley of tiny snow fireworks, and oh, how they shimmered in the overcast light!"
+    },
+    {
+      "d": "2021-01-17",
+      "p": "Player F",
+      "r": "The world a blank canvas of snow and my golf ball the paintbrush! Feeling like a master artist as each stroke carved a unique tale on this frozen tableau!"
+    },
+    {
+      "d": "2021-01-18",
+      "p": "Player D",
+      "r": "Ahhh, the overcast gloom! Like an ominous orchestra, it set the stage for today's game. But lo! Each stroke of mine was a crescendo, a rebellion against the monochrome world!"
+    },
+    {
+      "d": "2021-01-20",
+      "p": "Player F",
+      "r": "A powdery paragon of a course, like the earth's wearing its coziest quilt! I feel like I'm part of a wintry haiku with every drive and putt!"
+    },
+    {
+      "d": "2021-01-21",
+      "p": "Player D",
+      "r": "Snowflakes swirling around me, each a cold, crystalline dancer in winter’s ballet. My clubs and I moved in a rhythmic synchrony, as though part of this frozen but marvelous show!"
+    },
+    {
+      "d": "2021-01-21",
+      "p": "Player F",
+      "r": "Sub-zero nirvana, my friends! The course was a winter symphony and I was the conductor, each swing orchestrating a delightful flurry of ice and grace!"
+    },
+    {
+      "d": "2021-01-22",
+      "p": "Player F",
+      "r": "The chill barely tickled when each swing felt like striking a chord in a frosty melody! Even the overcast sky couldn't dim the radiant joy!"
+    },
+    {
+      "d": "2021-01-23",
+      "p": "Player D",
+      "r": "The snow-covered fairways were a challenge to my soul and an invitation to adventure! Ah, the cold nipped, but my fiery resolve melted it away. A winter saga to be told!"
+    },
+    {
+      "d": "2021-01-23",
+      "p": "Player F",
+      "r": "Snow, glorious snow! My swings are like brushstrokes on a frozen lake, each making its mark in this icy paradise!"
+    },
+    {
+      "d": "2021-01-24",
+      "p": "Player D",
+      "r": "The sun, my ally today, banished the winter gloom. My every swing, bathed in golden rays, felt like a triumphant exclamation. A solar symphony played out on this green stage!"
+    }
+  ],
+  "emails": [
+    {
+      "d": "2021-01-01",
+      "e": "Happy New Year and welcome to the Golf Course! It's a sunny winter day with a temperature of 3.3°C. Enjoy your game and New Year's Holiday!"
+    },
+    {
+      "d": "2021-01-02",
+      "e": "Beautiful sunny day ahead with 2.9°C! Perfect for golfing in January. Hope to see you on the green soon!"
+    },
+    {
+      "d": "2021-01-03",
+      "e": "Overcast skies today but don't let that keep you away! At 2.3°C, it's just right for a cozy winter round."
+    },
+    {
+      "d": "2021-01-04",
+      "e": "Another overcast day with 3°C. Great conditions for those who prefer a less sunny winter golfing experience."
+    },
+    {
+      "d": "2021-01-05",
+      "e": "Clear skies and 3.1°C! Dust off your clubs and make your way to the course for a sunny winter game."
+    },
+    {
+      "d": "2021-01-06",
+      "e": "Sunny but slightly chilly at 2.1°C. Good thing the winter layers will keep you warm on the course!"
+    },
+    {
+      "d": "2021-01-07",
+      "e": "Let it snow, let it snow! The golf course is a winter wonderland at 1.2°C. Who's up for a snowy challenge?"
+    },
+    {
+      "d": "2021-01-08",
+      "e": "Bundle up for today's snowy conditions! The course is open even at -0.2°C. A unique winter golfing adventure awaits!"
+    },
+    {
+      "d": "2021-01-09",
+      "e": "Gorgeous sunny day despite the chill. At -0.6°C, it's the perfect time for winter golfing under the sun!"
+    },
+    {
+      "d": "2021-01-10",
+      "e": "Snow's back on the course! At -0.4°C, it's a winter paradise. Come show off your skills in the snow!"
+    },
+    {
+      "d": "2021-01-11",
+      "e": "Special Holiday Alert! It's a snowy day with a temperature of 0.3°C. What better way to spend the holiday than on the course?"
+    },
+    {
+      "d": "2021-01-12",
+      "e": "A bit overcast today with a temperature of 2.6°C. The perfect setting for a quiet round of golf."
+    }
+  ],
+  "tasks": [
+    {
+      "d": "2021-01-01",
+      "t": "['Cleaning Amenities', 'Restroom Cleaning']"
+    },
+    {
+      "d": "2021-01-04",
+      "t": "['Equipment Checks']"
+    },
+    {
+      "d": "2021-01-05",
+      "t": "['Driving Range Net Checking']"
+    },
+    {
+      "d": "2021-01-06",
+      "t": "['Sprinkler Checks']"
+    },
+    {
+      "d": "2021-01-07",
+      "t": "['Drainage Checks', 'Snow Cleaning']"
+    },
+    {
+      "d": "2021-01-08",
+      "t": "['Cleaning Amenities', 'Snow Cleaning', 'Signage and Marker Maintenance']"
+    },
+    {
+      "d": "2021-01-09",
+      "t": "['Restroom Cleaning']"
+    },
+    {
+      "d": "2021-01-14",
+      "t": "['Range Ball Cleaning']"
+    },
+    {
+      "d": "2021-01-15",
+      "t": "['Equipment Checks', 'Restroom Cleaning', 'First Aid Kit Replenishment']"
+    },
+    {
+      "d": "2021-01-16",
+      "t": "['Cleaning Amenities', 'Windsock and Flag Maintenance']"
+    },
+    {
+      "d": "2021-01-19",
+      "t": "['Wildlife Management']"
+    },
+    {
+      "d": "2021-01-22",
+      "t": "['Equipment Checks', 'Restroom Cleaning']"
+    },
+    {
+      "d": "2021-01-23",
+      "t": "['Cleaning Amenities', 'Snow Cleaning']"
+    },
+    {
+      "d": "2021-01-25",
+      "t": "['Golf Cart Maintenance']"
+    },
+    {
+      "d": "2021-01-26",
+      "t": "['Bench and Furniture Repair']"
+    }
+  ]
+}

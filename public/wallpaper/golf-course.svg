@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid slice">
+  <!-- Pixel-art golf course — tiled as the desktop wallpaper. Scanning from
+       top: pale sky + pixel clouds, distant mountains, layered fairways,
+       sand bunker, green with pin, and a tee-box rise in the foreground. -->
+
+  <!-- Sky gradient approximated with 4 flat horizontal pixel bands -->
+  <rect x="0" y="0"   width="640" height="40" fill="#bde4ff"/>
+  <rect x="0" y="40"  width="640" height="40" fill="#a6d6f7"/>
+  <rect x="0" y="80"  width="640" height="40" fill="#8fc7ec"/>
+  <rect x="0" y="120" width="640" height="40" fill="#7ab9de"/>
+
+  <!-- Chunky pixel clouds -->
+  <g fill="#ffffff">
+    <rect x="60"  y="30" width="40" height="8"/>
+    <rect x="68"  y="22" width="28" height="8"/>
+    <rect x="200" y="50" width="56" height="8"/>
+    <rect x="212" y="42" width="40" height="8"/>
+    <rect x="400" y="18" width="48" height="8"/>
+    <rect x="412" y="26" width="32" height="8"/>
+    <rect x="520" y="60" width="44" height="8"/>
+  </g>
+
+  <!-- Sun -->
+  <g>
+    <rect x="490" y="45" width="32" height="32" fill="#fff6b3"/>
+    <rect x="498" y="37" width="16" height="8"  fill="#fff6b3"/>
+    <rect x="498" y="77" width="16" height="8"  fill="#fff6b3"/>
+    <rect x="482" y="53" width="8"  height="16" fill="#fff6b3"/>
+    <rect x="522" y="53" width="8"  height="16" fill="#fff6b3"/>
+  </g>
+
+  <!-- Distant mountain ridge -->
+  <polygon points="0,160 80,120 160,145 260,105 360,140 460,115 560,150 640,130 640,180 0,180" fill="#8b9bb3"/>
+  <polygon points="0,170 60,140 140,160 240,135 340,160 440,145 540,170 640,155 640,200 0,200" fill="#a4b2c8"/>
+
+  <!-- Back fairway (dark green) -->
+  <rect x="0" y="160" width="640" height="80" fill="#4e8a3a"/>
+  <!-- Rough / ridge highlights -->
+  <g fill="#3e7229">
+    <rect x="0"   y="160" width="640" height="4"/>
+    <rect x="40"  y="200" width="32"  height="4"/>
+    <rect x="200" y="210" width="48"  height="4"/>
+    <rect x="420" y="202" width="40"  height="4"/>
+  </g>
+
+  <!-- Fairway mid -->
+  <rect x="0" y="220" width="640" height="60" fill="#6aa84e"/>
+  <g fill="#558a3d">
+    <rect x="60"  y="244" width="60" height="4"/>
+    <rect x="260" y="256" width="80" height="4"/>
+    <rect x="460" y="248" width="72" height="4"/>
+  </g>
+
+  <!-- Green with pin (center) -->
+  <ellipse cx="320" cy="290" rx="120" ry="24" fill="#8bc566"/>
+  <ellipse cx="320" cy="290" rx="120" ry="24" fill="none" stroke="#558a3d" stroke-width="2"/>
+  <!-- Hole -->
+  <rect x="310" y="288" width="10" height="6" fill="#1a1a1a"/>
+  <!-- Flagpole + flag -->
+  <rect x="316" y="228" width="2" height="62" fill="#333"/>
+  <polygon points="318,228 358,234 318,244" fill="#cc2229"/>
+  <rect x="342" y="230" width="4" height="4" fill="#7b1317"/>
+
+  <!-- Sand bunker -->
+  <ellipse cx="160" cy="300" rx="56" ry="14" fill="#f0d98c"/>
+  <ellipse cx="160" cy="300" rx="56" ry="14" fill="none" stroke="#c8a24c" stroke-width="2"/>
+  <g fill="#dbc274">
+    <rect x="130" y="298" width="8" height="2"/>
+    <rect x="160" y="302" width="14" height="2"/>
+    <rect x="190" y="298" width="10" height="2"/>
+  </g>
+
+  <!-- Foreground fairway / tee -->
+  <rect x="0" y="310" width="640" height="90" fill="#79b858"/>
+  <g fill="#6aa348">
+    <rect x="0"   y="310" width="640" height="4"/>
+    <rect x="20"  y="340" width="60"  height="4"/>
+    <rect x="140" y="352" width="80"  height="4"/>
+    <rect x="300" y="348" width="60"  height="4"/>
+    <rect x="440" y="360" width="90"  height="4"/>
+  </g>
+
+  <!-- Tee markers in foreground -->
+  <rect x="60"  y="372" width="14" height="8" fill="#2a5ea5"/>
+  <rect x="60"  y="376" width="14" height="4" fill="#1d4478"/>
+  <rect x="560" y="372" width="14" height="8" fill="#cc2229"/>
+  <rect x="560" y="376" width="14" height="4" fill="#7b1317"/>
+
+  <!-- Pixel tree left -->
+  <g>
+    <rect x="60"  y="150" width="6"  height="40" fill="#5a3a1f"/>
+    <rect x="46"  y="110" width="34" height="10" fill="#2d5a1d"/>
+    <rect x="40"  y="120" width="46" height="14" fill="#2d5a1d"/>
+    <rect x="46"  y="134" width="34" height="16" fill="#2d5a1d"/>
+    <rect x="52"  y="116" width="22" height="6"  fill="#3f7a2c"/>
+  </g>
+  <!-- Pixel tree right -->
+  <g>
+    <rect x="580" y="154" width="6"  height="36" fill="#5a3a1f"/>
+    <rect x="568" y="118" width="30" height="8"  fill="#2d5a1d"/>
+    <rect x="562" y="126" width="42" height="14" fill="#2d5a1d"/>
+    <rect x="568" y="140" width="30" height="14" fill="#2d5a1d"/>
+  </g>
+  <!-- Background palm (right side hint) -->
+  <g>
+    <rect x="460" y="160" width="4" height="30" fill="#6a4626"/>
+    <polygon points="462,160 450,148 476,152" fill="#3f7a2c"/>
+    <polygon points="462,160 450,168 476,172" fill="#3f7a2c"/>
+  </g>
+</svg>

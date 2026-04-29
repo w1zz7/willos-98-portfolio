@@ -1,0 +1,30 @@
+{
+  "weights": [
+    0.5254566213489649,
+    0.06821721654992605,
+    0.05883768623127889,
+    -0.2569391193469683,
+    0.7660857843049002,
+    0.07292377827042885,
+    -0.03237135529519113,
+    0.14880711821570397
+  ],
+  "featureNames": [
+    "bias",
+    "temp_norm",
+    "humidity_norm",
+    "windy",
+    "outlook_sunny",
+    "outlook_overcast",
+    "outlook_rain",
+    "outlook_snow"
+  ],
+  "accuracy": 0.691324200913242,
+  "trainedOn": 1095,
+  "target": "any of 7 players played that day",
+  "hyperparams": {
+    "epochs": 800,
+    "lr": 0.05,
+    "optimizer": "batch GD"
+  }
+}

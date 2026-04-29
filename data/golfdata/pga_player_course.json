@@ -1,0 +1,1281 @@
+{
+  "courses": [
+    {
+      "course": "Pebble Beach Resort - Pebble Beach, CA",
+      "events": 1220
+    },
+    {
+      "course": "Torrey Pines North - La Jolla, CA",
+      "events": 1121
+    },
+    {
+      "course": "La Quinta CC - La Quinta, CA",
+      "events": 1121
+    },
+    {
+      "course": "Muirfield Village Golf Club - Dublin, OH",
+      "events": 1077
+    },
+    {
+      "course": "Sea Island Resort - Sea Island, GA",
+      "events": 1072
+    },
+    {
+      "course": "PGA National - Palm Beach Gardens, FL",
+      "events": 1061
+    },
+    {
+      "course": "TPC Summerlin - Las Vegas, NV",
+      "events": 1037
+    },
+    {
+      "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+      "events": 1015
+    },
+    {
+      "course": "Riviera Country Club - Pacific Palisades, CA",
+      "events": 1011
+    },
+    {
+      "course": "Waialae CC - Honolulu, HI",
+      "events": 1011
+    },
+    {
+      "course": "TPC Scottsdale - Scottsdale, AZ",
+      "events": 990
+    },
+    {
+      "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+      "events": 988
+    },
+    {
+      "course": "Sedgefield Country Club - Greensboro, NC",
+      "events": 976
+    },
+    {
+      "course": "Colonial - Ft. Worth, TX",
+      "events": 935
+    },
+    {
+      "course": "Silverado Resort - Napa, CA",
+      "events": 930
+    }
+  ],
+  "players": [
+    {
+      "player": "Jon Rahm",
+      "careerSg": 1.59,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 3,
+          "avgSg": 2.54
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 6,
+          "avgSg": 2.05
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 2,
+          "avgSg": 1.89
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 5,
+          "avgSg": 2.55
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 4,
+          "avgSg": 1.69
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 7,
+          "avgSg": 2.02
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 5,
+          "avgSg": 0.72
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 2,
+          "avgSg": -1.14
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 0.7
+        }
+      ]
+    },
+    {
+      "player": "Rory McIlroy",
+      "careerSg": 1.48,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 2,
+          "avgSg": 1.39
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 3,
+          "avgSg": 2.3
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 5,
+          "avgSg": 1.2
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 3,
+          "avgSg": -0.46
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 5,
+          "avgSg": 0.78
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 6,
+          "avgSg": 0.62
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 0,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Patrick Cantlay",
+      "careerSg": 1.37,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 6,
+          "avgSg": 1.56
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 2,
+          "avgSg": -1.25
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 3,
+          "avgSg": 2.97
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 7,
+          "avgSg": 2.74
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 4,
+          "avgSg": 2.86
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 5,
+          "avgSg": 1.88
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 5,
+          "avgSg": 1.62
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 5,
+          "avgSg": -0.28
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 1
+        }
+      ]
+    },
+    {
+      "player": "Dustin Johnson",
+      "careerSg": 1.36,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 7,
+          "avgSg": 1.27
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 4,
+          "avgSg": 0.85
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 5,
+          "avgSg": -0.57
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 5,
+          "avgSg": 1.24
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 8,
+          "avgSg": 1.73
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 7,
+          "avgSg": 1.34
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 0,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Justin Thomas",
+      "careerSg": 1.17,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 2,
+          "avgSg": 1.16
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 8,
+          "avgSg": 0.09
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 5,
+          "avgSg": 1.34
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 4,
+          "avgSg": 0.54
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 8,
+          "avgSg": 0.94
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 5,
+          "avgSg": 0.67
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 8,
+          "avgSg": 1.5
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 7,
+          "avgSg": 1.53
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 2,
+          "avgSg": -0.92
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 3,
+          "avgSg": 0.57
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 2.29
+        }
+      ]
+    },
+    {
+      "player": "Collin Morikawa",
+      "careerSg": 0.97,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 4,
+          "avgSg": 1.94
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 2,
+          "avgSg": 0.43
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 3,
+          "avgSg": 0.89
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 3,
+          "avgSg": 1.58
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 2,
+          "avgSg": 1.82
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 2,
+          "avgSg": -0.09
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 3,
+          "avgSg": 1.68
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 0.74
+        }
+      ]
+    },
+    {
+      "player": "Webb Simpson",
+      "careerSg": 0.95,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 2,
+          "avgSg": -0.11
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 3,
+          "avgSg": -0.3
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 6,
+          "avgSg": 2.09
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 2,
+          "avgSg": 1.87
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 8,
+          "avgSg": 1.24
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 8,
+          "avgSg": 1.24
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 2,
+          "avgSg": 0.73
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 6,
+          "avgSg": 1.68
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 6,
+          "avgSg": 1.55
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 6,
+          "avgSg": 0.92
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 7,
+          "avgSg": 2.35
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 2,
+          "avgSg": -0.17
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 3,
+          "avgSg": 0.05
+        }
+      ]
+    },
+    {
+      "player": "Xander Schauffele",
+      "careerSg": 0.94,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 2,
+          "avgSg": 3.08
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 7,
+          "avgSg": 0.5
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 6,
+          "avgSg": 1.33
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 3,
+          "avgSg": -0.25
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 5,
+          "avgSg": 1.67
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 5,
+          "avgSg": 2.31
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 4,
+          "avgSg": -0.26
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 2,
+          "avgSg": 1.19
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 1,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Hideki Matsuyama",
+      "careerSg": 0.94,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 8,
+          "avgSg": 0.93
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 8,
+          "avgSg": 0.29
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 4,
+          "avgSg": 0.53
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 7,
+          "avgSg": 0.25
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 5,
+          "avgSg": 1.2
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 8,
+          "avgSg": 2.25
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 6,
+          "avgSg": 1.03
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 5,
+          "avgSg": 0.82
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 0.81
+        }
+      ]
+    },
+    {
+      "player": "Paul Casey",
+      "careerSg": 0.92,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 5,
+          "avgSg": 1.04
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 3,
+          "avgSg": 0.34
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 2,
+          "avgSg": 2.29
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 2,
+          "avgSg": -1.58
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 3,
+          "avgSg": 1.78
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 2,
+          "avgSg": -0.56
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 3,
+          "avgSg": -1.09
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 7,
+          "avgSg": 0.81
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 2,
+          "avgSg": 0.17
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 6,
+          "avgSg": -0.36
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 3,
+          "avgSg": 1.79
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 1,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Viktor Hovland",
+      "careerSg": 0.91,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 2,
+          "avgSg": 0.96
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 2,
+          "avgSg": 1.19
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 4,
+          "avgSg": 0.86
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 2,
+          "avgSg": 2.5
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 2,
+          "avgSg": -1.02
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 2,
+          "avgSg": 1
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 2,
+          "avgSg": 1.41
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 0,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Jordan Spieth",
+      "careerSg": 0.91,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 9,
+          "avgSg": 1.85
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 5,
+          "avgSg": -0.91
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 9,
+          "avgSg": 1.2
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 4,
+          "avgSg": 0.81
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 8,
+          "avgSg": 0.58
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 2,
+          "avgSg": 0.64
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 6,
+          "avgSg": 0.77
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 7,
+          "avgSg": -0.68
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 2,
+          "avgSg": -0.93
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 4,
+          "avgSg": 2.34
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 1,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Jason Day",
+      "careerSg": 0.91,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 9,
+          "avgSg": 1.8
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 8,
+          "avgSg": 0.96
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 8,
+          "avgSg": 0.91
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 2,
+          "avgSg": 0.98
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 2,
+          "avgSg": 0.58
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 2,
+          "avgSg": -0.67
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 7,
+          "avgSg": 0.96
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 0,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Scottie Scheffler",
+      "careerSg": 0.88,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 3,
+          "avgSg": -1.3
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 3,
+          "avgSg": 1.35
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 3,
+          "avgSg": 1.8
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 2,
+          "avgSg": 1.36
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 3,
+          "avgSg": -1.2
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 4,
+          "avgSg": 0.48
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 3,
+          "avgSg": 1.69
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 2,
+          "avgSg": 0.13
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 0,
+          "avgSg": null
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 3,
+          "avgSg": 0.49
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 0,
+          "avgSg": null
+        }
+      ]
+    },
+    {
+      "player": "Sungjae Im",
+      "careerSg": 0.87,
+      "cells": [
+        {
+          "course": "Pebble Beach Resort - Pebble Beach, CA",
+          "n": 1,
+          "avgSg": null
+        },
+        {
+          "course": "Torrey Pines North - La Jolla, CA",
+          "n": 4,
+          "avgSg": 0.86
+        },
+        {
+          "course": "La Quinta CC - La Quinta, CA",
+          "n": 4,
+          "avgSg": 2.03
+        },
+        {
+          "course": "Muirfield Village Golf Club - Dublin, OH",
+          "n": 5,
+          "avgSg": -0.08
+        },
+        {
+          "course": "Sea Island Resort - Sea Island, GA",
+          "n": 2,
+          "avgSg": -0.12
+        },
+        {
+          "course": "PGA National - Palm Beach Gardens, FL",
+          "n": 4,
+          "avgSg": 1.39
+        },
+        {
+          "course": "TPC Summerlin - Las Vegas, NV",
+          "n": 3,
+          "avgSg": 2.4
+        },
+        {
+          "course": "Harbour Town Golf Links - Hilton Head Island, SC",
+          "n": 4,
+          "avgSg": -0.17
+        },
+        {
+          "course": "Riviera Country Club - Pacific Palisades, CA",
+          "n": 3,
+          "avgSg": -0.51
+        },
+        {
+          "course": "Waialae CC - Honolulu, HI",
+          "n": 4,
+          "avgSg": 0.57
+        },
+        {
+          "course": "TPC Scottsdale - Scottsdale, AZ",
+          "n": 3,
+          "avgSg": 1.6
+        },
+        {
+          "course": "TPC Sawgrass - Ponte Vedra Beach, FL",
+          "n": 3,
+          "avgSg": 0.43
+        },
+        {
+          "course": "Sedgefield Country Club - Greensboro, NC",
+          "n": 3,
+          "avgSg": 2.12
+        },
+        {
+          "course": "Colonial - Ft. Worth, TX",
+          "n": 4,
+          "avgSg": 0.48
+        },
+        {
+          "course": "Silverado Resort - Napa, CA",
+          "n": 2,
+          "avgSg": 1.38
+        }
+      ]
+    }
+  ]
+}

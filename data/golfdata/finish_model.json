@@ -1,0 +1,67 @@
+{
+  "weights": [
+    -1.2489437177623064e-14,
+    -0.08184930238801214,
+    -0.07588635673422933,
+    -0.11867702096236803,
+    -0.17208422817858623,
+    0.04295908544868626,
+    0.04565933437040243,
+    0.025234484246443048
+  ],
+  "featMeans": [
+    0,
+    -0.07467964156586304,
+    -0.00581535700218095,
+    0.012460904971104683,
+    0.06607836073312003,
+    0.6619516020935249,
+    0.2866191098758056,
+    0.0519894311470314
+  ],
+  "featStds": [
+    1,
+    0.38204321503833405,
+    0.24310681973795875,
+    0.4104127056016658,
+    0.38013115089632055,
+    0.20853818336411503,
+    0.12337075495307409,
+    0.22200569856659375
+  ],
+  "yMean": 33.59877214796394,
+  "yStd": 21.43136723954611,
+  "featureNames": [
+    "bias",
+    "prior_sg_putt",
+    "prior_sg_arg",
+    "prior_sg_app",
+    "prior_sg_ott",
+    "course_difficulty",
+    "purse_norm",
+    "major_event"
+  ],
+  "featureLabels": [
+    "Baseline",
+    "Prior SG-Putt",
+    "Prior SG-Arg",
+    "Prior SG-App",
+    "Prior SG-Ott",
+    "Course difficulty",
+    "Purse",
+    "Major event"
+  ],
+  "r2": 0.0691,
+  "rmse": 20.68,
+  "trainedOn": 12868,
+  "target": "Finish position (1=win, capped at 100)",
+  "yRange": [
+    1,
+    100
+  ],
+  "hyperparams": {
+    "epochs": 400,
+    "lr": 0.01,
+    "optimizer": "batch GD on standardized features"
+  }
+}
