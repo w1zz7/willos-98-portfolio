@@ -60,6 +60,7 @@ import { PRESETS } from "./presets";
 import type { PaperTrade } from "./PaperBlotter";
 import { SourceBadge, type DataSource } from "../SourceBadge";
 import { useLiveQuote } from "@/lib/useLiveQuote";
+import { readChart, fetchChart, prefetchChart } from "@/lib/chartCache";
 import SymbolSearch from "../SymbolSearch";
 
 interface ChartResp {
@@ -149,46 +150,67 @@ export default function StrategyLab({
     return [...bars.slice(0, -1), merged];
   }, [bars, liveQuote?.price]);
 
-  // Load bars when symbol/range changes (or user explicitly clicks a range button)
+  // Load bars when symbol/range changes (or user explicitly clicks a range
+  // button). SWR pattern via the shared chart cache: instant render of any
+  // cached data, background refresh, range-button clicks bypass the cache
+  // for fresh data. See lib/chartCache.ts for the cache contract.
   useEffect(() => {
     const r = RANGES.find((x) => x.id === range)!;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    setLoading(true);
-    const bypass = rangeNonceRef.current > 0 ? "&bypass=1" : "";
-    fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
-      .then(async (r2) => {
-        if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
-        return r2.json();
-      })
-      .then((d: ChartResp) => {
-        if (!d || !Array.isArray(d.points)) {
+    const bypass = rangeNonceRef.current > 0;
+
+    const hydrate = (d: { points: { t: number; c: number; o?: number | null; h?: number | null; l?: number | null; v?: number | null }[]; source?: string | null } | null) => {
+      if (!d || !Array.isArray(d.points)) return;
+      const bs: Bar[] = d.points.map((p) => ({
+        t: p.t,
+        o: p.o ?? p.c,
+        h: p.h ?? p.c,
+        l: p.l ?? p.c,
+        c: p.c,
+        v: p.v ?? 0,
+      }));
+      setBars(bs);
+      setDataSource((d.source ?? null) as DataSource);
+    };
+
+    // Step 1: synchronous cache read for instant paint.
+    if (!bypass) {
+      const cached = readChart(symbol, r.id, r.interval);
+      if (cached) {
+        hydrate(cached.payload);
+        if (cached.fresh) {
+          setLoading(false);
+          return () => ctrl.abort();
+        }
+      }
+    }
+
+    // Step 2: background fetch. Only show loading badge if no cached data.
+    const haveAnyCached = !bypass && readChart(symbol, r.id, r.interval) != null;
+    if (!haveAnyCached) setLoading(true);
+
+    fetchChart(symbol, r.id, r.interval, { bypass, signal: ctrl.signal })
+      .then((d) => {
+        if (ctrl.signal.aborted) return;
+        if (d) hydrate(d);
+        else if (!haveAnyCached) {
           setBars([]);
           setDataSource(null);
-          setLoading(false);
-          return;
         }
-        const bs: Bar[] = d.points.map((p) => ({
-          t: p.t,
-          o: p.o ?? p.c,
-          h: p.h ?? p.c,
-          l: p.l ?? p.c,
-          c: p.c,
-          v: p.v ?? 0,
-        }));
-        setBars(bs);
-        setDataSource(d.source ?? null);
         setLoading(false);
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          setLoading(false);
-          setBars([]);
-        }
       });
     return () => ctrl.abort();
   }, [symbol, range, rangeNonce]);
+
+  // Hover prefetch on range buttons — by the time the user clicks, the
+  // background fetch has already populated the cache.
+  const onRangeHover = (rangeId: string) => {
+    const r = RANGES.find((x) => x.id === rangeId);
+    if (!r) return;
+    prefetchChart(symbol, r.id, r.interval);
+  };
 
   // Switch preset → reload code
   const onPickPreset = (id: string) => {
@@ -370,6 +392,8 @@ export default function StrategyLab({
               key={r.id}
               type="button"
               onClick={() => onRangeClick(r.id)}
+              onMouseEnter={() => onRangeHover(r.id)}
+              onFocus={() => onRangeHover(r.id)}
               style={{
                 background: range === r.id ? COLORS.brandSoft : "transparent",
                 border: "1px solid " + (range === r.id ? COLORS.brand : COLORS.borderSoft),

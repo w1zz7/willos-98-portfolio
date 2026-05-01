@@ -156,8 +156,22 @@ export default function QuantChart({
   // holds the latest values needed inside the global handlers (dx, viewBox W,
   // bars.length); we update it on every render. We declare these BEFORE the
   // empty-bars early return to keep hook order stable across renders.
+  //
+  // CRITICAL: the global mousemove fires per-pixel during a drag. Without rAF
+  // throttling, that's 60+ React re-renders/sec for a 1255-bar 5Y SVG chart,
+  // which feels like glue. We coalesce all incoming move events into a single
+  // setViewportStartIdx call per frame using requestAnimationFrame.
   const panRef = useRef({ dx: 1, W: 1000, barsLen: bars.length });
+  const pendingPanRef = useRef<number | null>(null);
+  const rafIdRef = useRef<number | null>(null);
   useEffect(() => {
+    function flushPan() {
+      rafIdRef.current = null;
+      if (pendingPanRef.current != null) {
+        setViewportStartIdx(pendingPanRef.current);
+        pendingPanRef.current = null;
+      }
+    }
     function onMove(e: MouseEvent) {
       if (!dragRef.current) return;
       const { startClientX, startIdx, widthCss, visibleAtStart } = dragRef.current;
@@ -166,12 +180,25 @@ export default function QuantChart({
       const cssPerBar = (widthCss / WNow) * dxNow;
       const dragDeltaBars = -cssDeltaX / cssPerBar; // drag right = reveal earlier bars
       const newStart = Math.max(0, Math.min(barsLen - visibleAtStart, Math.round(startIdx + dragDeltaBars)));
-      setViewportStartIdx(newStart);
+      // Stash the latest target — coalesce into next animation frame.
+      pendingPanRef.current = newStart;
+      if (rafIdRef.current == null) {
+        rafIdRef.current = window.requestAnimationFrame(flushPan);
+      }
     }
     function onUp() {
       if (dragRef.current) {
         dragRef.current = null;
         document.body.style.cursor = "";
+      }
+      // Final flush in case the last frame is still pending.
+      if (rafIdRef.current != null) {
+        window.cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (pendingPanRef.current != null) {
+        setViewportStartIdx(pendingPanRef.current);
+        pendingPanRef.current = null;
       }
     }
     window.addEventListener("mousemove", onMove);
@@ -179,6 +206,34 @@ export default function QuantChart({
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      if (rafIdRef.current != null) window.cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
+
+  // rAF-throttle the hover-crosshair updates the same way. Without this, every
+  // pixel of mouse movement over the chart triggers 3 setState calls — a 1255-bar
+  // SVG re-render at 60+ Hz makes the cursor feel sluggish. We coalesce all
+  // pending hover values into a single React update per animation frame.
+  const pendingHoverRef = useRef<{ idx: number; px: { x: number; y: number }; client: { x: number; y: number } } | null>(null);
+  const hoverRafRef = useRef<number | null>(null);
+  const flushHover = () => {
+    hoverRafRef.current = null;
+    const p = pendingHoverRef.current;
+    if (!p) return;
+    pendingHoverRef.current = null;
+    setHoverIdx(p.idx);
+    setHoverPx(p.px);
+    setHoverClient(p.client);
+  };
+  const scheduleHover = (idx: number, px: { x: number; y: number }, client: { x: number; y: number }) => {
+    pendingHoverRef.current = { idx, px, client };
+    if (hoverRafRef.current == null) {
+      hoverRafRef.current = window.requestAnimationFrame(flushHover);
+    }
+  };
+  useEffect(() => {
+    return () => {
+      if (hoverRafRef.current != null) window.cancelAnimationFrame(hoverRafRef.current);
     };
   }, []);
 
@@ -435,10 +490,14 @@ export default function QuantChart({
           // bars[hoverIdx] stays valid across pan/zoom.
           const localIdx = Math.floor((xRel - PADDING_LEFT) / dx);
           if (localIdx >= 0 && localIdx < visBars.length) {
-            const absIdx = viewStart + localIdx;
-            setHoverIdx(absIdx);
-            setHoverPx({ x: xScale(localIdx), y: yRel });
-            setHoverClient({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+            // rAF-coalesce — a 1255-bar SVG re-renders too slowly to keep up
+            // with raw 60 Hz mousemove. Schedule the latest values for the
+            // next frame; intermediate moves get dropped on the floor.
+            scheduleHover(
+              viewStart + localIdx,
+              { x: xScale(localIdx), y: yRel },
+              { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            );
           }
         }}
       >

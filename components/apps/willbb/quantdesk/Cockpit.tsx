@@ -41,6 +41,7 @@ import {
 import QuantChart, { type OverlaySeries } from "./QuantChart";
 import { SourceBadge, type DataSource } from "../SourceBadge";
 import { useLiveQuote } from "@/lib/useLiveQuote";
+import { readChart, fetchChart, prefetchChart } from "@/lib/chartCache";
 import SymbolSearch from "../SymbolSearch";
 
 interface ChartResp {
@@ -140,27 +141,61 @@ export default function Cockpit({
   rangeNonceRef.current = rangeNonce;
 
   // Fetch asset bars + market bars (^GSPC) in parallel for beta/IR/etc.
+  // SWR pattern: synchronous read of the client cache renders an INSTANT
+  // chart on round-trip range/symbol switches (1Y → 5Y → 1Y feels free
+  // because the second 1Y is served from memory). Background fetch then
+  // refreshes in the background. Range-button clicks bypass the cache so
+  // the user always sees fresh data when they explicitly ask for it.
   useEffect(() => {
     const r = RANGES.find((x) => x.id === range)!;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    setLoading(true);
-    const bypass = rangeNonceRef.current > 0 ? "&bypass=1" : "";
+    const bypass = rangeNonceRef.current > 0;
+
+    // Step 1: synchronous cache read. If we have anything (fresh or stale),
+    // hydrate state immediately so the chart paints without waiting for the
+    // network. Skip on bypass so a manual refresh always shows fresh data.
+    if (!bypass) {
+      const cachedAsset = readChart(symbol, r.id, r.interval);
+      const cachedMkt = readChart("^GSPC", r.id, r.interval);
+      if (cachedAsset) setResp(cachedAsset.payload as unknown as ChartResp);
+      if (cachedMkt) setMktResp(cachedMkt.payload as unknown as ChartResp);
+      // If both were fresh (<60s old), no need to refetch — the cache
+      // entry is already what the server would return anyway.
+      if (cachedAsset?.fresh && cachedMkt?.fresh) {
+        setLoading(false);
+        return () => ctrl.abort();
+      }
+    }
+
+    // Step 2: background fetch (or foreground if cache miss).
+    // Only show the loading badge if we have NO cached chart to render —
+    // otherwise the stale chart stays visible and the refresh is silent.
+    const haveAnyCached = !bypass && readChart(symbol, r.id, r.interval) != null;
+    if (!haveAnyCached) setLoading(true);
+
     Promise.all([
-      fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
-        .then(async (r2) => (r2.ok ? r2.json() : null))
-        .catch(() => null),
-      fetch(`/api/markets/chart?symbol=%5EGSPC&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
-        .then(async (r2) => (r2.ok ? r2.json() : null))
-        .catch(() => null),
-    ]).then(([asset, mkt]: [ChartResp | null, ChartResp | null]) => {
-      setResp(asset && Array.isArray(asset.points) ? asset : null);
-      setMktResp(mkt && Array.isArray(mkt.points) ? mkt : null);
+      fetchChart(symbol, r.id, r.interval, { bypass, signal: ctrl.signal }),
+      fetchChart("^GSPC", r.id, r.interval, { bypass, signal: ctrl.signal }),
+    ]).then(([asset, mkt]) => {
+      if (ctrl.signal.aborted) return;
+      if (asset) setResp(asset as unknown as ChartResp);
+      if (mkt) setMktResp(mkt as unknown as ChartResp);
       setLoading(false);
     });
     return () => ctrl.abort();
   }, [symbol, range, rangeNonce]);
+
+  // Hover prefetch — when the user mouses over a range button, kick off a
+  // background fetch for that range. By the time they actually click, the
+  // data is in the client cache and the click feels instantaneous.
+  const onRangeHover = (rangeId: string) => {
+    const r = RANGES.find((x) => x.id === rangeId);
+    if (!r) return;
+    prefetchChart(symbol, r.id, r.interval);
+    prefetchChart("^GSPC", r.id, r.interval);
+  };
 
   // Wraps setRange so user-initiated clicks bump the bypass nonce; programmatic
   // range changes (e.g., via an external link) skip the bump.
@@ -211,14 +246,26 @@ export default function Cockpit({
   const mktCloses = useMemo(() => (mktResp?.points ?? []).map((p) => p.c), [mktResp]);
   const mktRet = useMemo(() => log_ret(mktCloses), [mktCloses]);
 
-  // Align asset returns with market returns by timestamp (or by index)
+  // STATIC variants — same data minus the live-tick splice. These let the
+  // heavy stats panel (Sharpe, Sortino, vol estimators, ACF/PACF, Hurst,
+  // ADF, rolling beta, IR) skip the per-tick recomputation. The 5s live
+  // tick changes only the latest bar's close — the resulting Sharpe over
+  // 252 days moves by ~10⁻⁵, indistinguishable from noise. Recomputing
+  // O(n²) ACF + Hurst every 5s on a 1255-bar series is the dominant CPU
+  // load on this panel; this is the single biggest perf win we can make.
+  const staticCloses = useMemo(() => staticBars.map((b) => b.c), [staticBars]);
+  const staticAssetRet = useMemo(() => log_ret(staticCloses), [staticCloses]);
+
+  // Align asset returns with market returns by timestamp (or by index).
+  // Keyed on staticBars.length (a primitive) instead of assetRet so this
+  // doesn't churn on every live tick — the alignment shape only changes
+  // when the bar count changes (i.e., a NEW bar is appended).
   const alignedMktRet: (number | null)[] = useMemo(() => {
-    // Simple approach: if same length, use as-is. Otherwise pad/trim.
-    const out: (number | null)[] = new Array(assetRet.length).fill(null);
-    const minLen = Math.min(assetRet.length, mktRet.length);
+    const out: (number | null)[] = new Array(staticBars.length).fill(null);
+    const minLen = Math.min(staticBars.length, mktRet.length);
     for (let i = 0; i < minLen; i++) out[i] = mktRet[i];
     return out;
-  }, [assetRet, mktRet]);
+  }, [staticBars.length, mktRet]);
 
   const overlays: OverlaySeries[] = useMemo(() => {
     if (bars.length === 0) return [];
@@ -243,22 +290,25 @@ export default function Cockpit({
     return out;
   }, [bars, closes, indicators]);
 
-  // Compute auxiliary quant series for the analytics panel (right rail)
+  // Compute auxiliary quant series for the analytics panel (right rail).
+  // CRITICAL: keyed on staticBars (NOT bars) — see comment above for rationale.
+  // Stats panel updates whenever a new bar lands (e.g., daily); the live tick
+  // does not retrigger the O(n²) ACF/PACF + Hurst computation.
   const stats = useMemo(() => {
-    if (assetRet.length < 30) return null;
-    const recent = assetRet.slice(-252).filter((v): v is number => v != null);
+    if (staticAssetRet.length < 30) return null;
+    const recent = staticAssetRet.slice(-252).filter((v): v is number => v != null);
     const meanR = recent.reduce((a, b) => a + b, 0) / Math.max(1, recent.length);
     const sdR = Math.sqrt(recent.reduce((a, b) => a + (b - meanR) ** 2, 0) / Math.max(1, recent.length - 1));
     const sharpe = sdR > 0 ? (meanR / sdR) * Math.sqrt(252) : 0;
     const annVol = sdR * Math.sqrt(252);
 
-    const rvYZ = realized_vol_yz(bars, indicators.rv_yz.params.n);
-    const rvGK = realized_vol_gk(bars, indicators.rv_gk.params.n);
-    const rvPK = realized_vol_pk(bars, indicators.rv_pk.params.n);
-    const rvCC = realized_vol_cc(closes, indicators.rv_cc.params.n);
-    const beta = rolling_beta(assetRet, alignedMktRet, indicators.rollBeta.params.n);
-    const sortinoSeries = sortino(assetRet, indicators.sortino.params.n);
-    const irSeries = information_ratio(assetRet, alignedMktRet, indicators.infoRatio.params.n);
+    const rvYZ = realized_vol_yz(staticBars, indicators.rv_yz.params.n);
+    const rvGK = realized_vol_gk(staticBars, indicators.rv_gk.params.n);
+    const rvPK = realized_vol_pk(staticBars, indicators.rv_pk.params.n);
+    const rvCC = realized_vol_cc(staticCloses, indicators.rv_cc.params.n);
+    const beta = rolling_beta(staticAssetRet, alignedMktRet, indicators.rollBeta.params.n);
+    const sortinoSeries = sortino(staticAssetRet, indicators.sortino.params.n);
+    const irSeries = information_ratio(staticAssetRet, alignedMktRet, indicators.infoRatio.params.n);
 
     const lastVal = (s: (number | null)[]) => {
       for (let i = s.length - 1; i >= 0; i--) if (s[i] != null) return s[i] as number;
@@ -266,7 +316,7 @@ export default function Cockpit({
     };
 
     const hurstVal = hurst(recent);
-    const adfVal = adf_stat(closes.filter((v): v is number => v != null).slice(-252));
+    const adfVal = adf_stat(staticCloses.filter((v): v is number => v != null).slice(-252));
     const acfVals = acf(recent, 20);
     const pacfVals = pacf(recent, 20);
 
@@ -288,7 +338,7 @@ export default function Cockpit({
       n: recent.length,
       rvYZ, rvGK, rvPK, rvCC, beta, sortinoSeries, irSeries,
     };
-  }, [bars, closes, assetRet, alignedMktRet, indicators]);
+  }, [staticBars, staticCloses, staticAssetRet, alignedMktRet, indicators]);
 
   // Build vol overlays (main pane, on close-price scale would be wrong → use a sub-pane)
   // For simplicity, we render vol estimators as their own time-series chart below the main chart.
@@ -369,6 +419,8 @@ export default function Cockpit({
                 key={r.id}
                 type="button"
                 onClick={() => onRangeClick(r.id)}
+                onMouseEnter={() => onRangeHover(r.id)}
+                onFocus={() => onRangeHover(r.id)}
                 style={{
                   background: range === r.id ? COLORS.brandSoft : "transparent",
                   border: "1px solid " + (range === r.id ? COLORS.brand : COLORS.borderSoft),
