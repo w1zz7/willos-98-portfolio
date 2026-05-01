@@ -123,10 +123,13 @@ export default function StrategyLab({
   const [markers, setMarkers] = useState<ChartMarker[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const tradeIdRef = useRef<number>(0);
-  // Counter that user-initiated range button clicks bump → ?bypass=1.
+  // Counter that the (not-yet-wired) manual refresh button bumps. Range
+  // button clicks go through the client SWR cache → 30s server cache →
+  // Yahoo fetch. Only an explicit refresh forces a fresh Yahoo round-trip.
   const [rangeNonce, setRangeNonce] = useState<number>(0);
   const rangeNonceRef = useRef<number>(0);
   rangeNonceRef.current = rangeNonce;
+  const bypassNextRef = useRef<boolean>(false);
   const onRangeClick = (id: string) => {
     setRangeNonce((n) => n + 1);
     setRange(id);
@@ -159,7 +162,8 @@ export default function StrategyLab({
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    const bypass = rangeNonceRef.current > 0;
+    const bypass = bypassNextRef.current;
+    bypassNextRef.current = false;
 
     const hydrate = (d: { points: { t: number; c: number; o?: number | null; h?: number | null; l?: number | null; v?: number | null }[]; source?: string | null } | null) => {
       if (!d || !Array.isArray(d.points)) return;

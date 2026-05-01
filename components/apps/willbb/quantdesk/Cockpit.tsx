@@ -132,13 +132,19 @@ export default function Cockpit({
   const [loading, setLoading] = useState<boolean>(false);
   const [indicators, setIndicators] = useState<Record<IndicatorId, IndicatorState>>(DEFAULTS);
   const abortRef = useRef<AbortController | null>(null);
-  // Counter that user-initiated range button clicks bump. We pass &bypass=1
-  // when nonzero so the server-side success cache is skipped — guarantees
-  // the chart visibly redraws on every range click, not the cached stale
-  // version. Initial mount + symbol change still hit cache for fast paint.
+  // Counter that the manual refresh button bumps. We pass &bypass=1 + skip
+  // the client SWR cache only when explicitly refreshing — range button
+  // clicks now go through the client cache → server cache (30s TTL) → Yahoo.
+  // Round-trip range clicks (1Y → 5Y → 1Y) hit the client cache for instant
+  // re-render. First-time clicks usually hit the 30s server cache for ~50ms
+  // total round-trip. Only an explicit "refresh" gesture forces a Yahoo fetch.
   const [rangeNonce, setRangeNonce] = useState<number>(0);
   const rangeNonceRef = useRef<number>(0);
   rangeNonceRef.current = rangeNonce;
+  // Separate flag for the next fetch to bypass the client+server cache. Set
+  // by the manual refresh button (not implemented on this panel yet — left
+  // here as a hook for when we add one). Resets after one use.
+  const bypassNextRef = useRef<boolean>(false);
 
   // Fetch asset bars + market bars (^GSPC) in parallel for beta/IR/etc.
   // SWR pattern: synchronous read of the client cache renders an INSTANT
@@ -151,7 +157,11 @@ export default function Cockpit({
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    const bypass = rangeNonceRef.current > 0;
+    // Use the cache aggressively — only bypass when the user has explicitly
+    // demanded fresh data via the (yet-to-be-wired-up) refresh button. Range
+    // clicks go through cache → server cache → Yahoo as needed.
+    const bypass = bypassNextRef.current;
+    bypassNextRef.current = false;
 
     // Step 1: synchronous cache read. If we have anything (fresh or stale),
     // hydrate state immediately so the chart paints without waiting for the
