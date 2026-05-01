@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import MacroPanel from "./MacroPanel";
 import CalendarsPanel from "./CalendarsPanel";
+import { swrFetch } from "@/lib/clientFetchCache";
 
 const COLORS = {
   bg: "#151518",
@@ -74,19 +75,27 @@ function useScreener(scrId: "gainers" | "losers" | "active") {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetch("/api/markets/equity?module=" + scrId)
-      .then(async (r) => {
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          throw new Error(j.error ?? `HTTP ${r.status}`);
-        }
-        return r.json();
-      })
+    // 5-min stale window — screener data is intraday but doesn't need
+    // sub-minute precision. Tab navigation (Screeners → Macro → Screeners)
+    // now hits cache instead of refetching. SWR cache also dedups when
+    // multiple Discovery components mount the same screener concurrently.
+    const STALE_MS = 5 * 60_000;
+    type ScrResp = { rows?: ScreenerRow[] };
+    const r = swrFetch<ScrResp>("/api/markets/equity?module=" + scrId, STALE_MS);
+    if (r.cached) {
+      setRows(r.cached.rows ?? []);
+      setError(null);
+    }
+    if (!r.isFresh) setLoading(true);
+    r.promise
       .then((d) => {
         if (cancelled) return;
-        setRows((d as { rows?: ScreenerRow[] }).rows ?? []);
+        if (d) {
+          setRows(d.rows ?? []);
+          setError(null);
+        } else if (!r.cached) {
+          setError("Failed to load");
+        }
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)))
       .finally(() => !cancelled && setLoading(false));

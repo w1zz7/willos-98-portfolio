@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { swrFetch } from "@/lib/clientFetchCache";
 import { COLORS, FONT_MONO, FONT_UI } from "./OpenBB";
 
 interface MacroPoint {
@@ -284,8 +285,14 @@ export default function MacroPanel() {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [unavailable, setUnavailable] = useState<Record<string, boolean>>({});
 
+  // SWR-cached fetches for the 11 macro series. The data is monthly/quarterly
+  // economic data — a 15-min stale window is fine. Without this, every visit
+  // to Discovery → Macro fired 11 fresh AV calls (eating into the 25/day
+  // budget) and waited 100-500ms × 11 sequentially due to AV's 5/min throttle.
+  // Now: instant render from cache on subsequent visits, AV budget preserved.
   useEffect(() => {
     const ctrl = new AbortController();
+    const STALE_MS = 15 * 60_000;
     type Setter = (data: MacroPoint[] | null) => void;
     const seriesList: { key: string; url: string; setter: Setter }[] = [
       { key: "tsy3m", url: "/api/markets/alpha?fn=TREASURY&maturity=3month&interval=monthly", setter: setTsy3m },
@@ -300,23 +307,34 @@ export default function MacroPanel() {
       { key: "unemp", url: "/api/markets/alpha?fn=UNEMPLOYMENT", setter: setUnemp },
       { key: "infl", url: "/api/markets/alpha?fn=INFLATION", setter: setInfl },
     ];
-    setLoading(Object.fromEntries(seriesList.map((s) => [s.key, true])));
+    // Initial loading flags only set true if no cached entry exists for that
+    // series. Cached entries paint instantly without a "loading…" flash.
+    const initialLoading: Record<string, boolean> = {};
     seriesList.forEach((s) => {
-      fetch(s.url, { signal: ctrl.signal })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: SeriesResp | null) => {
+      const r = swrFetch<SeriesResp>(s.url, STALE_MS, { signal: ctrl.signal });
+      if (r.cached) {
+        if (r.cached.unavailable || !r.cached.data) {
+          setUnavailable((u) => ({ ...u, [s.key]: true }));
+        } else {
+          s.setter(r.cached.data);
+        }
+      }
+      initialLoading[s.key] = !r.isFresh;
+      r.promise
+        .then((d) => {
+          if (ctrl.signal.aborted) return;
           if (!d || d.unavailable || !d.data) {
             setUnavailable((u) => ({ ...u, [s.key]: true }));
           } else {
             s.setter(d.data);
+            setUnavailable((u) => ({ ...u, [s.key]: false }));
           }
-          setLoading((u) => ({ ...u, [s.key]: false }));
         })
-        .catch(() => {
-          setUnavailable((u) => ({ ...u, [s.key]: true }));
-          setLoading((u) => ({ ...u, [s.key]: false }));
+        .finally(() => {
+          if (!ctrl.signal.aborted) setLoading((u) => ({ ...u, [s.key]: false }));
         });
     });
+    setLoading(initialLoading);
     return () => ctrl.abort();
   }, []);
 

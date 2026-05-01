@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { COLORS, FONT_MONO, FONT_UI } from "./OpenBB";
+import { swrFetch } from "@/lib/clientFetchCache";
 
 interface EarningsRow {
   symbol: string;
@@ -54,30 +55,56 @@ export default function CalendarsPanel({ onPick }: { onPick: (s: string) => void
   const [iposUnavailable, setIposUnavailable] = useState(false);
   const [iposLoading, setIposLoading] = useState(true);
 
+  // SWR-cached fetch — calendars update at most daily, so a 30-min stale
+  // window is plenty. Re-mounting the Discovery → Calendars sub-tab pulls
+  // from cache instantly; in-flight dedup means a Macro→Calendars→Macro
+  // round-trip during the same session never hits the network twice.
   useEffect(() => {
     const ctrl = new AbortController();
-    fetch("/api/markets/alpha?fn=EARNINGS_CALENDAR&horizon=3month", { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { data?: EarningsRow[]; unavailable?: boolean } | null) => {
+    const STALE_MS = 30 * 60_000;
+
+    type EarningsResp = { data?: EarningsRow[]; unavailable?: boolean };
+    const earnings = swrFetch<EarningsResp>(
+      "/api/markets/alpha?fn=EARNINGS_CALENDAR&horizon=3month",
+      STALE_MS,
+      { signal: ctrl.signal },
+    );
+    if (earnings.cached) {
+      if (earnings.cached.unavailable || !earnings.cached.data) setEarningsUnavailable(true);
+      else setEarnings(earnings.cached.data);
+      if (earnings.isFresh) setEarningsLoading(false);
+    }
+    earnings.promise
+      .then((d) => {
+        if (ctrl.signal.aborted) return;
         if (!d || d.unavailable || !d.data) setEarningsUnavailable(true);
-        else setEarnings(d.data);
-        setEarningsLoading(false);
+        else { setEarnings(d.data); setEarningsUnavailable(false); }
       })
-      .catch(() => {
-        setEarningsUnavailable(true);
-        setEarningsLoading(false);
+      .finally(() => {
+        if (!ctrl.signal.aborted) setEarningsLoading(false);
       });
-    fetch("/api/markets/alpha?fn=IPO_CALENDAR", { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { data?: IPORow[]; unavailable?: boolean } | null) => {
+
+    type IPOResp = { data?: IPORow[]; unavailable?: boolean };
+    const ipo = swrFetch<IPOResp>(
+      "/api/markets/alpha?fn=IPO_CALENDAR",
+      STALE_MS,
+      { signal: ctrl.signal },
+    );
+    if (ipo.cached) {
+      if (ipo.cached.unavailable || !ipo.cached.data) setIposUnavailable(true);
+      else setIpos(ipo.cached.data);
+      if (ipo.isFresh) setIposLoading(false);
+    }
+    ipo.promise
+      .then((d) => {
+        if (ctrl.signal.aborted) return;
         if (!d || d.unavailable || !d.data) setIposUnavailable(true);
-        else setIpos(d.data);
-        setIposLoading(false);
+        else { setIpos(d.data); setIposUnavailable(false); }
       })
-      .catch(() => {
-        setIposUnavailable(true);
-        setIposLoading(false);
+      .finally(() => {
+        if (!ctrl.signal.aborted) setIposLoading(false);
       });
+
     return () => ctrl.abort();
   }, []);
 
