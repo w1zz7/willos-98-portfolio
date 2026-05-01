@@ -63,12 +63,7 @@ const Discovery = dynamic(() => import("./Discovery"), {
   loading: () => <PaneLoader label="Loading Discovery" />,
   ssr: false,
 });
-// Research tab is now powered by the willbb-py companion (Streamlit + Plotly +
-// pandas). The hand-rolled QuantDesk (Cockpit / StrategyLab / Scanner /
-// RiskDashboard / QuantChart / 18 quant primitives / Pine-v5 DSL backtester /
-// Carhart 4-factor regression — ~4,500 LOC) was deleted in favor of an iframe
-// to localhost:8502 (dev) or the deployed Streamlit Cloud URL (prod).
-const ResearchEmbed = dynamic(() => import("./ResearchEmbed"), {
+const QuantDesk = dynamic(() => import("./quantdesk/QuantDesk"), {
   loading: () => <PaneLoader label="Loading Research" />,
   ssr: false,
 });
@@ -455,7 +450,10 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
           />
         )}
         {tab === "research" && (
-          <ResearchEmbed focusedSymbol={focused} />
+          <QuantDesk
+            symbol={focused}
+            setSymbol={setFocused}
+          />
         )}
       </div>
 
