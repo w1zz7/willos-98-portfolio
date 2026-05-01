@@ -27,6 +27,7 @@ import type { ChartPoint } from "./PriceChart";
 import TradingViewChart, { type TVInterval, type TVRange } from "./TradingViewChart";
 import BootScreen from "./BootScreen";
 import { SourceBadge, type DataSource, aggregateSource } from "./SourceBadge";
+import { prefetchChart } from "@/lib/chartCache";
 
 // Lazy-loaded heavy panels — they don't ship in the Markets-tab initial chunk.
 // EquityResearch (multi-tab equity views), Discovery (screeners + macro +
@@ -226,6 +227,25 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  // Pre-warm the chart cache for the currently-focused symbol at the most
+  // common ranges. By the time the user clicks the Research tab (which mounts
+  // QuantDesk → Cockpit → fetches /api/markets/chart), the cache is already
+  // populated and the chart paints instantly. We fetch in a microtask so the
+  // initial Markets-tab paint isn't blocked. Re-fires on symbol change so a
+  // watchlist click also pre-populates the cache before tab switch.
+  useEffect(() => {
+    if (!focused) return;
+    // Only warm 1mo (default Cockpit range) + 1y (most common second click).
+    // 5Y is large enough that warming it preemptively is wasteful — cover via
+    // the hover-prefetch on the range button instead.
+    Promise.resolve().then(() => {
+      prefetchChart(focused, "1mo", "1d");
+      prefetchChart(focused, "1y", "1d");
+      // ^GSPC for Cockpit's beta/IR market series.
+      prefetchChart("^GSPC", "1mo", "1d");
+    });
+  }, [focused]);
 
   // Strip quotes - poll every 15s while window is open. Pauses when the
   // tab is hidden so we don't hammer the upstream from background tabs.

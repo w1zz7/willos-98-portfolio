@@ -15,7 +15,7 @@
  * a "Classics" group for chart compatibility, but defaulted off.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { COLORS, FONT_MONO, FONT_UI } from "../OpenBB";
 import {
   type Bar,
@@ -468,7 +468,7 @@ export default function Cockpit({
             >
               <SectionTitle>Realized Volatility (annualized · 21-day window)</SectionTitle>
               <RealizedVolChart
-                bars={bars}
+                barCount={staticBars.length}
                 rvYZ={stats.rvYZ}
                 rvGK={stats.rvGK}
                 rvPK={stats.rvPK}
@@ -601,14 +601,18 @@ function Readout({ label, value, tone }: { label: string; value: string; tone: s
   );
 }
 
-function RealizedVolChart({
-  bars,
+// Inner impl — wrapped in memo() at the export site below. Takes barCount
+// (primitive) instead of the full bars[] array so React.memo's default
+// shallow compare correctly skips re-render across live ticks (the array
+// reference changes on every tick but bars.length doesn't).
+function RealizedVolChartImpl({
+  barCount,
   rvYZ,
   rvGK,
   rvPK,
   rvCC,
 }: {
-  bars: Bar[];
+  barCount: number;
   rvYZ: (number | null)[];
   rvGK: (number | null)[];
   rvPK: (number | null)[];
@@ -621,7 +625,7 @@ function RealizedVolChart({
   }
   const lo = 0;
   const hi = Math.max(...all) * 1.05;
-  const xFor = (i: number) => PAD_L + (i / Math.max(1, bars.length - 1)) * (W - PAD_L - PAD_R);
+  const xFor = (i: number) => PAD_L + (i / Math.max(1, barCount - 1)) * (W - PAD_L - PAD_R);
   const yFor = (v: number) => H - PAD_B - (v / hi) * (H - PAD_T - PAD_B);
 
   function lineFor(series: (number | null)[]): string {
@@ -661,8 +665,15 @@ function RealizedVolChart({
     </svg>
   );
 }
+// React.memo wrapper — barCount is a primitive and the rv* arrays are stable
+// across live ticks (Phase L decoupled stats from bars). Default shallow
+// compare is sufficient: if all 5 props are referentially equal, skip render.
+const RealizedVolChart = memo(RealizedVolChartImpl);
 
-function CorrelogramChart({ values, n, label }: { values: number[]; n: number; label: string }) {
+// Inner impl, wrapped in memo() at the bottom of the file. ACF/PACF arrays
+// (`values`) are stable across live ticks via Phase L (stats keys on
+// staticBars), so React.memo's shallow compare correctly skips re-render.
+function CorrelogramChartImpl({ values, n, label }: { values: number[]; n: number; label: string }) {
   void label;
   const W = 600, H = 130, PAD_L = 40, PAD_R = 12, PAD_T = 12, PAD_B = 22;
   const maxLag = values.length - 1;
@@ -717,3 +728,4 @@ function CorrelogramChart({ values, n, label }: { values: number[]; n: number; l
     </svg>
   );
 }
+const CorrelogramChart = memo(CorrelogramChartImpl);

@@ -456,6 +456,35 @@ function SubTabBar({ sub, setSub }: { sub: SubTab; setSub: (s: SubTab) => void }
 }
 
 // ---------- shared module fetcher hook ----------
+//
+// Client-side stale-while-revalidate cache for /api/markets/equity calls.
+// Without this, clicking a sub-tab (Statistics → Income → Statistics)
+// re-fetches every time even though the data hasn't changed. Module data
+// (statistics, income, balance, etc.) updates at most quarterly so a 5-min
+// stale window is plenty fresh while making sub-tab navigation instant.
+//
+// Keyed on (symbol, moduleName, ...deps). LRU-bounded at 64 entries —
+// covers ~5 symbols × 13 modules. Bumping the refresh nonce (the user
+// clicking the manual Refresh button) bypasses the cache for all modules
+// of the active symbol; no per-module invalidation needed because the
+// nonce changes the cache key indirectly via the deps array.
+const equityCache = new Map<string, { data: unknown; at: number }>();
+const EQUITY_STALE_MS = 5 * 60_000; // 5 min — equity research is quarterly data
+const EQUITY_MAX_ENTRIES = 64;
+const equityInflight = new Map<string, Promise<unknown>>();
+
+function equityCacheKey(symbol: string, moduleName: string, deps: unknown[], nonce: number): string {
+  return `${symbol.toUpperCase()}|${moduleName}|${deps.join("|")}|${nonce}`;
+}
+function equityCacheTouch(key: string, value: { data: unknown; at: number }) {
+  equityCache.delete(key);
+  equityCache.set(key, value);
+  while (equityCache.size > EQUITY_MAX_ENTRIES) {
+    const oldest = equityCache.keys().next().value;
+    if (oldest) equityCache.delete(oldest);
+    else break;
+  }
+}
 
 function useEquityModule<T>(symbol: string, moduleName: string, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
@@ -465,30 +494,61 @@ function useEquityModule<T>(symbol: string, moduleName: string, deps: unknown[] 
   const nonce = useContext(EquityRefreshContext);
   useEffect(() => {
     if (!symbol) return;
+    const key = equityCacheKey(symbol, moduleName, deps, nonce);
+
+    // Synchronous cache read — instant render of any cached entry.
+    const cached = equityCache.get(key);
+    if (cached) {
+      setData(cached.data as T);
+      setFetchedAt(cached.at);
+      setError(null);
+      // If still fresh, no network round-trip needed.
+      if (Date.now() - cached.at < EQUITY_STALE_MS) {
+        setLoading(false);
+        return;
+      }
+    } else {
+      // Only show loading badge on a true cache miss — sub-tab round-trips
+      // (where stale data is already on-screen) refresh silently.
+      setLoading(true);
+      setError(null);
+    }
+
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     const params = new URLSearchParams({ module: moduleName, symbol });
     for (const d of deps) {
       if (typeof d === "string" && d) params.append(moduleName === "options" ? "expiration" : "extra", d);
     }
-    fetch("/api/markets/equity?" + params.toString())
-      .then(async (r) => {
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          throw new Error(j.error ?? `HTTP ${r.status}`);
-        }
-        return r.json();
-      })
+    const url = "/api/markets/equity?" + params.toString();
+
+    // In-flight dedup — concurrent sub-tab mounts for the same key share one fetch.
+    let promise = equityInflight.get(key);
+    if (!promise) {
+      promise = fetch(url)
+        .then(async (r) => {
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error ?? `HTTP ${r.status}`);
+          }
+          return r.json();
+        })
+        .then((d) => {
+          if ((d as { error?: string }).error) throw new Error((d as { error: string }).error);
+          equityCacheTouch(key, { data: d, at: Date.now() });
+          return d;
+        })
+        .finally(() => {
+          equityInflight.delete(key);
+        });
+      equityInflight.set(key, promise);
+    }
+
+    promise
       .then((d) => {
         if (!cancelled) {
-          if ((d as { error?: string }).error) {
-            setError((d as { error: string }).error);
-            setData(null);
-          } else {
-            setData(d as T);
-            setFetchedAt(Date.now());
-          }
+          setData(d as T);
+          setFetchedAt(Date.now());
+          setError(null);
         }
       })
       .catch((e) => {
