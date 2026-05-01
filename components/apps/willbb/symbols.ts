@@ -3,7 +3,7 @@
  *
  * INDEX_STRIP powers the top ticker tape. WATCHLIST_ORDER is Will's actual
  * trading-app watchlist (transcribed from his platform, April 2026), in
- * the order he keeps it — most-watched at the top. The Markets pane
+ * the order he keeps it - most-watched at the top. The Markets pane
  * scrolls so the whole list is reachable.
  */
 
@@ -22,7 +22,11 @@ export const INDEX_STRIP: SymbolMeta[] = [
   { symbol: "^RUT", label: "Russell 2K", group: "index" },
   { symbol: "^VIX", label: "VIX", group: "index" },
   { symbol: "CL=F", label: "WTI Oil", group: "commodity" },
+  { symbol: "BZ=F", label: "Brent", group: "commodity" },
   { symbol: "GC=F", label: "Gold", group: "commodity" },
+  { symbol: "SI=F", label: "Silver", group: "commodity" },
+  { symbol: "EURUSD=X", label: "EUR/USD", group: "fx" },
+  { symbol: "USDJPY=X", label: "USD/JPY", group: "fx" },
   { symbol: "BTC-USD", label: "Bitcoin", group: "crypto" },
   { symbol: "ETH-USD", label: "Ethereum", group: "crypto" },
 ];
@@ -31,7 +35,7 @@ export const INDEX_STRIP: SymbolMeta[] = [
  * Will's actual watchlist, top-to-bottom in the order he keeps it.
  * Sourced from his trading-platform screens.
  */
-const WATCHLIST_ORDER: string[] = [
+export const WATCHLIST_ORDER: string[] = [
   "GOOG", "UNH", "NVDA", "AMD", "TEM",
   "SPY", "QQQ", "RDDT", "AAPL", "HOOD",
   "DASH", "AMZN", "ONON", "TSLA", "MSTR",

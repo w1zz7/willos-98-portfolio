@@ -176,7 +176,7 @@ export default function TradingStrategy({ window: _ }: { window: WindowState }) 
               Trading Strategy
             </div>
             <div className="text-[14px] opacity-90 leading-tight">
-              How Will trades — pre-market levels + a fundamentals-first checklist
+              How Will trades - pre-market levels + a fundamentals-first checklist
             </div>
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function TradingStrategy({ window: _ }: { window: WindowState }) 
         <SectionHeader
           eyebrow="Section 2"
           title="Evaluation Framework"
-          subtitle="Fundamentals first, then technicals — 5 checks before sizing in"
+          subtitle="Fundamentals first, then technicals - 5 checks before sizing in"
         />
 
         <div className="px-[14px] pt-[12px] pb-[14px] flex flex-col gap-[10px]">
@@ -315,7 +315,7 @@ export default function TradingStrategy({ window: _ }: { window: WindowState }) 
                 Bottom line
               </div>
               <div className="text-[16px] leading-relaxed mt-[2px] italic">
-                Fundamentals get the green light first — revenue, margins,
+                Fundamentals get the green light first - revenue, margins,
                 cash, valuation. Then if the technicals align (uptrend,
                 positive momentum, volume confirmation, price defending
                 support), the stock looks good to consider. Otherwise wait

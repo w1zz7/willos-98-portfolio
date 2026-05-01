@@ -1,11 +1,11 @@
 {
   "weights": [
-    0.24231374758621826,
-    0.3788236458662747,
-    0.40272652576343393,
-    0.19190999900623407,
-    0.10206305861607784,
-    -0.05936397188118484
+    0.244365631909012,
+    0.379636004656742,
+    0.39503405993239793,
+    0.214139694653215,
+    0.08215769100281048,
+    -0.04812740942187305
   ],
   "featureNames": [
     "bias",
@@ -23,14 +23,14 @@
     "Tournament purse",
     "Season (era)"
   ],
-  "accuracy": 0.6156316916488223,
+  "accuracy": 0.6159070052003671,
   "baseRate": 0.6014377485469563,
   "trainedOn": 32690,
   "confusion": {
-    "tp": 18032,
-    "fp": 10936,
-    "fn": 1629,
-    "tn": 2093
+    "tp": 18039,
+    "fp": 10934,
+    "fn": 1622,
+    "tn": 2095
   },
   "hyperparams": {
     "epochs": 600,
@@ -38,5 +38,147 @@
     "optimizer": "batch GD"
   },
   "target": "made_cut (binary) on row-level tournament data 2016-2022",
-  "note": "Features are lagged from the player's prior season — leak-free."
+  "note": "Features are lagged from the player's prior season - leak-free.",
+  "walkForward": {
+    "method": "Per test season Y, train on rows season<Y, test on season===Y",
+    "testSeasons": [
+      2020,
+      2021,
+      2022
+    ],
+    "folds": [
+      {
+        "testSeason": 2020,
+        "nTrain": 19039,
+        "nTest": 4287,
+        "accuracy": 0.6209,
+        "baseRate": 0.6011,
+        "lift": 0.0198,
+        "confusion": {
+          "tp": 2439,
+          "fp": 1487,
+          "fn": 138,
+          "tn": 223
+        }
+      },
+      {
+        "testSeason": 2021,
+        "nTrain": 23326,
+        "nTest": 5688,
+        "accuracy": 0.5937,
+        "baseRate": 0.5536,
+        "lift": 0.0401,
+        "confusion": {
+          "tp": 2933,
+          "fp": 2095,
+          "fn": 216,
+          "tn": 444
+        }
+      },
+      {
+        "testSeason": 2022,
+        "nTrain": 29014,
+        "nTest": 3676,
+        "accuracy": 0.6124,
+        "baseRate": 0.5987,
+        "lift": 0.0136,
+        "confusion": {
+          "tp": 1928,
+          "fp": 1152,
+          "fn": 273,
+          "tn": 323
+        }
+      }
+    ],
+    "meanOosLift": 0.0245,
+    "meanOosAccuracy": 0.609,
+    "meanOosBaseRate": 0.5845
+  },
+  "calibration": {
+    "method": "10-decile bucketing of stitched OOS predictions",
+    "bins": [
+      {
+        "bin": 0,
+        "lo": 0,
+        "hi": 0.1,
+        "n": 4,
+        "predMean": 0.0477,
+        "actualRate": 0
+      },
+      {
+        "bin": 1,
+        "lo": 0.1,
+        "hi": 0.2,
+        "n": 32,
+        "predMean": 0.149,
+        "actualRate": 0.25
+      },
+      {
+        "bin": 2,
+        "lo": 0.2,
+        "hi": 0.3,
+        "n": 161,
+        "predMean": 0.2584,
+        "actualRate": 0.3602
+      },
+      {
+        "bin": 3,
+        "lo": 0.3,
+        "hi": 0.4,
+        "n": 317,
+        "predMean": 0.3603,
+        "actualRate": 0.347
+      },
+      {
+        "bin": 4,
+        "lo": 0.4,
+        "hi": 0.5,
+        "n": 1103,
+        "predMean": 0.459,
+        "actualRate": 0.4089
+      },
+      {
+        "bin": 5,
+        "lo": 0.5,
+        "hi": 0.6,
+        "n": 4172,
+        "predMean": 0.5587,
+        "actualRate": 0.5256
+      },
+      {
+        "bin": 6,
+        "lo": 0.6,
+        "hi": 0.7,
+        "n": 6130,
+        "predMean": 0.641,
+        "actualRate": 0.6173
+      },
+      {
+        "bin": 7,
+        "lo": 0.7,
+        "hi": 0.8,
+        "n": 1687,
+        "predMean": 0.7364,
+        "actualRate": 0.7599
+      },
+      {
+        "bin": 8,
+        "lo": 0.8,
+        "hi": 0.9,
+        "n": 45,
+        "predMean": 0.8206,
+        "actualRate": 0.9111
+      },
+      {
+        "bin": 9,
+        "lo": 0.9,
+        "hi": 1,
+        "n": 0,
+        "predMean": 0.95,
+        "actualRate": 0
+      }
+    ],
+    "brierScore": 0.2329,
+    "nOosPredictions": 13651
+  }
 }

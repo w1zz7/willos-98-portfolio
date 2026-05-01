@@ -3,21 +3,22 @@
 /**
  * Predictions tab: two trained ML models, both run in-browser.
  *
- *   Model A — Play probability (logistic regression, weather → anyPlay)
+ *   Model A - Play probability (logistic regression, weather → anyPlay)
  *             1,095-day train, 8 features, 69% accuracy
  *
- *   Model B — PGA cut probability (logistic regression, lagged player profile
+ *   Model B - PGA cut probability (logistic regression, lagged player profile
  *             + tournament purse → made_cut)
  *             32,690-row train, 6 features, 61.6% accuracy vs 60.1% base rate
  *
  * Both have weights shipped as static JSON (~1.5KB total). Inference is pure
- * arithmetic — sliders change → probability updates same frame.
+ * arithmetic - sliders change → probability updates same frame.
  */
 
 import { useMemo, useState } from "react";
 import model from "@/data/golfdata/model.json";
 import cutModel from "@/data/golfdata/cut_model.json";
 import finishModel from "@/data/golfdata/finish_model.json";
+import CareerSimulator from "./CareerSimulator";
 
 interface Colors {
   bg: string; panel: string; panelAlt: string; panelDeep: string;
@@ -32,7 +33,7 @@ interface Props {
   fontUi: string;
 }
 
-type ModelTab = "play" | "cut" | "finish";
+type ModelTab = "play" | "cut" | "finish" | "simulator";
 
 const OUTLOOKS = ["sunny", "overcast", "rain", "snow"] as const;
 type Outlook = (typeof OUTLOOKS)[number];
@@ -95,22 +96,22 @@ const PLAY_PRESETS: { name: string; inputs: PlayInputs; rationale: string }[] = 
   {
     name: "Perfect summer day",
     inputs: { temp: 24, humidity: 45, windy: false, outlook: "sunny" },
-    rationale: "Warm, dry, calm, sunny — model maximum",
+    rationale: "Warm, dry, calm, sunny - model maximum",
   },
   {
     name: "Stormy day",
     inputs: { temp: 8, humidity: 92, windy: true, outlook: "rain" },
-    rationale: "Cold, humid, windy, raining — model minimum",
+    rationale: "Cold, humid, windy, raining - model minimum",
   },
   {
     name: "Mild overcast",
     inputs: { temp: 17, humidity: 65, windy: false, outlook: "overcast" },
-    rationale: "Moderate everything — uncertain zone",
+    rationale: "Moderate everything - uncertain zone",
   },
   {
     name: "Cold but clear",
     inputs: { temp: 2, humidity: 50, windy: false, outlook: "sunny" },
-    rationale: "Sunny but freezing — winter trade-off",
+    rationale: "Sunny but freezing - winter trade-off",
   },
 ];
 
@@ -150,7 +151,8 @@ export default function PredictionsTab({ colors, fontMono, fontUi }: Props) {
           [
             { id: "play", label: "Model A · Play prediction", sub: "weather → anyPlay" },
             { id: "cut", label: "Model B · PGA cut prediction", sub: "lagged form + purse → made_cut" },
-            { id: "finish", label: "Model C · Tournament finish", sub: "lagged SG + course + major → finish" },
+            { id: "finish", label: "Model C · Top-10 probability", sub: "lagged SG + course + major → P(top-10)" },
+            { id: "simulator", label: "Model D · GBM Career Simulator", sub: "stochastic process · Monte Carlo · EWMA σ" },
           ] as { id: ModelTab; label: string; sub: string }[]
         ).map((t) => {
           const active = tab === t.id;
@@ -190,6 +192,7 @@ export default function PredictionsTab({ colors, fontMono, fontUi }: Props) {
         {tab === "play" && <PlayModelView colors={colors} fontMono={fontMono} />}
         {tab === "cut" && <CutModelView colors={colors} fontMono={fontMono} />}
         {tab === "finish" && <FinishModelView colors={colors} fontMono={fontMono} />}
+        {tab === "simulator" && <CareerSimulator colors={colors} fontMono={fontMono} />}
       </div>
     </div>
   );
@@ -347,7 +350,7 @@ function PlayModelView({ colors, fontMono }: { colors: Colors; fontMono: string 
           <strong>Loss:</strong> binary cross-entropy.{" "}
           <strong>Optimizer:</strong> batch gradient descent, no momentum.{" "}
           <strong>Why LR not a tree?</strong> The dataset is small (1,095 rows), the features are
-          smooth weather variables, and a linear-in-features decision surface is interpretable —
+          smooth weather variables, and a linear-in-features decision surface is interpretable -
           you can read each weight as a per-feature pull on the logit.{" "}
           <strong>Limitations:</strong> no held-out test split (small data), seasonal correlation
           isn&apos;t modeled, and the snow class only has ~50 days/year so its weight is noisy.
@@ -476,7 +479,7 @@ function CutModelView({ colors, fontMono }: { colors: Colors; fontMono: string }
           Player profile inputs
         </h3>
         <p style={{ fontSize: 11, color: colors.textDim, lineHeight: 1.55, marginBottom: 14 }}>
-          Trained on {cutModel.trainedOn.toLocaleString()} tournament-rounds (2016–2022) — features
+          Trained on {cutModel.trainedOn.toLocaleString()} tournament-rounds (2016–2022) - features
           are <em>lagged</em> from the player&apos;s prior season so there&apos;s no leakage from the
           cut being predicted. Adjust below to see what kind of player profile produces a strong
           cut probability.
@@ -574,7 +577,7 @@ function CutModelView({ colors, fontMono }: { colors: Colors; fontMono: string }
         <Methodology colors={colors} fontMono={fontMono}>
           <strong>Why a cut model is hard:</strong> base rate is ~60% (most rows are pros who
           regularly make cuts), so a model that just predicts &quot;always made&quot; would beat 60% on
-          its own. Beating that ~1.5pp is real signal — it means the model is using the
+          its own. Beating that ~1.5pp is real signal - it means the model is using the
           lagged-form features beyond a no-information majority guess.
           <br />
           <strong>Confusion matrix on train:</strong>{" "}
@@ -586,7 +589,7 @@ function CutModelView({ colors, fontMono }: { colors: Colors; fontMono: string }
           {f1.toFixed(2)}
           <br />
           <strong>Limitations:</strong> course-difficulty isn&apos;t modeled, head-to-head field
-          strength is collapsed into the purse signal, and the lag is one season — a hot start
+          strength is collapsed into the purse signal, and the lag is one season - a hot start
           this season doesn&apos;t reflect.
         </Methodology>
       </div>
@@ -645,17 +648,163 @@ function CutModelView({ colors, fontMono }: { colors: Colors; fontMono: string }
             fontFamily: fontMono,
           }}
         >
-          Train accuracy: {(cutModel.accuracy * 100).toFixed(1)}% · base rate{" "}
+          Train (in-sample) accuracy: {(cutModel.accuracy * 100).toFixed(1)}% · base rate{" "}
           {(cutModel.baseRate * 100).toFixed(1)}% · Δ +{((cutModel.accuracy - cutModel.baseRate) * 100).toFixed(2)}pp.
         </div>
+
+        {cutModel.walkForward && cutModel.calibration && (
+          <CutOosPanel
+            walkForward={cutModel.walkForward}
+            calibration={cutModel.calibration}
+            colors={colors}
+            fontMono={fontMono}
+          />
+        )}
       </div>
     </div>
   );
 }
 
+interface CutWalkForwardData {
+  method: string;
+  testSeasons: number[];
+  folds: { testSeason: number; nTrain: number; nTest: number; accuracy: number; baseRate: number; lift: number; confusion: { tp: number; fp: number; fn: number; tn: number } }[];
+  meanOosLift: number;
+  meanOosAccuracy: number;
+  meanOosBaseRate: number;
+}
+interface CutCalibrationData {
+  method: string;
+  bins: { bin: number; lo: number; hi: number; n: number; predMean: number; actualRate: number }[];
+  brierScore: number;
+  nOosPredictions: number;
+}
+
+function CutOosPanel({
+  walkForward,
+  calibration,
+  colors,
+  fontMono,
+}: {
+  walkForward: CutWalkForwardData;
+  calibration: CutCalibrationData;
+  colors: Colors;
+  fontMono: string;
+}) {
+  return (
+    <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid " + colors.borderSoft }}>
+      <Label colors={colors}>Walk-forward OOS validation</Label>
+      <p style={{ fontSize: 11, color: colors.textDim, marginBottom: 10, lineHeight: 1.55 }}>
+        For each test season, train on all earlier seasons only and predict the test season. This
+        is the only honest way to know if the lift over base rate generalizes - anything else is
+        in-sample storytelling.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto 1fr 1fr 1fr 1fr",
+          fontSize: 11,
+          fontFamily: fontMono,
+          background: colors.panel,
+          border: "1px solid " + colors.borderSoft,
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em" }}>FOLD</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>TRAIN N</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>OOS ACC</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>BASE RATE</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>LIFT</div>
+        {walkForward.folds.map((f) => (
+          <FoldRow key={f.testSeason} f={f} colors={colors} />
+        ))}
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft }}>mean</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right" }}>-</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right" }}>{(walkForward.meanOosAccuracy * 100).toFixed(1)}%</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right" }}>{(walkForward.meanOosBaseRate * 100).toFixed(1)}%</div>
+        <div style={{ padding: "5px 8px", color: walkForward.meanOosLift > 0 ? colors.brand : "#f0686a", borderTop: "1px solid " + colors.borderSoft, textAlign: "right", fontWeight: 600 }}>
+          {walkForward.meanOosLift > 0 ? "+" : ""}{(walkForward.meanOosLift * 100).toFixed(2)}pp
+        </div>
+      </div>
+
+      <Label colors={colors}>10-decile OOS calibration · Brier {calibration.brierScore.toFixed(4)}</Label>
+      <CalibrationChart bins={calibration.bins} colors={colors} fontMono={fontMono} />
+      <p style={{ fontSize: 10, color: colors.textFaint, marginTop: 6, lineHeight: 1.55 }}>
+        Each dot is one decile: x = mean predicted P(cut) within the decile, y = actual cut rate.
+        Diagonal = perfectly calibrated. Above the line = under-confident; below = over-confident.
+        Brier = mean((p−y)²); lower is better, with 0.25 = always-50% baseline and 0 = perfect.
+      </p>
+    </div>
+  );
+}
+
+function FoldRow({ f, colors }: { f: CutWalkForwardData["folds"][number]; colors: Colors }) {
+  return (
+    <>
+      <div style={{ padding: "5px 8px", color: colors.textDim }}>{f.testSeason}</div>
+      <div style={{ padding: "5px 8px", color: colors.text, textAlign: "right" }}>{f.nTrain.toLocaleString()}</div>
+      <div style={{ padding: "5px 8px", color: colors.text, textAlign: "right" }}>{(f.accuracy * 100).toFixed(1)}%</div>
+      <div style={{ padding: "5px 8px", color: colors.textDim, textAlign: "right" }}>{(f.baseRate * 100).toFixed(1)}%</div>
+      <div style={{ padding: "5px 8px", color: f.lift > 0 ? colors.brand : "#f0686a", textAlign: "right", fontWeight: 600 }}>
+        {f.lift > 0 ? "+" : ""}{(f.lift * 100).toFixed(2)}pp
+      </div>
+    </>
+  );
+}
+
+function CalibrationChart({
+  bins,
+  colors,
+  fontMono,
+}: {
+  bins: CutCalibrationData["bins"];
+  colors: Colors;
+  fontMono: string;
+}) {
+  const W = 300, H = 220, PAD = 30;
+  const xs = (v: number) => PAD + v * (W - 2 * PAD);
+  const ys = (v: number) => H - PAD - v * (H - 2 * PAD);
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block", background: colors.panel, border: "1px solid " + colors.borderSoft }}>
+      {/* Identity diagonal */}
+      <line x1={xs(0)} y1={ys(0)} x2={xs(1)} y2={ys(1)} stroke={colors.borderSoft} strokeDasharray="4,3" />
+      {/* Axis labels */}
+      {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
+        <text key={`x-${i}`} x={xs(v)} y={H - 8} fontSize={9} fill={colors.textFaint} fontFamily={fontMono} textAnchor="middle">
+          {v.toFixed(2)}
+        </text>
+      ))}
+      {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
+        <text key={`y-${i}`} x={PAD - 6} y={ys(v) + 3} fontSize={9} fill={colors.textFaint} fontFamily={fontMono} textAnchor="end">
+          {v.toFixed(2)}
+        </text>
+      ))}
+      <text x={W / 2} y={H - 1} fontSize={10} fill={colors.textDim} fontFamily={fontMono} textAnchor="middle">predicted P(cut)</text>
+      <text x={4} y={H / 2} fontSize={10} fill={colors.textDim} fontFamily={fontMono} textAnchor="middle" transform={`rotate(-90, 12, ${H / 2})`}>actual cut rate</text>
+      {/* Decile dots - radius scales with bucket size */}
+      {bins.filter((b) => b.n > 0).map((b) => {
+        const r = Math.max(2, Math.min(8, Math.sqrt(b.n) * 0.18));
+        const dev = Math.abs(b.predMean - b.actualRate);
+        const color = dev < 0.05 ? colors.brand : dev < 0.1 ? colors.warn : "#f0686a";
+        return (
+          <g key={b.bin}>
+            <line x1={xs(b.predMean)} y1={ys(b.predMean)} x2={xs(b.predMean)} y2={ys(b.actualRate)} stroke={colors.borderSoft} strokeWidth={0.6} />
+            <circle cx={xs(b.predMean)} cy={ys(b.actualRate)} r={r} fill={color} opacity={0.85} />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 // ============================================================
-// MODEL C: Tournament Finish (linear regression)
+// MODEL C: Top-10 Probability (logistic regression - Phase D)
 // ============================================================
+// v1 was a linear regression on finish-position with R² ≈ 7% (essentially
+// noise). Reframed as a binary classifier on `made_top10`, evaluated
+// walk-forward by season with stitched OOS AUC + 10-decile calibration.
+// AUC ~0.64 OOS, Brier ~0.14 - modest but real signal.
 
 interface FinishInputs {
   priorPutt: number;
@@ -720,46 +869,42 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
     const featMeans = finishModel.featMeans;
     const featStds = finishModel.featStds;
 
-    // Standardize the input features (skip bias)
+    // Standardize features (skip bias) and compute z, then sigmoid → P(top-10)
     const xStd = x.map((v, j) => (j === 0 ? 1 : (v - featMeans[j]) / featStds[j]));
-    // Compute standardized prediction (sum of weight × standardized input)
-    const predStd = xStd.reduce((s, v, k) => s + v * w[k], 0);
-    // Un-standardize
-    const predFinish = predStd * finishModel.yStd + finishModel.yMean;
-    const clipped = Math.max(1, Math.min(100, predFinish));
-
-    // Per-feature contributions in standardized space, then convert to "Finish positions" by multiplying by yStd
-    const contribs = xStd.map((v, j) => {
-      if (j === 0) return w[j] * finishModel.yStd; // bias contribution to position
-      return v * w[j] * finishModel.yStd;
-    });
-
-    return { x, xStd, predStd, predFinish, clipped, contribs };
+    const z = xStd.reduce((s, v, k) => s + v * w[k], 0);
+    const p = 1 / (1 + Math.exp(-z));
+    // Per-feature contributions to logit z (positive = pushes toward top-10).
+    const contribs = xStd.map((v, j) => v * w[j]);
+    return { x, xStd, z, p, contribs };
   }, [inp]);
 
+  // Verdict based on P(top-10) - base rate is ~17.7% so anything > ~25% is meaningful.
   const verdict =
-    result.clipped <= 5
-      ? "Win contender"
-      : result.clipped <= 15
-      ? "Top 15 contender"
-      : result.clipped <= 30
-      ? "Made cut, mid-pack"
-      : result.clipped <= 60
-      ? "Backmarker (made cut)"
-      : "Likely missed cut";
+    result.p > 0.40
+      ? "Strong top-10 contender"
+      : result.p > 0.25
+      ? "Above average top-10 odds"
+      : result.p > 0.15
+      ? "Roughly base-rate odds"
+      : result.p > 0.08
+      ? "Below average"
+      : "Long shot";
   const verdictColor =
-    result.clipped <= 5
+    result.p > 0.40
       ? colors.brand
-      : result.clipped <= 15
+      : result.p > 0.25
       ? "#a4d99a"
-      : result.clipped <= 30
+      : result.p > 0.15
       ? colors.warn
       : "#f0686a";
 
   const maxAbsContrib = Math.max(
-    ...result.contribs.slice(1).map((c) => Math.abs(c))
+    ...result.contribs.slice(1).map((c) => Math.abs(c)),
+    0.0001
   );
-  const r2Pct = Math.max(0, finishModel.r2 * 100);
+  const oosAuc = finishModel.walkForward?.stitchedOosAuc ?? 0;
+  const isAuc = finishModel.isAuc ?? 0;
+  const baseRate = finishModel.isBaseRate ?? 0.177;
 
   return (
     <div className="grid grid-cols-2 gap-[14px]">
@@ -768,11 +913,11 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
           Tournament context
         </h3>
         <p style={{ fontSize: 11, color: colors.textDim, lineHeight: 1.55, marginBottom: 14 }}>
-          Linear regression trained on{" "}
-          {finishModel.trainedOn.toLocaleString()} tournament rows (2016–2022) — features are{" "}
-          <em>lagged</em> from the player&apos;s prior season so there&apos;s no leakage. R² is{" "}
-          modest ({r2Pct.toFixed(1)}%) — finish position is dominated by within-week variance and
-          field strength that the lagged features can&apos;t fully capture.
+          Logistic regression on {finishModel.trainedOn.toLocaleString()} tournament rows
+          (2016&ndash;2022) → P(player finishes top 10). Features are <em>lagged</em> from the
+          prior season - no leakage. <strong>OOS AUC: {oosAuc.toFixed(3)}</strong> across 3 walk-forward
+          folds (vs IS AUC {isAuc.toFixed(3)}); base rate {(baseRate * 100).toFixed(1)}%.
+          A real signal - not strong, but honestly verified.
         </p>
 
         <Slider label="Prior SG-Putt" value={inp.priorPutt} min={-1.5} max={1.5} step={0.05} unit="" onChange={(v) => setInp({ ...inp, priorPutt: v })} colors={colors} fontMono={fontMono} track={colors.warn} fmt={(v) => (v >= 0 ? "+" : "") + v.toFixed(2)} />
@@ -827,24 +972,24 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
         </div>
 
         <Methodology colors={colors} fontMono={fontMono}>
-          <strong>Why R² is modest:</strong> finish position is dominated by within-tournament
-          variance — putts that lipped out, an unlucky tee time draw, weather wave splits. The
-          lagged features capture the floor of a player&apos;s ability but can&apos;t predict
-          which week they&apos;ll catch fire.
+          <strong>Why a binary classifier instead of finish position?</strong> A previous version
+          regressed actual finish (1–100). R² was ~7% - basically noise dominated by within-week
+          variance (lipped putts, bad weather draws, hot tee times). The reframe: collapse to
+          &ldquo;made top 10?&rdquo; - a binary signal a fund actually cares about (placement-betting
+          markets, field-strength priors, fantasy contests). AUC {oosAuc.toFixed(2)} OOS is modest
+          but real.
           <br />
-          <strong>RMSE:</strong> {finishModel.rmse.toFixed(1)} positions on average. A predicted
-          T20 might actually finish anywhere from T1 to T40. Use the prediction as a base
-          expectation, not a forecast.
+          <strong>OOS validation:</strong> walk-forward by season (train on 2016–{finishModel.walkForward?.folds[0]?.testSeason ? finishModel.walkForward.folds[0].testSeason - 1 : 2019}, test on {finishModel.walkForward?.folds[0]?.testSeason ?? 2020}; train on 2016–{finishModel.walkForward?.folds[1]?.testSeason ? finishModel.walkForward.folds[1].testSeason - 1 : 2020}, test on {finishModel.walkForward?.folds[1]?.testSeason ?? 2021}; etc.). Per-fold AUC table below.
           <br />
-          <strong>Limitations:</strong> not modeled — current-season form (rolling 4 events),
-          head-to-head field strength, course-specific player history (which is what Scene 6 in
-          the 3D Visuals tab tries to convey).
+          <strong>Limitations:</strong> not modeled - current-season form (rolling 4 events),
+          head-to-head field strength, course-specific player history (the Player×Course scene
+          shows that signal exists but we haven&apos;t merged it yet).
         </Methodology>
       </div>
 
       <div>
         <h3 style={{ fontSize: 13, color: colors.text, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.005em" }}>
-          Predicted finish
+          P(made top 10)
         </h3>
 
         <div
@@ -853,10 +998,10 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontSize: 10, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "0.18em" }}>
-              Predicted finish position
+              Predicted P(top-10)
             </span>
             <span style={{ fontSize: 10, color: colors.textFaint, fontFamily: fontMono }}>
-              (1 = win, 100 = back of pack)
+              (base rate {(baseRate * 100).toFixed(1)}%)
             </span>
           </div>
           <div
@@ -869,14 +1014,15 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
               marginTop: 8,
             }}
           >
-            T{Math.round(result.clipped)}
+            {(result.p * 100).toFixed(1)}%
           </div>
           <div style={{ fontSize: 12, color: colors.textDim, marginTop: 6, letterSpacing: "0.04em" }}>
             <span style={{ color: verdictColor }}>● </span>
             {verdict}
           </div>
           <div style={{ fontSize: 10, color: colors.textFaint, marginTop: 8, fontFamily: fontMono }}>
-            ± {finishModel.rmse.toFixed(0)} positions (RMSE)
+            z = {result.z.toFixed(2)} · σ(z) = {(result.p * 100).toFixed(1)}% · lift over base rate:{" "}
+            {(result.p - baseRate > 0 ? "+" : "")}{((result.p - baseRate) * 100).toFixed(1)}pp
           </div>
           <div
             style={{
@@ -889,7 +1035,7 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
           >
             <div
               style={{
-                width: `${Math.min(100, (result.clipped / 100) * 100)}%`,
+                width: `${Math.min(100, result.p * 100)}%`,
                 height: "100%",
                 background: `linear-gradient(90deg, ${colors.brand} 0%, ${verdictColor} 100%)`,
                 transition: "width 200ms",
@@ -898,11 +1044,10 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
           </div>
         </div>
 
-        <Label colors={colors}>Per-feature contribution (in finish positions)</Label>
+        <Label colors={colors}>Per-feature contribution to logit</Label>
         <p style={{ fontSize: 10, color: colors.textFaint, marginBottom: 10 }}>
-          Each row shows how that feature, at the current input, pushes the predicted finish
-          relative to the field average. Negative (green) = pulls toward winning (lower number);
-          positive (red) = pushes toward back of pack.
+          Positive (green) pushes toward top-10; negative (red) away. z = sum of contributions plus
+          bias; σ(z) = P(top-10).
         </p>
 
         <div className="space-y-[3px]">
@@ -917,16 +1062,88 @@ function FinishModelView({ colors, fontMono }: { colors: Colors; fontMono: strin
               maxAbs={maxAbsContrib || 1}
               colors={colors}
               fontMono={fontMono}
-              invertColor
             />
           ))}
         </div>
 
         <div style={{ marginTop: 12, fontSize: 10, color: colors.textFaint, fontFamily: fontMono }}>
-          R²: {(finishModel.r2 * 100).toFixed(1)}% · RMSE: {finishModel.rmse.toFixed(2)} · n =
-          {" "}{finishModel.trainedOn.toLocaleString()}
+          IS AUC: {isAuc.toFixed(3)} · OOS AUC: {oosAuc.toFixed(3)} · n = {finishModel.trainedOn.toLocaleString()}
         </div>
+
+        {finishModel.walkForward && finishModel.calibration && (
+          <FinishOosPanel
+            walkForward={finishModel.walkForward}
+            calibration={finishModel.calibration}
+            colors={colors}
+            fontMono={fontMono}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+interface FinishWalkForwardData {
+  method: string;
+  folds: { testSeason: number; nTrain: number; nTest: number; auc: number; baseRate: number }[];
+  meanOosAuc: number;
+  stitchedOosAuc: number;
+}
+interface FinishCalibrationData {
+  method: string;
+  bins: { bin: number; lo: number; hi: number; n: number; predMean: number; actualRate: number }[];
+  brierScore: number;
+  nOosPredictions: number;
+}
+
+function FinishOosPanel({
+  walkForward,
+  calibration,
+  colors,
+  fontMono,
+}: {
+  walkForward: FinishWalkForwardData;
+  calibration: FinishCalibrationData;
+  colors: Colors;
+  fontMono: string;
+}) {
+  return (
+    <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid " + colors.borderSoft }}>
+      <Label colors={colors}>Walk-forward OOS folds</Label>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto 1fr 1fr 1fr",
+          fontSize: 11,
+          fontFamily: fontMono,
+          background: colors.panel,
+          border: "1px solid " + colors.borderSoft,
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em" }}>FOLD</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>TRAIN N</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>OOS AUC</div>
+        <div style={{ padding: "5px 8px", color: colors.textFaint, borderBottom: "1px solid " + colors.borderSoft, fontSize: 9, letterSpacing: "0.1em", textAlign: "right" }}>BASE RATE</div>
+        {walkForward.folds.flatMap((f) => [
+          <div key={`l-${f.testSeason}`} style={{ padding: "5px 8px", color: colors.textDim }}>{f.testSeason}</div>,
+          <div key={`n-${f.testSeason}`} style={{ padding: "5px 8px", color: colors.text, textAlign: "right" }}>{f.nTrain.toLocaleString()}</div>,
+          <div key={`a-${f.testSeason}`} style={{ padding: "5px 8px", color: f.auc > 0.55 ? colors.brand : colors.warn, textAlign: "right", fontWeight: 600 }}>{f.auc.toFixed(3)}</div>,
+          <div key={`b-${f.testSeason}`} style={{ padding: "5px 8px", color: colors.textDim, textAlign: "right" }}>{(f.baseRate * 100).toFixed(1)}%</div>,
+        ])}
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft }}>stitched</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right" }}>-</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right", fontWeight: 600 }}>{walkForward.stitchedOosAuc.toFixed(3)}</div>
+        <div style={{ padding: "5px 8px", color: colors.brand, borderTop: "1px solid " + colors.borderSoft, textAlign: "right" }}>-</div>
+      </div>
+
+      <Label colors={colors}>10-decile OOS calibration · Brier {calibration.brierScore.toFixed(4)}</Label>
+      <CalibrationChart bins={calibration.bins} colors={colors} fontMono={fontMono} />
+      <p style={{ fontSize: 10, color: colors.textFaint, marginTop: 6, lineHeight: 1.55 }}>
+        Same calibration framing as the cut model. With base rate ~17.7%, dots above the diagonal
+        in the 0.20–0.40 range mean the model is correctly identifying high-probability players;
+        below means over-confidence.
+      </p>
     </div>
   );
 }

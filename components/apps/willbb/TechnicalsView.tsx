@@ -4,12 +4,12 @@
  * Technical Analysis Guide.
  *
  * Walks the focused symbol through a 5-step checklist:
- *   1. Trend & Moving Averages   — close vs SMA(50) and SMA(200)
- *   2. Momentum                  — RSI(14) + MACD(12,26,9)
- *   3. Volume confirmation       — last bar volume vs SMA(20) volume,
+ *   1. Trend & Moving Averages   - close vs SMA(50) and SMA(200)
+ *   2. Momentum                  - RSI(14) + MACD(12,26,9)
+ *   3. Volume confirmation       - last bar volume vs SMA(20) volume,
  *                                  rising/falling on price direction
- *   4. Support & Resistance      — local swing highs / lows over last 60 bars
- *   5. Fundamentals (sanity)     — P/E, earnings, analyst rec from
+ *   4. Support & Resistance      - local swing highs / lows over last 60 bars
+ *   5. Fundamentals (sanity)     - P/E, earnings, analyst rec from
  *                                  /api/markets/equity?module=statistics
  *
  * Every section reports the raw value, a verdict (bullish / neutral /
@@ -190,12 +190,12 @@ function swingLevels(
 // ---------- formatters ----------
 
 function fmt(n: number | null | undefined, digits = 2): string {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 function fmtPct(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
 }
 
@@ -257,7 +257,7 @@ export default function TechnicalsView({ symbol }: { symbol: string }) {
     return computeAnalysis(chart, stats);
   }, [chart, stats]);
 
-  // TradingView chart is independent of our API — always render it at the
+  // TradingView chart is independent of our API - always render it at the
   // top so visitors get the visual even when Yahoo is rate-limiting our
   // analysis pipeline. The checklist sections below explain their own state.
 
@@ -394,14 +394,14 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
     verdict: trendVerdict,
     rows: [
       ["Last close", `$${fmt(last)}`],
-      ["SMA(50)", sma50Last != null ? `$${fmt(sma50Last)}` : "—"],
-      ["SMA(200)", sma200Last != null ? `$${fmt(sma200Last)}` : "—"],
+      ["SMA(50)", sma50Last != null ? `$${fmt(sma50Last)}` : "-"],
+      ["SMA(200)", sma200Last != null ? `$${fmt(sma200Last)}` : "-"],
       ["Price vs 50-day", aboveSma50 ? "ABOVE" : "BELOW"],
       ["Price vs 200-day", aboveSma200 ? "ABOVE" : "BELOW"],
       [
         "50/200 cross",
         sma50Last == null || sma200Last == null
-          ? "—"
+          ? "-"
           : goldenCross
           ? "Golden (50 > 200)"
           : "Death (50 < 200)",
@@ -410,8 +410,8 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
     note: aboveSma50
       ? `${chart.symbol} is trading above its 50-day SMA${
           lastCrossDays != null ? ` (crossed up ~${lastCrossDays} session(s) ago)` : ""
-        }${aboveSma200 ? " and above its 200-day SMA — clean uptrend." : " but still below the 200-day."}`
-      : `${chart.symbol} is below its 50-day SMA — the short-term trend is down${
+        }${aboveSma200 ? " and above its 200-day SMA - clean uptrend." : " but still below the 200-day."}`
+      : `${chart.symbol} is below its 50-day SMA - the short-term trend is down${
           aboveSma200 ? " though the longer 200-day still slopes up." : "."
         }`,
   };
@@ -439,15 +439,15 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
       ? histLast > histPrev
         ? "rising (improving)"
         : "falling (deteriorating)"
-      : "—";
+      : "-";
   const momentum: SectionResult = {
     verdict: momentumVerdict,
     rows: [
-      ["RSI(14)", rsiLast != null ? fmt(rsiLast, 1) : "—"],
+      ["RSI(14)", rsiLast != null ? fmt(rsiLast, 1) : "-"],
       [
         "RSI zone",
         rsiLast == null
-          ? "—"
+          ? "-"
           : rsiLast >= 70
           ? "Overbought ≥70"
           : rsiLast <= 30
@@ -456,19 +456,19 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
           ? "Healthy 50–70"
           : "Soft <50",
       ],
-      ["MACD", macdLast != null ? fmt(macdLast, 3) : "—"],
-      ["Signal", sigLast != null ? fmt(sigLast, 3) : "—"],
-      ["Histogram", histLast != null ? fmt(histLast, 3) : "—"],
+      ["MACD", macdLast != null ? fmt(macdLast, 3) : "-"],
+      ["Signal", sigLast != null ? fmt(sigLast, 3) : "-"],
+      ["Histogram", histLast != null ? fmt(histLast, 3) : "-"],
       ["Histogram trend", histTurning],
     ],
     note:
       rsiLast == null || macdLast == null
         ? "Not enough bars to compute RSI/MACD."
         : momentumVerdict === "bullish"
-        ? `RSI is ${fmt(rsiLast, 1)} (positive but not extreme) and MACD has crossed above its signal — momentum is constructive.`
+        ? `RSI is ${fmt(rsiLast, 1)} (positive but not extreme) and MACD has crossed above its signal - momentum is constructive.`
         : momentumVerdict === "bearish"
-        ? `RSI is ${fmt(rsiLast, 1)} and MACD is below its signal — momentum is rolling over.`
-        : `RSI is ${fmt(rsiLast, 1)} and MACD is mixed — momentum is indecisive, wait for confirmation.`,
+        ? `RSI is ${fmt(rsiLast, 1)} and MACD is below its signal - momentum is rolling over.`
+        : `RSI is ${fmt(rsiLast, 1)} and MACD is mixed - momentum is indecisive, wait for confirmation.`,
   };
 
   // ---- Volume ----
@@ -485,23 +485,23 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
     volumeNote = "No per-bar volume reported (common for indices, FX, and some crypto sources).";
   } else if (priceUp && (volRatio as number) > 1.0) {
     volumeVerdict = "bullish";
-    volumeNote = `Today's volume ran ${fmt((volRatio as number - 1) * 100, 0)}% above the 20-day average on a green day — buying confirmed.`;
+    volumeNote = `Today's volume ran ${fmt((volRatio as number - 1) * 100, 0)}% above the 20-day average on a green day - buying confirmed.`;
   } else if (!priceUp && (volRatio as number) > 1.0) {
     volumeVerdict = "bearish";
-    volumeNote = `Today's volume ran ${fmt((volRatio as number - 1) * 100, 0)}% above the 20-day average on a red day — distribution / selling pressure.`;
+    volumeNote = `Today's volume ran ${fmt((volRatio as number - 1) * 100, 0)}% above the 20-day average on a red day - distribution / selling pressure.`;
   } else if (priceUp && (volRatio as number) <= 1.0) {
     volumeVerdict = "neutral";
-    volumeNote = "Price moved up but on lighter-than-average volume — rally lacks conviction.";
+    volumeNote = "Price moved up but on lighter-than-average volume - rally lacks conviction.";
   } else {
     volumeVerdict = "neutral";
-    volumeNote = "Price moved down on average / lighter volume — pullback isn't urgent.";
+    volumeNote = "Price moved down on average / lighter volume - pullback isn't urgent.";
   }
   const volumeSection: SectionResult = {
     verdict: volumeVerdict,
     rows: [
       ["Last bar volume", fmtBig(lastVol)],
-      ["20-day avg volume", volSmaLast != null ? fmtBig(volSmaLast) : "—"],
-      ["Ratio (last / avg)", volRatio != null ? `${fmt(volRatio, 2)}×` : "—"],
+      ["20-day avg volume", volSmaLast != null ? fmtBig(volSmaLast) : "-"],
+      ["Ratio (last / avg)", volRatio != null ? `${fmt(volRatio, 2)}×` : "-"],
       ["Last bar price action", priceUp ? "UP" : "DOWN"],
     ],
     note: volumeNote,
@@ -521,13 +521,13 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
     const inUpperHalf = last - nearestSup > room / 2;
     if (inUpperHalf && (distToRes ?? 0) < 3) {
       srVerdict = "neutral";
-      srNote = `${chart.symbol} is pressing into resistance near $${fmt(nearestRes)} — a clean break = bullish; rejection = bearish.`;
+      srNote = `${chart.symbol} is pressing into resistance near $${fmt(nearestRes)} - a clean break = bullish; rejection = bearish.`;
     } else if (inUpperHalf) {
       srVerdict = "bullish";
       srNote = `${chart.symbol} sits in the upper half of its recent range. Resistance ≈ $${fmt(nearestRes)}, support ≈ $${fmt(nearestSup)}.`;
     } else {
       srVerdict = "bearish";
-      srNote = `${chart.symbol} is in the lower half of its recent range. Watch support ≈ $${fmt(nearestSup)} — a break = next leg down.`;
+      srNote = `${chart.symbol} is in the lower half of its recent range. Watch support ≈ $${fmt(nearestSup)} - a break = next leg down.`;
     }
   } else {
     srNote = "Not enough recent swings to anchor support/resistance.";
@@ -538,17 +538,17 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
       [
         "Nearest resistance",
         nearestRes != null
-          ? `$${fmt(nearestRes)} (${distToRes != null ? fmtPct(distToRes) : "—"} away)`
-          : "—",
+          ? `$${fmt(nearestRes)} (${distToRes != null ? fmtPct(distToRes) : "-"} away)`
+          : "-",
       ],
       [
         "Nearest support",
         nearestSup != null
-          ? `$${fmt(nearestSup)} (${distToSup != null ? fmtPct(distToSup) : "—"} away)`
-          : "—",
+          ? `$${fmt(nearestSup)} (${distToSup != null ? fmtPct(distToSup) : "-"} away)`
+          : "-",
       ],
-      ["Resistances spotted", resistances.length ? resistances.map((v) => `$${fmt(v)}`).join(", ") : "—"],
-      ["Supports spotted", supports.length ? supports.map((v) => `$${fmt(v)}`).join(", ") : "—"],
+      ["Resistances spotted", resistances.length ? resistances.map((v) => `$${fmt(v)}`).join(", ") : "-"],
+      ["Supports spotted", supports.length ? supports.map((v) => `$${fmt(v)}`).join(", ") : "-"],
     ],
     note: srNote,
   };
@@ -589,8 +589,8 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
             recKey ? `consensus = ${recKey}` : ""
           }.`
         : fundVerdict === "bearish"
-        ? "Fundamentals look stretched relative to the chart — be cautious extending here."
-        : "Fundamentals are mixed — the technical setup carries more of the weight.";
+        ? "Fundamentals look stretched relative to the chart - be cautious extending here."
+        : "Fundamentals are mixed - the technical setup carries more of the weight.";
   }
   const fundamentals: SectionResult = {
     verdict: fundVerdict,
@@ -598,11 +598,11 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
       ["P/E (Trailing)", fmt(peTrailing)],
       ["P/E (Forward)", fmt(peForward)],
       ["PEG Ratio", fmt(peg)],
-      ["Profit Margin", profitMargin != null ? fmtPct(profitMargin * 100) : "—"],
-      ["Analyst Rec.", recKey ?? "—"],
+      ["Profit Margin", profitMargin != null ? fmtPct(profitMargin * 100) : "-"],
+      ["Analyst Rec.", recKey ?? "-"],
       [
         "Target Upside",
-        upsidePct != null ? `${fmtPct(upsidePct)} → $${fmt(target as number)}` : "—",
+        upsidePct != null ? `${fmtPct(upsidePct)} → $${fmt(target as number)}` : "-",
       ],
     ],
     note: fundNote,
@@ -637,7 +637,7 @@ function computeAnalysis(chart: ChartPayload, stats: StatsPayload | null): {
 }
 
 function fmtBig(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + "T";
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + "M";
@@ -658,10 +658,10 @@ function Verdict({
 }) {
   const text =
     overall === "bullish"
-      ? "Most signals align bullish — setup looks attractive to consider."
+      ? "Most signals align bullish - setup looks attractive to consider."
       : overall === "bearish"
-      ? "Most signals point bearish — wait for a cleaner setup."
-      : "Signals are mixed — wait for confirmation before acting.";
+      ? "Most signals point bearish - wait for a cleaner setup."
+      : "Signals are mixed - wait for confirmation before acting.";
   return (
     <div
       className="px-[16px] py-[12px]"
@@ -797,7 +797,7 @@ function Disclaimer() {
         fontFamily: FONT_UI,
       }}
     >
-      Educational only — not investment advice. Indicators are computed from
+      Educational only - not investment advice. Indicators are computed from
       Yahoo Finance bars (or CoinGecko for crypto). Always pair signals with
       your own research and risk tolerance.
     </div>

@@ -252,7 +252,7 @@ export const APPS: Record<AppId, AppDef> = {
   },
   contact: {
     appId: "contact",
-    title: "Contact Me — Will Zhang",
+    title: "Contact Me - Will Zhang",
     iconUrl: "/icons/notepad.svg",
     defaultSize: { w: 720, h: 580 },
     minSize: { w: 520, h: 440 },

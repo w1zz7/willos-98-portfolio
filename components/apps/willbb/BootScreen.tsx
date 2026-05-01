@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * WillBB Markets Terminal — boot sequence.
+ * WillBB Markets Terminal - boot sequence.
  *
  * Plays for ~2.4s when the terminal first opens, then fades into the
  * live dashboard. Lines stream in like a Bloomberg cold start: cyan
  * accent, monospace, progress bar, and a final "READY" handshake.
  *
- * Pure presentation — no data fetching, no side-effects beyond a single
+ * Pure presentation - no data fetching, no side-effects beyond a single
  * setInterval that drives the line cadence and a setTimeout that fires
  * `onComplete` when the sequence ends.
  */

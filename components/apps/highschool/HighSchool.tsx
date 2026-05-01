@@ -27,19 +27,19 @@ interface Activity {
 const MEDIA: HsMedia[] = [
   {
     src: "/linkedin/hs-valorant-2023.jpg",
-    title: "2023 NJ Garden State Esports — State Champion",
+    title: "2023 NJ Garden State Esports - State Champion",
     caption:
       "Valorant varsity team, Cherry Hill East Esports Club. First state title.",
   },
   {
     src: "/linkedin/hs-valorant-2024.jpg",
-    title: "2024 NJ Garden State Esports — State Champion",
+    title: "2024 NJ Garden State Esports - State Champion",
     caption:
       "Back-to-back. Two-year run as NJ state champion in Valorant.",
   },
   {
     src: "/linkedin/hs-esports-state-champ.jpg",
-    title: "Esports — State Champion (stage finals)",
+    title: "Esports - State Champion (stage finals)",
     caption:
       "Full esports team on-stage at the NJ Garden State Esports finals. 2× champion run in Valorant.",
   },
@@ -53,7 +53,7 @@ const MEDIA: HsMedia[] = [
     src: "/linkedin/hs-marching-band.jpg",
     title: "Marching Band",
     caption:
-      "Cherry Hill East Marching Band — sectional + state-level competition. NJ Marching Band State Champion program.",
+      "Cherry Hill East Marching Band - sectional + state-level competition. NJ Marching Band State Champion program.",
   },
 ];
 
@@ -83,7 +83,7 @@ const ACTIVITIES: Activity[] = [
     name: "Marching Band",
     role: "Member · NJ State Champion",
     body:
-      "Competed with the Cherry Hill East Marching Band — program took the NJ Marching Band State Championship.",
+      "Competed with the Cherry Hill East Marching Band - program took the NJ Marching Band State Championship.",
     accent: true,
   },
   {
@@ -96,7 +96,7 @@ const ACTIVITIES: Activity[] = [
     name: "Vietnamese Culture Club",
     role: "Dance team",
     body:
-      "Danced with the Vietnamese Culture Club — performed at school + community events.",
+      "Danced with the Vietnamese Culture Club - performed at school + community events.",
   },
   {
     name: "Coffee House Talent Show",

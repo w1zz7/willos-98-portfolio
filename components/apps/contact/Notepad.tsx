@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Contact Me — Win98 business-card app.
+ * Contact Me - Win98 business-card app.
  *
  * Top:    hero card with headshot + name/title/location
  * Mid:    4-up contact grid with one-click copy on each row
@@ -56,9 +56,9 @@ export default function ContactNotepad({ window: win }: { window: WindowState })
   const copy = (text: string, label: string) => {
     try {
       navigator.clipboard?.writeText(text);
-      showToast(`Copied — ${label}`);
+      showToast(`Copied - ${label}`);
     } catch {
-      showToast("Couldn't copy — select the text manually");
+      showToast("Couldn't copy - select the text manually");
     }
   };
 
@@ -72,7 +72,7 @@ export default function ContactNotepad({ window: win }: { window: WindowState })
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    showToast("vCard downloaded — open to add to contacts");
+    showToast("vCard downloaded - open to add to contacts");
   };
 
   const menus: MenuDef[] = [
@@ -156,7 +156,7 @@ export default function ContactNotepad({ window: win }: { window: WindowState })
             <ContactForm initialSubject={subject} />
           ) : (
             <p className="px-[12px] py-[10px] text-[15px] leading-snug text-[#333]">
-              Open a quick form that pre-fills your mail client — no servers,
+              Open a quick form that pre-fills your mail client - no servers,
               no data stored. Or just drop a note via{" "}
               <a
                 href={`mailto:${EMAIL}`}
@@ -194,7 +194,7 @@ export default function ContactNotepad({ window: win }: { window: WindowState })
 }
 
 /* ----------------------------------------------------------------
-   Hero — headshot + name + role + location + status pill + CTAs
+   Hero - headshot + name + role + location + status pill + CTAs
    ---------------------------------------------------------------- */
 function HeroCard({
   onEmail,
@@ -288,7 +288,7 @@ function ActionButton({
 }
 
 /* ----------------------------------------------------------------
-   Detail grid — 4 rows with one-click copy
+   Detail grid - 4 rows with one-click copy
    ---------------------------------------------------------------- */
 function DetailGrid({
   copy,
@@ -507,7 +507,7 @@ Reply-to: ${email}`}</pre>
       </label>
       <div className="flex items-center justify-between gap-[6px] flex-wrap">
         <p className="text-[12px] text-[color:var(--color-win-text-disabled)] m-0">
-          Submitting opens your mail client with the body pre-filled — nothing
+          Submitting opens your mail client with the body pre-filled - nothing
           is stored or sent from this page.
         </p>
         <button type="submit" className="win-btn font-bold">

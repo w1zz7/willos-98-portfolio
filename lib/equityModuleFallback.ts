@@ -5,7 +5,7 @@
  * /equity/* module by deriving numbers from STATS_SEED + PROFILE_SEED so the
  * sub-tabs render real-looking data when Yahoo's quoteSummary is rate-limited.
  *
- * The generated values are NOT live financial statements — they are
+ * The generated values are NOT live financial statements - they are
  * coherent estimates anchored to known TTM revenue, margins, and market cap.
  * The UI surfaces a "snapshot" badge so visitors see this is sample data.
  *
@@ -17,7 +17,7 @@
 import { STATS_SEED, PROFILE_SEED } from "./equityFallback";
 import { getSeedQuote } from "./marketsFallback";
 
-// Fiscal-year ends (rough for known names) — fallback to Dec for the rest.
+// Fiscal-year ends (rough for known names) - fallback to Dec for the rest.
 const FY_END: Record<string, string> = {
   AAPL: "09",
   MSFT: "06",
@@ -71,7 +71,7 @@ function mostRecentQuarterEnd(today: Date = new Date()): { year: number; month: 
     if (qDate <= today) return { year, month: qm };
     void m;
   }
-  // No quarter has ended yet this year — fall back to last December.
+  // No quarter has ended yet this year - fall back to last December.
   return { year: year - 1, month: 12 };
 }
 
@@ -335,7 +335,7 @@ export function generateEarnings(symbol: string) {
     };
   });
 
-  // 4-year revenue + earnings annual chart — anchored to the most recent
+  // 4-year revenue + earnings annual chart - anchored to the most recent
   // COMPLETED fiscal year so we never claim numbers for a year that hasn't
   // ended yet.
   const lastFy = mostRecentFyYear(symbol);
@@ -705,7 +705,7 @@ const NEWS_TEMPLATES: Array<{ title: string; publisher: string; type?: string }>
   { title: "{NAME} reports stronger-than-expected results, lifts guidance", publisher: "Reuters" },
   { title: "Analyst note: {SYMBOL} margin trajectory remains intact into next quarter", publisher: "MarketWatch" },
   { title: "{SYMBOL} sees continued institutional inflows as sector rotation favors quality names", publisher: "Bloomberg" },
-  { title: "Why {NAME} could be a long-term winner — five reasons", publisher: "The Motley Fool" },
+  { title: "Why {NAME} could be a long-term winner - five reasons", publisher: "The Motley Fool" },
   { title: "{NAME} CEO commentary signals confidence on multi-quarter pipeline", publisher: "CNBC" },
   { title: "{NAME} expands product roadmap; analysts watching execution", publisher: "Seeking Alpha" },
   { title: "Options flow on {SYMBOL} skews bullish into upcoming earnings", publisher: "Benzinga" },

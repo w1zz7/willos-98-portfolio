@@ -27,6 +27,8 @@ import TradingViewChart, { type TVInterval, type TVRange } from "./TradingViewCh
 import EquityResearch from "./EquityResearch";
 import Discovery from "./Discovery";
 import BootScreen from "./BootScreen";
+import QuantDesk from "./quantdesk/QuantDesk";
+import { SourceBadge, type DataSource, aggregateSource } from "./SourceBadge";
 
 interface Quote {
   symbol: string;
@@ -37,7 +39,7 @@ interface Quote {
   currency: string | null;
   marketState: string | null;
   exchange: string | null;
-  source?: "yahoo" | "coingecko" | "seed" | "unavailable";
+  source?: "yahoo" | "coingecko" | "stooq" | "alphavantage" | "seed" | "unavailable";
 }
 
 interface QuotesResponse {
@@ -66,7 +68,7 @@ interface ChartResponse {
   points: ChartPoint[];
 }
 
-type TabId = "markets" | "equity" | "discovery";
+type TabId = "markets" | "equity" | "discovery" | "research";
 
 // `tv` is the bar size (interval) and `tvRange` is the visible zoom window.
 // Both must be set or the chart looks identical for every D-interval choice.
@@ -80,7 +82,7 @@ const RANGES = [
 ] as const;
 
 // Bloomberg/terminal-inspired dark palette tuned for tabular numeric data.
-const COLORS = {
+export const COLORS = {
   bg: "#151518", // --bg-secondary
   panel: "#212124", // --bg-primary
   panelAlt: "#1f1e23", // --bg-tertiary
@@ -99,28 +101,28 @@ const COLORS = {
 } as const;
 
 // Inter for UI chrome, monospace for tabular numerics. We don't bundle the
-// webfont — system-ui falls back gracefully and the cell font (already
+// webfont - system-ui falls back gracefully and the cell font (already
 // loaded by the rest of the portfolio) covers the price columns.
-const FONT_UI =
+export const FONT_UI =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
-const FONT_MONO = "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace";
+export const FONT_MONO = "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace";
 
 // ---------- helpers ----------
 
 function fmtPrice(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (Math.abs(n) >= 10_000) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   if (Math.abs(n) >= 1) return n.toFixed(2);
   return n.toFixed(4);
 }
 
 function fmtPct(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
 }
 
 function fmtBig(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
   if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
@@ -178,7 +180,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
   const [degraded, setDegraded] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
   const [lastTick, setLastTick] = useState<number>(0);
-  // Refresh nonce — bump this and every poll fires immediately.
+  // Refresh nonce - bump this and every poll fires immediately.
   const [refreshNonce, setRefreshNonce] = useState<number>(0);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -188,7 +190,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     return () => window.clearInterval(id);
   }, []);
 
-  // Strip quotes — poll every 15s while window is open. Pauses when the
+  // Strip quotes - poll every 15s while window is open. Pauses when the
   // tab is hidden so we don't hammer the upstream from background tabs.
   // AbortController kills in-flight requests on cleanup so a stale poll
   // can't overwrite fresh data after a manual refresh / unmount.
@@ -229,7 +231,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     };
   }, [refreshNonce]);
 
-  // Watchlist quotes — also 15s polling, also visibility-gated.
+  // Watchlist quotes - also 15s polling, also visibility-gated.
   useEffect(() => {
     const ctrl = new AbortController();
     let timer: number | null = null;
@@ -260,7 +262,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
 
   // Chart for the focused symbol + range. Signal aborts in-flight fetch
   // when the user clicks a different range / symbol before the previous
-  // request lands — otherwise last-resolver-wins would race.
+  // request lands - otherwise last-resolver-wins would race.
   const loadChart = useCallback(
     async (symbol: string, r: (typeof RANGES)[number], signal: AbortSignal) => {
       setLoadingChart(true);
@@ -295,7 +297,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     return () => ctrl.abort();
   }, [focused, range, loadChart, refreshNonce]);
 
-  // Manual refresh — bumps the nonce, all polling effects re-fire.
+  // Manual refresh - bumps the nonce, all polling effects re-fire.
   // Ref-based gate (not state) so rapid clicks within the same render
   // frame are debounced synchronously. State-based gates miss because
   // React batches updates and the closure sees stale `refreshing` until
@@ -343,12 +345,8 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
         lastTick={lastTick}
         liveSource={
           stripQuotes.length === 0
-            ? "—"
-            : stripQuotes.every((q) => q.source === "seed")
-            ? "SNAPSHOT"
-            : stripQuotes.some((q) => q.source === "seed")
-            ? "MIXED"
-            : "LIVE"
+            ? null
+            : aggregateSource(stripQuotes.map((q) => q.source as DataSource))
         }
         onRefresh={onManualRefresh}
         refreshing={refreshing}
@@ -394,6 +392,12 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
             }}
           />
         )}
+        {tab === "research" && (
+          <QuantDesk
+            symbol={focused}
+            setSymbol={setFocused}
+          />
+        )}
       </div>
 
       <StatusBar focused={focused} chart={chart} loading={loadingChart} />
@@ -416,19 +420,11 @@ function Header({
   marketLabel: string;
   marketColor: string;
   lastTick: number;
-  liveSource: "LIVE" | "SNAPSHOT" | "MIXED" | "—";
+  liveSource: DataSource;
   onRefresh: () => void;
   refreshing: boolean;
 }) {
   const tickAge = lastTick === 0 ? null : Math.max(0, Math.floor((now.getTime() - lastTick) / 1000));
-  const sourceColor =
-    liveSource === "LIVE"
-      ? COLORS.up
-      : liveSource === "SNAPSHOT"
-      ? COLORS.brand
-      : liveSource === "MIXED"
-      ? COLORS.brand
-      : COLORS.textDim;
   return (
     <div
       className="flex items-center justify-between px-[14px] py-[8px] border-b shrink-0"
@@ -463,43 +459,8 @@ function Header({
         </span>
       </div>
       <div className="flex items-center gap-[10px] text-[12px]">
-        {/* Live-source pulse */}
-        <span
-          className="flex items-center gap-[6px] px-[8px] py-[2px]"
-          style={{
-            background: COLORS.panelDeep,
-            border: "1px solid " + COLORS.borderSoft,
-            fontFamily: FONT_UI,
-            fontSize: 10,
-            letterSpacing: "0.14em",
-          }}
-          title={
-            liveSource === "LIVE"
-              ? "Live data from upstream"
-              : liveSource === "SNAPSHOT"
-              ? "Upstream cooled off — showing latest cached snapshot"
-              : liveSource === "MIXED"
-              ? "Some symbols live, some snapshot"
-              : "No data yet"
-          }
-        >
-          <span
-            className="inline-block rounded-full"
-            style={{
-              width: 6,
-              height: 6,
-              background: sourceColor,
-              boxShadow:
-                liveSource === "LIVE" ? `0 0 6px ${sourceColor}` : "none",
-            }}
-          />
-          <span style={{ color: sourceColor }}>{liveSource}</span>
-          {tickAge != null && (
-            <span style={{ color: COLORS.textFaint, fontFamily: FONT_MONO }}>
-              · {tickAge}s
-            </span>
-          )}
-        </span>
+        {/* Unified data-source badge — covers LIVE / DELAYED / CACHED / SYNTHETIC */}
+        <SourceBadge source={liveSource} size="sm" ageSeconds={tickAge} />
         <span style={{ color: COLORS.textDim, fontFamily: FONT_MONO }}>
           {nyClock(now)} ET
         </span>
@@ -518,7 +479,7 @@ function Header({
             letterSpacing: "0.14em",
             textTransform: "uppercase",
           }}
-          title="Force refresh — bypass cache + retry upstreams"
+          title="Force refresh - bypass cache + retry upstreams"
         >
           <span
             aria-hidden
@@ -613,6 +574,7 @@ function TabBar({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
     { id: "markets", label: "Markets" },
     { id: "equity", label: "Equity Research" },
     { id: "discovery", label: "Discovery" },
+    { id: "research", label: "Research" },
   ];
   return (
     <div
@@ -804,7 +766,7 @@ function MarketsTab({
           </div>
         </div>
 
-        {/* Chart body — TradingView widget (their data feed, full toolbar) */}
+        {/* Chart body - TradingView widget (their data feed, full toolbar) */}
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0">
             <TradingViewChart
@@ -843,8 +805,8 @@ function MarketsTab({
                 ["52w high", fmtPrice(chart.fiftyTwoWeekHigh)],
                 ["52w low", fmtPrice(chart.fiftyTwoWeekLow)],
                 ["Volume", fmtBig(chart.volume)],
-                ["Currency", chart.currency ?? "—"],
-                ["Exchange", chart.exchange ?? "—"],
+                ["Currency", chart.currency ?? "-"],
+                ["Exchange", chart.exchange ?? "-"],
               ].map(([k, v]) => (
                 <div
                   key={k}

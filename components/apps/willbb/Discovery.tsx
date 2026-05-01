@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Discovery — daily gainers / losers / most-active screeners.
+ * Discovery - daily gainers / losers / most-active screeners.
  *
  * Backed by Yahoo's predefined screener endpoints (day_gainers /
  * day_losers / most_actives), proxied server-side. Click any row to jump to
@@ -9,6 +9,8 @@
  */
 
 import { useEffect, useState } from "react";
+import MacroPanel from "./MacroPanel";
+import CalendarsPanel from "./CalendarsPanel";
 
 const COLORS = {
   bg: "#151518",
@@ -41,17 +43,17 @@ interface ScreenerRow {
 }
 
 function fmtPct(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
 }
 
 function fmtNum(n: number | null, digits = 2): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 function fmtBig(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + "T";
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + "M";
@@ -95,22 +97,81 @@ function useScreener(scrId: "gainers" | "losers" | "active") {
   return { rows, loading, error };
 }
 
+type DiscoveryTab = "screeners" | "macro" | "calendars";
+
+const DISCOVERY_TABS: { id: DiscoveryTab; label: string; sub: string }[] = [
+  { id: "screeners", label: "Screeners", sub: "gainers · losers · most active" },
+  { id: "macro", label: "Macro", sub: "treasury · CPI · GDP · unemployment · inflation" },
+  { id: "calendars", label: "Calendars", sub: "earnings · IPO" },
+];
+
 export default function Discovery({
   onPick,
 }: {
   onPick: (symbol: string) => void;
 }) {
+  const [tab, setTab] = useState<DiscoveryTab>("screeners");
+
+  return (
+    <div className="flex flex-col h-full" style={{ background: COLORS.bg }}>
+      <SubTabBar tab={tab} setTab={setTab} />
+      <div className="flex-1 min-h-0">
+        {tab === "screeners" && (
+          <div
+            className="grid h-full overflow-hidden"
+            style={{
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              background: COLORS.bg,
+            }}
+          >
+            <Column title="Gainers" subtitle="day_gainers" scrId="gainers" onPick={onPick} accent={COLORS.up} />
+            <Column title="Losers" subtitle="day_losers" scrId="losers" onPick={onPick} accent={COLORS.down} />
+            <Column title="Most Active" subtitle="most_actives" scrId="active" onPick={onPick} accent={COLORS.brand} />
+          </div>
+        )}
+        {tab === "macro" && <MacroPanel />}
+        {tab === "calendars" && <CalendarsPanel onPick={onPick} />}
+      </div>
+    </div>
+  );
+}
+
+function SubTabBar({
+  tab,
+  setTab,
+}: {
+  tab: DiscoveryTab;
+  setTab: (t: DiscoveryTab) => void;
+}) {
   return (
     <div
-      className="grid h-full overflow-hidden"
-      style={{
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        background: COLORS.bg,
-      }}
+      className="flex shrink-0"
+      style={{ background: COLORS.panel, borderBottom: "1px solid " + COLORS.border }}
     >
-      <Column title="Gainers" subtitle="day_gainers" scrId="gainers" onPick={onPick} accent={COLORS.up} />
-      <Column title="Losers" subtitle="day_losers" scrId="losers" onPick={onPick} accent={COLORS.down} />
-      <Column title="Most Active" subtitle="most_actives" scrId="active" onPick={onPick} accent={COLORS.brand} />
+      {DISCOVERY_TABS.map((t) => {
+        const active = t.id === tab;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className="px-[16px] py-[8px] text-left"
+            style={{
+              color: active ? COLORS.text : COLORS.textDim,
+              borderBottom: active ? "2px solid " + COLORS.brand : "2px solid transparent",
+              background: "transparent",
+              fontFamily: FONT_UI,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: active ? 600 : 500, letterSpacing: "0.04em" }}>
+              {t.label}
+            </div>
+            <div style={{ fontSize: 10, color: active ? COLORS.textDim : COLORS.textFaint, marginTop: 1, fontFamily: FONT_MONO }}>
+              {t.sub}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -166,7 +227,7 @@ function Column({
             className="px-[14px] py-[12px] text-[12px] leading-relaxed"
             style={{ color: COLORS.textDim, fontFamily: FONT_UI }}
           >
-            Yahoo screener returned no rows — likely rate-limited from this
+            Yahoo screener returned no rows - likely rate-limited from this
             server. Will repopulate when the cooldown clears.
           </div>
         )}
@@ -181,14 +242,14 @@ function Column({
             <div className="min-w-0">
               <div className="flex items-baseline gap-[8px]">
                 <span className="text-[13px] font-semibold" style={{ color: COLORS.brand, fontFamily: FONT_MONO }}>
-                  {r.symbol ?? "—"}
+                  {r.symbol ?? "-"}
                 </span>
                 <span
                   className="text-[11px] truncate flex-1"
                   style={{ color: COLORS.textDim, fontFamily: FONT_UI, maxWidth: 180 }}
                   title={r.shortName ?? ""}
                 >
-                  {r.shortName ?? "—"}
+                  {r.shortName ?? "-"}
                 </span>
               </div>
               <div

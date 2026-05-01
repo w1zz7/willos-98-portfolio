@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Equity Research view — comprehensive single-symbol research surface.
+ * Equity Research view - comprehensive single-symbol research surface.
  *
  * Sub-tabs:
  *   Profile     · company name, sector, HQ, executives
@@ -17,14 +17,15 @@
  *   Options     · calls/puts chain by expiration
  *   News        · 15 latest company headlines
  *
- * Everything flows through /api/markets/equity?module=…&symbol=… — one
+ * Everything flows through /api/markets/equity?module=…&symbol=… - one
  * server-side proxy, Yahoo Finance + CoinGecko fallback, no API keys.
  */
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import TechnicalsView from "./TechnicalsView";
+import { NewsAndSentimentView, SmartMoneyView, TranscriptView } from "./EquityAlphaViews";
 
-// Refresh nonce — bump from EquityResearch and every useEquityModule
+// Refresh nonce - bump from EquityResearch and every useEquityModule
 // re-fetches. Used by the manual "Refresh" button.
 const EquityRefreshContext = createContext<number>(0);
 
@@ -60,6 +61,8 @@ type SubTab =
   | "analysts"
   | "earnings"
   | "holders"
+  | "smartmoney"
+  | "transcript"
   | "dividends"
   | "options"
   | "news";
@@ -74,9 +77,11 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: "analysts", label: "Analysts" },
   { id: "earnings", label: "Earnings" },
   { id: "holders", label: "Holders" },
+  { id: "smartmoney", label: "Smart Money" },
+  { id: "transcript", label: "Transcript" },
   { id: "dividends", label: "Dividends" },
   { id: "options", label: "Options" },
-  { id: "news", label: "News" },
+  { id: "news", label: "News+S" },
 ];
 
 interface SearchHit {
@@ -92,7 +97,7 @@ interface SearchHit {
 // ---------- helpers ----------
 
 function fmtBig(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + "T";
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + "M";
@@ -101,12 +106,12 @@ function fmtBig(n: number | null | undefined): string {
 }
 
 function fmtNum(n: number | null | undefined, digits = 2): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 function fmtPct(n: number | null | undefined, fromRatio = false): string {
-  if (n == null) return "—";
+  if (n == null) return "-";
   const v = fromRatio ? n * 100 : n;
   return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
 }
@@ -119,7 +124,7 @@ function pctColor(n: number | null | undefined): string {
 }
 
 function fmtDate(epoch: number | null | undefined): string {
-  if (epoch == null) return "—";
+  if (epoch == null) return "-";
   return new Date(epoch * 1000).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -212,7 +217,7 @@ export default function EquityResearch({
             fontFamily: FONT_UI,
           }}
         >
-          Showing snapshot data for {symbol} — upstream rate-limited from
+          Showing snapshot data for {symbol} - upstream rate-limited from
           this server. Numbers refresh once the cooldown clears.
         </div>
       )}
@@ -227,9 +232,11 @@ export default function EquityResearch({
         {sub === "analysts" && <AnalystsView symbol={symbol} />}
         {sub === "earnings" && <EarningsView symbol={symbol} />}
         {sub === "holders" && <HoldersView symbol={symbol} />}
+        {sub === "smartmoney" && <SmartMoneyView symbol={symbol} />}
+        {sub === "transcript" && <TranscriptView symbol={symbol} />}
         {sub === "dividends" && <DividendsView symbol={symbol} />}
         {sub === "options" && <OptionsView symbol={symbol} />}
-        {sub === "news" && <NewsView symbol={symbol} />}
+        {sub === "news" && <NewsAndSentimentView symbol={symbol} />}
       </div>
     </div>
     </EquityRefreshContext.Provider>
@@ -362,7 +369,7 @@ function SymbolBar({
                   className="text-[12px] flex-1 truncate"
                   style={{ color: COLORS.text, fontFamily: FONT_UI }}
                 >
-                  {h.shortname ?? h.longname ?? "—"}
+                  {h.shortname ?? h.longname ?? "-"}
                 </span>
                 <span
                   className="text-[10px] uppercase"
@@ -390,7 +397,7 @@ function SymbolBar({
           letterSpacing: "0.12em",
           textTransform: "uppercase",
         }}
-        title="Force refresh — re-fetch every research module"
+        title="Force refresh - re-fetch every research module"
       >
         <span
           aria-hidden
@@ -641,10 +648,10 @@ function ProfileView({ symbol }: { symbol: string }) {
           rows={[
             ["Market Cap", fmtBig(data.marketCap)],
             ["Employees", fmtBig(data.employees)],
-            ["Quote Type", data.quoteType ?? "—"],
-            ["Country", data.country ?? "—"],
-            ["HQ", [data.city, data.state, data.country].filter(Boolean).join(", ") || "—"],
-            ["Phone", data.phone ?? "—"],
+            ["Quote Type", data.quoteType ?? "-"],
+            ["Country", data.country ?? "-"],
+            ["HQ", [data.city, data.state, data.country].filter(Boolean).join(", ") || "-"],
+            ["Phone", data.phone ?? "-"],
           ]}
         />
       </Panel>
@@ -672,10 +679,10 @@ function ProfileView({ symbol }: { symbol: string }) {
               <RowFrag
                 key={i}
                 cells={[
-                  <span key="n" style={{ color: COLORS.text }}>{o.name ?? "—"}</span>,
-                  <span key="t" style={{ color: COLORS.textDim }}>{o.title ?? "—"}</span>,
-                  <span key="a" style={{ color: COLORS.text }}>{o.age ?? "—"}</span>,
-                  <span key="b" style={{ color: COLORS.text }}>{o.yearBorn ?? "—"}</span>,
+                  <span key="n" style={{ color: COLORS.text }}>{o.name ?? "-"}</span>,
+                  <span key="t" style={{ color: COLORS.textDim }}>{o.title ?? "-"}</span>,
+                  <span key="a" style={{ color: COLORS.text }}>{o.age ?? "-"}</span>,
+                  <span key="b" style={{ color: COLORS.text }}>{o.yearBorn ?? "-"}</span>,
                   <span key="p" style={{ color: COLORS.text }}>${fmtBig(o.totalPay)}</span>,
                 ]}
                 rightAligned={[2, 3, 4]}
@@ -832,8 +839,8 @@ function StatisticsView({ symbol }: { symbol: string }) {
               ["Target Median", fmtNum(data.targetMedianPrice)],
               ["Target High", fmtNum(data.targetHighPrice)],
               ["Target Low", fmtNum(data.targetLowPrice)],
-              ["Analyst Count", String(data.numberOfAnalystOpinions ?? "—")],
-              ["Recommendation", data.recommendationKey ?? "—"],
+              ["Analyst Count", String(data.numberOfAnalystOpinions ?? "-")],
+              ["Recommendation", data.recommendationKey ?? "-"],
             ]}
           />
         </Panel>
@@ -1026,9 +1033,9 @@ function AnalystsView({ symbol }: { symbol: string }) {
             ["Target Median", fmtNum(data.target.median)],
             ["Target High", fmtNum(data.target.high)],
             ["Target Low", fmtNum(data.target.low)],
-            ["Recommendation", data.target.recommendationKey ?? "—"],
+            ["Recommendation", data.target.recommendationKey ?? "-"],
             ["Mean Score", fmtNum(data.target.recommendationMean)],
-            ["# Analysts", String(data.target.analysts ?? "—")],
+            ["# Analysts", String(data.target.analysts ?? "-")],
           ]}
         />
       </Panel>
@@ -1060,7 +1067,7 @@ function AnalystsView({ symbol }: { symbol: string }) {
               {data.trend.map((t, i) => (
                 <tr key={i}>
                   <td className="px-[12px] py-[5px]" style={{ color: COLORS.text, fontFamily: FONT_UI, borderBottom: "1px solid " + COLORS.borderSoft }}>
-                    {t.period ?? "—"}
+                    {t.period ?? "-"}
                   </td>
                   {[t.strongBuy, t.buy, t.hold, t.sell, t.strongSell].map((v, j) => (
                     <td
@@ -1072,7 +1079,7 @@ function AnalystsView({ symbol }: { symbol: string }) {
                         borderBottom: "1px solid " + COLORS.borderSoft,
                       }}
                     >
-                      {v ?? "—"}
+                      {v ?? "-"}
                     </td>
                   ))}
                 </tr>
@@ -1094,11 +1101,11 @@ function AnalystsView({ symbol }: { symbol: string }) {
               <RowFrag
                 key={i}
                 cells={[
-                  <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{u.date ?? "—"}</span>,
-                  <span key="f" style={{ color: COLORS.text }}>{u.firm ?? "—"}</span>,
-                  <span key="fg" style={{ color: COLORS.textDim }}>{u.fromGrade ?? "—"}</span>,
-                  <span key="tg" style={{ color: COLORS.text, fontWeight: 600 }}>{u.toGrade ?? "—"}</span>,
-                  <span key="a" style={{ color: COLORS.brand }}>{u.action ?? "—"}</span>,
+                  <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{u.date ?? "-"}</span>,
+                  <span key="f" style={{ color: COLORS.text }}>{u.firm ?? "-"}</span>,
+                  <span key="fg" style={{ color: COLORS.textDim }}>{u.fromGrade ?? "-"}</span>,
+                  <span key="tg" style={{ color: COLORS.text, fontWeight: 600 }}>{u.toGrade ?? "-"}</span>,
+                  <span key="a" style={{ color: COLORS.brand }}>{u.action ?? "-"}</span>,
                 ]}
               />
             ))}
@@ -1139,7 +1146,7 @@ function EarningsView({ symbol }: { symbol: string }) {
       <Panel title="Next Earnings">
         <StatList
           rows={[
-            ["Date(s)", data.next.date.length ? data.next.date.join(" / ") : "—"],
+            ["Date(s)", data.next.date.length ? data.next.date.join(" / ") : "-"],
             ["EPS Avg", fmtNum(data.next.epsAvg)],
             ["EPS High", fmtNum(data.next.epsHigh)],
             ["EPS Low", fmtNum(data.next.epsLow)],
@@ -1159,8 +1166,8 @@ function EarningsView({ symbol }: { symbol: string }) {
             <RowFrag
               key={i}
               cells={[
-                <span key="q" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{q.quarter ?? "—"}</span>,
-                <span key="p" style={{ color: COLORS.textDim }}>{q.period ?? "—"}</span>,
+                <span key="q" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{q.quarter ?? "-"}</span>,
+                <span key="p" style={{ color: COLORS.textDim }}>{q.period ?? "-"}</span>,
                 <span key="e" style={{ color: COLORS.text }}>{fmtNum(q.estimate)}</span>,
                 <span key="a" style={{ color: COLORS.text }}>{fmtNum(q.actual)}</span>,
                 <span key="s" style={{ color: pctColor(q.surprisePct) }}>{fmtPct(q.surprisePct)}</span>,
@@ -1181,7 +1188,7 @@ function EarningsView({ symbol }: { symbol: string }) {
               <RowFrag
                 key={i}
                 cells={[
-                  <span key="y" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{y.year ?? "—"}</span>,
+                  <span key="y" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{y.year ?? "-"}</span>,
                   <span key="r" style={{ color: COLORS.text }}>${fmtBig(y.revenue)}</span>,
                   <span key="e" style={{ color: COLORS.text }}>${fmtBig(y.earnings)}</span>,
                 ]}
@@ -1260,11 +1267,11 @@ function HoldersView({ symbol }: { symbol: string }) {
               <RowFrag
                 key={i}
                 cells={[
-                  <span key="o" style={{ color: COLORS.text }}>{o.organization ?? "—"}</span>,
+                  <span key="o" style={{ color: COLORS.text }}>{o.organization ?? "-"}</span>,
                   <span key="p" style={{ color: COLORS.text }}>{fmtPct(o.pctHeld, true)}</span>,
                   <span key="s" style={{ color: COLORS.text }}>{fmtBig(o.position)}</span>,
                   <span key="v" style={{ color: COLORS.text }}>${fmtBig(o.value)}</span>,
-                  <span key="d" style={{ color: COLORS.textDim, fontFamily: FONT_MONO }}>{o.reportDate ?? "—"}</span>,
+                  <span key="d" style={{ color: COLORS.textDim, fontFamily: FONT_MONO }}>{o.reportDate ?? "-"}</span>,
                 ]}
                 rightAligned={[1, 2, 3, 4]}
               />
@@ -1284,11 +1291,11 @@ function HoldersView({ symbol }: { symbol: string }) {
               <RowFrag
                 key={i}
                 cells={[
-                  <span key="o" style={{ color: COLORS.text }}>{o.organization ?? "—"}</span>,
+                  <span key="o" style={{ color: COLORS.text }}>{o.organization ?? "-"}</span>,
                   <span key="p" style={{ color: COLORS.text }}>{fmtPct(o.pctHeld, true)}</span>,
                   <span key="s" style={{ color: COLORS.text }}>{fmtBig(o.position)}</span>,
                   <span key="v" style={{ color: COLORS.text }}>${fmtBig(o.value)}</span>,
-                  <span key="d" style={{ color: COLORS.textDim, fontFamily: FONT_MONO }}>{o.reportDate ?? "—"}</span>,
+                  <span key="d" style={{ color: COLORS.textDim, fontFamily: FONT_MONO }}>{o.reportDate ?? "-"}</span>,
                 ]}
                 rightAligned={[1, 2, 3, 4]}
               />
@@ -1327,10 +1334,10 @@ function HoldersView({ symbol }: { symbol: string }) {
                   <RowFrag
                     key={i}
                     cells={[
-                      <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{t.date ?? "—"}</span>,
-                      <span key="n" style={{ color: COLORS.text }}>{t.name ?? "—"}</span>,
-                      <span key="r" style={{ color: COLORS.textDim }}>{t.relation ?? "—"}</span>,
-                      <span key="a" style={{ color: COLORS.text }}>{t.transactionText ?? "—"}</span>,
+                      <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{t.date ?? "-"}</span>,
+                      <span key="n" style={{ color: COLORS.text }}>{t.name ?? "-"}</span>,
+                      <span key="r" style={{ color: COLORS.textDim }}>{t.relation ?? "-"}</span>,
+                      <span key="a" style={{ color: COLORS.text }}>{t.transactionText ?? "-"}</span>,
                       <span key="s" style={{ color: COLORS.text }}>{fmtBig(t.shares)}</span>,
                       <span key="v" style={{ color: COLORS.text }}>${fmtBig(t.value)}</span>,
                     ]}
@@ -1377,7 +1384,7 @@ function DividendsView({ symbol }: { symbol: string }) {
                 <RowFrag
                   key={i}
                   cells={[
-                    <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{d.date ?? "—"}</span>,
+                    <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{d.date ?? "-"}</span>,
                     <span key="a" style={{ color: COLORS.text }}>${fmtNum(d.amount, 4)}</span>,
                   ]}
                   rightAligned={[1]}
@@ -1402,7 +1409,7 @@ function DividendsView({ symbol }: { symbol: string }) {
                 <RowFrag
                   key={i}
                   cells={[
-                    <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{s.date ?? "—"}</span>,
+                    <span key="d" style={{ color: COLORS.text, fontFamily: FONT_MONO }}>{s.date ?? "-"}</span>,
                     <span key="r" style={{ color: COLORS.text }}>{s.ratio ?? `${s.numerator ?? "?"}:${s.denominator ?? "?"}`}</span>,
                   ]}
                   rightAligned={[1]}
@@ -1611,13 +1618,13 @@ function NewsView({ symbol }: { symbol: string }) {
                 className="text-[14px] font-semibold leading-snug"
                 style={{ color: COLORS.text, fontFamily: FONT_UI }}
               >
-                {n.title ?? "—"}
+                {n.title ?? "-"}
               </div>
               <div
                 className="text-[11px] mt-[3px] flex gap-[10px]"
                 style={{ color: COLORS.textDim, fontFamily: FONT_UI }}
               >
-                <span>{n.publisher ?? "—"}</span>
+                <span>{n.publisher ?? "-"}</span>
                 <span>·</span>
                 <span style={{ fontFamily: FONT_MONO }}>{fmtDate(n.providerPublishTime)}</span>
                 {n.relatedTickers && n.relatedTickers.length > 0 && (

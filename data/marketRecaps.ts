@@ -34,7 +34,7 @@ export const MARKET_RECAPS: MarketRecap[] = [
     date: "2026-04-27",
     label: "4/27 to 5/1 Market Intel",
     headline:
-      "🔍 Setup: Mag 7 mega-week — FOMC Wednesday + GOOGL/AMZN/META/MSFT same night",
+      "🔍 Setup: Mag 7 mega-week - FOMC Wednesday + GOOGL/AMZN/META/MSFT same night",
     type: "intel",
     macro: [
       "Last week ended on a high note - chips ripped on Iran peace-talk headlines and earnings are coming in hot (78% of S&P 500 reporters beating on the bottom line)",
@@ -241,7 +241,7 @@ export const MARKET_RECAPS: MarketRecap[] = [
     date: "2026-04-20",
     label: "4/20 to 4/24 Market Intel",
     headline:
-      "🔍 Setup: earnings-heavy week + oil jump into new highs — get selective",
+      "🔍 Setup: earnings-heavy week + oil jump into new highs - get selective",
     type: "intel",
     macro: [
       "Market just hit new highs but is starting to feel a little stretched",

@@ -115,13 +115,27 @@ function sigmoid(z) {
   return 1 / (1 + Math.exp(-z));
 }
 
+/**
+ * Seeded LCG (linear congruential generator) — deterministic so model weights
+ * are reproducible run-to-run. Math.random() leaks non-determinism into the
+ * trained model, which jiggles every metric in the UI between prep runs.
+ */
+function makeSeededRng(seed = 42) {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
 function trainLR(rows, epochs = 800, lr = 0.05) {
   const X = rows.map(featurize);
   const y = rows.map((r) => r.anyPlay);
   const nFeat = X[0].length;
   let w = new Array(nFeat).fill(0);
-  // Add small random init (not on bias) to break symmetry
-  for (let i = 1; i < nFeat; i++) w[i] = (Math.random() - 0.5) * 0.1;
+  const rng = makeSeededRng(42);
+  // Small deterministic init (not on bias) to break symmetry.
+  for (let i = 1; i < nFeat; i++) w[i] = (rng() - 0.5) * 0.1;
 
   for (let e = 0; e < epochs; e++) {
     const grad = new Array(nFeat).fill(0);
@@ -273,37 +287,11 @@ writeFileSync(
 
 // ---------- Sample text records ----------
 
-const longText = readFileSync(join(ARCHIVE, "golf_dataset_long_format_with_text.csv"), "utf-8");
-const long = parseCSV(longText);
-console.log("Long rows:", long.length);
-
-const seenEmails = new Set();
-const seenTasks = new Set();
-const reviews = long
-  .filter((r) => r.Review && r.Review.length > 20 && r.Review.length < 280)
-  .slice(0, 30)
-  .map((r) => ({ d: r.Date, p: `Player ${r.ID ?? "?"}`, r: r.Review }));
-const emails = [];
-for (const r of long) {
-  if (!r.EmailCampaign || r.EmailCampaign.length < 20) continue;
-  if (seenEmails.has(r.EmailCampaign)) continue;
-  seenEmails.add(r.EmailCampaign);
-  emails.push({ d: r.Date, e: r.EmailCampaign });
-  if (emails.length >= 12) break;
-}
-const tasks = [];
-for (const r of long) {
-  if (!r.MaintenanceTask || r.MaintenanceTask.length < 20) continue;
-  if (seenTasks.has(r.MaintenanceTask)) continue;
-  seenTasks.add(r.MaintenanceTask);
-  tasks.push({ d: r.Date, t: r.MaintenanceTask });
-  if (tasks.length >= 15) break;
-}
-
-writeFileSync(
-  join(OUT_DIR, "text_samples.json"),
-  JSON.stringify({ reviews, emails, tasks }, null, 2)
-);
+// === Phase E: text samples removed ===
+// The long-format text dataset (reviews / emails / maintenance) had no
+// connection to the real PGA Tour analysis and read like synthetic
+// scaffolding. Killing the block to tighten the project to two honest
+// datasets: weather (pedagogical) + PGA Tour (real).
 
 // ---------- PGA Tour aggregation ----------
 
@@ -504,7 +492,7 @@ writeFileSync(
 //   prior_cut_pct          (player's prior-season cut rate or 0.5)
 //   prior_top10_rate       (prior-season top-10 / events or 0.05)
 //   purse_norm             (tournament purse normalized 0..1)
-//   season_idx             (encoded 0..7 for 2015..2022 — minor effect)
+//   season_idx             (encoded 0..7 for 2015..2022 - minor effect)
 // Target: made_cut binary
 
 console.log("\nTraining PGA cut-prediction logistic regression...");
@@ -541,7 +529,7 @@ for (const r of pga) {
   const player = (r.player || "").trim();
   const madeCut = num(r.made_cut);
   if (!season || !player || madeCut == null) continue;
-  if (season === seasonsAll[0]) continue; // need lag — skip earliest season
+  if (season === seasonsAll[0]) continue; // need lag - skip earliest season
 
   const priorKey = `${season - 1}__${player}`;
   const prior = playerSeasonStats.get(priorKey);
@@ -549,6 +537,7 @@ for (const r of pga) {
   const purseNorm = (purse - purseMin) / Math.max(1, purseMax - purseMin);
 
   cutTrainRows.push({
+    season,
     x: [
       1, // bias
       prior && prior.sgTotalN > 0 ? prior.sgTotalSum / prior.sgTotalN : 0, // lagged SG-Total
@@ -568,7 +557,8 @@ function trainLR2(rows, epochs = 600, lr = 0.1) {
   const y = rows.map((r) => r.y);
   const nFeat = X[0].length;
   let w = new Array(nFeat).fill(0);
-  for (let i = 1; i < nFeat; i++) w[i] = (Math.random() - 0.5) * 0.1;
+  const rng = makeSeededRng(42);
+  for (let i = 1; i < nFeat; i++) w[i] = (rng() - 0.5) * 0.1;
   for (let e = 0; e < epochs; e++) {
     const grad = new Array(nFeat).fill(0);
     for (let i = 0; i < X.length; i++) {
@@ -605,6 +595,83 @@ console.log(
   `  Cut LR accuracy: ${(cutModel.accuracy * 100).toFixed(2)}% on ${cutModel.n} rows (base rate ${(cutModel.baseRate * 100).toFixed(1)}%)`
 );
 
+// === Walk-forward CV: 3 folds, test seasons 2020/2021/2022 ===========
+// For each test season Y, train on rows where season < Y, then predict
+// rows where season === Y. Persist per-fold OOS accuracy + lift over base
+// rate, plus a 10-decile calibration table over the stitched OOS predictions.
+console.log("  Running walk-forward CV on cut model (test seasons 2020/2021/2022)...");
+
+function predictLR(weights, x) {
+  const z = x.reduce((s, v, k) => s + v * weights[k], 0);
+  return 1 / (1 + Math.exp(-z));
+}
+
+const cutTestSeasons = [2020, 2021, 2022];
+const cutFolds = [];
+const oosPreds = []; // { p, y } across all folds for stitched calibration
+for (const testSeason of cutTestSeasons) {
+  const trainSlice = cutTrainRows.filter((r) => r.season < testSeason);
+  const testSlice = cutTrainRows.filter((r) => r.season === testSeason);
+  if (trainSlice.length < 100 || testSlice.length < 50) continue;
+  const foldModel = trainLR2(trainSlice);
+  let correct = 0;
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  let yMean = 0;
+  for (const row of testSlice) {
+    const p = predictLR(foldModel.weights, row.x);
+    const pred = p > 0.5 ? 1 : 0;
+    if (pred === row.y) correct++;
+    if (pred === 1 && row.y === 1) tp++;
+    if (pred === 1 && row.y === 0) fp++;
+    if (pred === 0 && row.y === 1) fn++;
+    if (pred === 0 && row.y === 0) tn++;
+    yMean += row.y;
+    oosPreds.push({ p, y: row.y });
+  }
+  const baseRate = yMean / testSlice.length;
+  const accuracy = correct / testSlice.length;
+  cutFolds.push({
+    testSeason,
+    nTrain: trainSlice.length,
+    nTest: testSlice.length,
+    accuracy: Number(accuracy.toFixed(4)),
+    baseRate: Number(baseRate.toFixed(4)),
+    lift: Number((accuracy - baseRate).toFixed(4)),
+    confusion: { tp, fp, fn, tn },
+  });
+}
+
+// 10-decile calibration: bucket OOS predictions by predicted P(cut),
+// average actual cut rate inside each bucket → diagonal = perfect calibration
+const calibrationBins = [];
+const NB = 10;
+for (let b = 0; b < NB; b++) {
+  const lo = b / NB;
+  const hi = (b + 1) / NB;
+  const bucket = oosPreds.filter((o) => o.p >= lo && o.p < (b === NB - 1 ? 1.0001 : hi));
+  if (bucket.length === 0) {
+    calibrationBins.push({ bin: b, lo, hi, n: 0, predMean: (lo + hi) / 2, actualRate: 0 });
+    continue;
+  }
+  const predMean = bucket.reduce((a, o) => a + o.p, 0) / bucket.length;
+  const actualRate = bucket.reduce((a, o) => a + o.y, 0) / bucket.length;
+  calibrationBins.push({
+    bin: b,
+    lo: Number(lo.toFixed(2)),
+    hi: Number(hi.toFixed(2)),
+    n: bucket.length,
+    predMean: Number(predMean.toFixed(4)),
+    actualRate: Number(actualRate.toFixed(4)),
+  });
+}
+
+// Brier score: mean((p - y)^2) - lower is better; perfect = 0
+const brier = oosPreds.length
+  ? oosPreds.reduce((a, o) => a + (o.p - o.y) ** 2, 0) / oosPreds.length
+  : 0;
+
+console.log(`  OOS folds: ${cutFolds.length}, mean lift over base rate: ${(cutFolds.reduce((a, f) => a + f.lift, 0) / Math.max(1, cutFolds.length) * 100).toFixed(2)}pp, Brier: ${brier.toFixed(4)}`);
+
 writeFileSync(
   join(OUT_DIR, "cut_model.json"),
   JSON.stringify(
@@ -632,7 +699,21 @@ writeFileSync(
       confusion: cutModel.confusion,
       hyperparams: { epochs: 600, lr: 0.1, optimizer: "batch GD" },
       target: "made_cut (binary) on row-level tournament data 2016-2022",
-      note: "Features are lagged from the player's prior season — leak-free.",
+      note: "Features are lagged from the player's prior season - leak-free.",
+      walkForward: {
+        method: "Per test season Y, train on rows season<Y, test on season===Y",
+        testSeasons: cutTestSeasons,
+        folds: cutFolds,
+        meanOosLift: Number((cutFolds.reduce((a, f) => a + f.lift, 0) / Math.max(1, cutFolds.length)).toFixed(4)),
+        meanOosAccuracy: Number((cutFolds.reduce((a, f) => a + f.accuracy, 0) / Math.max(1, cutFolds.length)).toFixed(4)),
+        meanOosBaseRate: Number((cutFolds.reduce((a, f) => a + f.baseRate, 0) / Math.max(1, cutFolds.length)).toFixed(4)),
+      },
+      calibration: {
+        method: "10-decile bucketing of stitched OOS predictions",
+        bins: calibrationBins,
+        brierScore: Number(brier.toFixed(4)),
+        nOosPredictions: oosPreds.length,
+      },
     },
     null,
     2
@@ -764,6 +845,84 @@ function kmeans(X, k, maxIter = 100, seed = 7) {
 }
 
 const km = kmeans(featuresZ, 4);
+
+// === Phase F: K-means k justification (elbow + silhouette) ===========
+// "Why k=4?" - sweep k=2..6 on the same z-scored career-SG matrix and
+// persist within-cluster sum-of-squares (WCSS) plus average silhouette
+// score per k. WCSS shows the elbow; silhouette shows internal cluster
+// quality.
+
+function computeWcss(X, assign, centroids) {
+  let wcss = 0;
+  for (let i = 0; i < X.length; i++) {
+    const c = centroids[assign[i]];
+    for (let j = 0; j < X[i].length; j++) wcss += (X[i][j] - c[j]) ** 2;
+  }
+  return wcss;
+}
+
+function computeSilhouette(X, assign, k) {
+  // a(i) = avg distance from i to other points in same cluster
+  // b(i) = min over other clusters of avg distance from i to that cluster
+  // s(i) = (b - a) / max(a, b);  ranges [-1, 1]; >0.5 = strong; <0.25 = weak
+  const N = X.length;
+  function dist(a, b) {
+    let s = 0;
+    for (let j = 0; j < a.length; j++) s += (a[j] - b[j]) ** 2;
+    return Math.sqrt(s);
+  }
+  let total = 0;
+  let counted = 0;
+  for (let i = 0; i < N; i++) {
+    const myCluster = assign[i];
+    const sumDistByCluster = new Array(k).fill(0);
+    const countByCluster = new Array(k).fill(0);
+    for (let j = 0; j < N; j++) {
+      if (i === j) continue;
+      const d = dist(X[i], X[j]);
+      sumDistByCluster[assign[j]] += d;
+      countByCluster[assign[j]]++;
+    }
+    if (countByCluster[myCluster] === 0) continue; // singleton cluster
+    const a = sumDistByCluster[myCluster] / countByCluster[myCluster];
+    let b = Infinity;
+    for (let c = 0; c < k; c++) {
+      if (c === myCluster) continue;
+      if (countByCluster[c] === 0) continue;
+      const meanD = sumDistByCluster[c] / countByCluster[c];
+      if (meanD < b) b = meanD;
+    }
+    if (b === Infinity) continue;
+    const s = (b - a) / Math.max(a, b);
+    total += s;
+    counted++;
+  }
+  return counted > 0 ? total / counted : 0;
+}
+
+const kmeansDiagnostics = [];
+for (let k = 2; k <= 6; k++) {
+  const trial = kmeans(featuresZ, k);
+  const wcss = computeWcss(featuresZ, trial.assign, trial.centroids);
+  const silhouette = computeSilhouette(featuresZ, trial.assign, k);
+  kmeansDiagnostics.push({
+    k,
+    wcss: Number(wcss.toFixed(2)),
+    silhouette: Number(silhouette.toFixed(4)),
+  });
+}
+console.log(`  K-means diagnostics: ${kmeansDiagnostics.map((d) => `k=${d.k} WCSS=${d.wcss.toFixed(0)} sil=${d.silhouette.toFixed(2)}`).join(", ")}`);
+
+writeFileSync(
+  join(OUT_DIR, "pga_kmeans_diagnostics.json"),
+  JSON.stringify({
+    diagnostics: kmeansDiagnostics,
+    chosenK: 4,
+    nPlayers: featuresZ.length,
+    features: ["putt", "arg", "app", "ott"],
+    method: "Sweep k=2..6 on z-scored career-SG signatures. WCSS = within-cluster sum of squared distances (lower=tighter clusters). Silhouette = mean (b-a)/max(a,b) where a=intra-cluster avg dist, b=nearest other-cluster avg dist; range [-1,1], >0.5 strong, ~0 weak.",
+  })
+);
 
 // Name each cluster by its centroid signature
 function archetypeName(centroid) {
@@ -1039,7 +1198,7 @@ writeFileSync(
 
 console.log("\nRunning PCA on top-60 player 4D signatures...");
 
-// Build matrix of z-scored (Putt, Arg, App, Ott) — already in featuresZ + clusterPool
+// Build matrix of z-scored (Putt, Arg, App, Ott) - already in featuresZ + clusterPool
 const playerNames = clusterPool.map((p) => p.player);
 const n = featuresZ.length;
 const dim = 4;
@@ -1484,7 +1643,12 @@ for (const p of playerSeason.values()) {
   }
 }
 
-const finishRows = [];
+// === Phase D: Reframe as Top-10 binary classifier ====================
+// v1 was a linear regression on `finish` (1..100). R² ≈ 7% - essentially
+// noise. Reframe: target is `made_top10 ∈ {0,1}`. Same lagged features,
+// trained as logistic regression, evaluated walk-forward (per test season)
+// with AUC + 10-decile calibration.
+const top10Rows = [];
 for (const r of pga) {
   const season = num(r.season);
   const player = (r.player || "").trim();
@@ -1501,7 +1665,8 @@ for (const r of pga) {
   const purse = num(r.purse) ?? 0;
   const purseNorm = (purse - purseMin) / Math.max(1, purseMax - purseMin);
 
-  finishRows.push({
+  top10Rows.push({
+    season,
     x: [
       1, // bias
       prior.putt,
@@ -1512,14 +1677,14 @@ for (const r of pga) {
       Math.max(0, Math.min(1, purseNorm)),
       isMajor(tname) ? 1 : 0,
     ],
-    y: finish, // 1..100
+    y: finish <= 10 ? 1 : 0, // binary top-10
   });
 }
 
-console.log(`  Finish model train rows: ${finishRows.length}`);
+console.log(`  Top-10 classifier train rows: ${top10Rows.length}`);
 
-// Linear regression via batch gradient descent on standardized features
-function trainLinearRegression(rows, epochs = 400, lr = 0.01) {
+// Logistic regression with feature standardization (bias intact).
+function trainLogisticRegression(rows, epochs = 600, lr = 0.1) {
   const X = rows.map((r) => r.x);
   const y = rows.map((r) => r.y);
   const nFeat = X[0].length;
@@ -1535,69 +1700,462 @@ function trainLinearRegression(rows, epochs = 400, lr = 0.01) {
     for (let i = 0; i < X.length; i++) var2 += (X[i][j] - featMeans[j]) ** 2;
     featStds[j] = Math.sqrt(var2 / X.length) || 1;
   }
-  // Standardize y too (predict standardized; un-standardize at inference)
-  const yMean = y.reduce((a, b) => a + b, 0) / y.length;
-  const yStd = Math.sqrt(y.reduce((a, b) => a + (b - yMean) ** 2, 0) / y.length) || 1;
-
   const Xs = X.map((row) =>
     row.map((v, j) => (j === 0 ? 1 : (v - featMeans[j]) / featStds[j]))
   );
-  const ys = y.map((v) => (v - yMean) / yStd);
 
   let w = new Array(nFeat).fill(0);
-  for (let i = 1; i < nFeat; i++) w[i] = (Math.random() - 0.5) * 0.05;
-
+  const rng = makeSeededRng(42);
+  for (let i = 1; i < nFeat; i++) w[i] = (rng() - 0.5) * 0.05;
   for (let e = 0; e < epochs; e++) {
     const grad = new Array(nFeat).fill(0);
     for (let i = 0; i < Xs.length; i++) {
-      const pred = Xs[i].reduce((s, v, k) => s + v * w[k], 0);
-      const err = pred - ys[i];
+      const z = Xs[i].reduce((s, v, k) => s + v * w[k], 0);
+      const p = 1 / (1 + Math.exp(-z));
+      const err = p - y[i];
       for (let k = 0; k < nFeat; k++) grad[k] += err * Xs[i][k];
     }
     for (let k = 0; k < nFeat; k++) w[k] -= (lr * grad[k]) / Xs.length;
   }
+  return { weights: w, featMeans, featStds, n: Xs.length };
+}
 
-  // Eval R² + RMSE on TRAINING set (no test split — small disclaimer in UI)
-  let ssRes = 0;
-  let ssTot = 0;
-  let sqErr = 0;
-  for (let i = 0; i < Xs.length; i++) {
-    const predStd = Xs[i].reduce((s, v, k) => s + v * w[k], 0);
-    const predFinish = predStd * yStd + yMean;
-    const actual = y[i];
-    sqErr += (predFinish - actual) ** 2;
-    ssRes += (predFinish - actual) ** 2;
-    ssTot += (actual - yMean) ** 2;
+function predictLR8(weights, featMeans, featStds, xRaw) {
+  const xs = xRaw.map((v, j) => (j === 0 ? 1 : (v - featMeans[j]) / featStds[j]));
+  const z = xs.reduce((s, v, k) => s + v * weights[k], 0);
+  return 1 / (1 + Math.exp(-z));
+}
+
+// AUC via rank-based U statistic (Mann-Whitney): correct & numerically stable.
+function computeAuc(preds) {
+  const n = preds.length;
+  if (n === 0) return 0;
+  // Sort by predicted prob ascending
+  const sorted = [...preds].sort((a, b) => a.p - b.p);
+  // Assign average ranks to handle ties
+  let i = 0;
+  const ranks = new Array(n);
+  while (i < n) {
+    let j = i;
+    while (j < n - 1 && sorted[j + 1].p === sorted[i].p) j++;
+    const avgRank = (i + j) / 2 + 1; // 1-indexed average rank
+    for (let k = i; k <= j; k++) ranks[k] = avgRank;
+    i = j + 1;
   }
-  const r2 = 1 - ssRes / ssTot;
-  const rmse = Math.sqrt(sqErr / Xs.length);
+  let sumRanksPos = 0;
+  let nPos = 0;
+  for (let k = 0; k < n; k++) {
+    if (sorted[k].y === 1) {
+      sumRanksPos += ranks[k];
+      nPos++;
+    }
+  }
+  const nNeg = n - nPos;
+  if (nPos === 0 || nNeg === 0) return 0.5;
+  return (sumRanksPos - (nPos * (nPos + 1)) / 2) / (nPos * nNeg);
+}
 
-  return {
-    weights: w,
-    featMeans,
-    featStds,
-    yMean,
-    yStd,
-    r2,
-    rmse,
-    n: Xs.length,
+const top10Model = trainLogisticRegression(top10Rows);
+// In-sample fit metrics - for reference; OOS is what matters.
+let isAucPreds = top10Rows.map((r) => ({ p: predictLR8(top10Model.weights, top10Model.featMeans, top10Model.featStds, r.x), y: r.y }));
+const isAuc = computeAuc(isAucPreds);
+const isBaseRate = top10Rows.reduce((a, r) => a + r.y, 0) / top10Rows.length;
+console.log(`  Top-10 IS AUC: ${isAuc.toFixed(3)} · base rate: ${(isBaseRate * 100).toFixed(2)}%`);
+
+// === Walk-forward CV: train on season<Y, test on season===Y ==========
+const top10TestSeasons = [2020, 2021, 2022];
+const top10Folds = [];
+const top10OosPreds = [];
+for (const testSeason of top10TestSeasons) {
+  const train = top10Rows.filter((r) => r.season < testSeason);
+  const test = top10Rows.filter((r) => r.season === testSeason);
+  if (train.length < 100 || test.length < 50) continue;
+  const foldModel = trainLogisticRegression(train);
+  const foldPreds = test.map((r) => ({
+    p: predictLR8(foldModel.weights, foldModel.featMeans, foldModel.featStds, r.x),
+    y: r.y,
+  }));
+  const auc = computeAuc(foldPreds);
+  const baseRate = test.reduce((a, r) => a + r.y, 0) / test.length;
+  top10Folds.push({
+    testSeason,
+    nTrain: train.length,
+    nTest: test.length,
+    auc: Number(auc.toFixed(4)),
+    baseRate: Number(baseRate.toFixed(4)),
+  });
+  top10OosPreds.push(...foldPreds);
+}
+
+const oosAuc = computeAuc(top10OosPreds);
+
+// 10-decile calibration on stitched OOS predictions
+const top10CalibrationBins = [];
+for (let b = 0; b < 10; b++) {
+  const lo = b / 10;
+  const hi = (b + 1) / 10;
+  const bucket = top10OosPreds.filter((o) => o.p >= lo && o.p < (b === 9 ? 1.0001 : hi));
+  if (bucket.length === 0) {
+    top10CalibrationBins.push({ bin: b, lo, hi, n: 0, predMean: (lo + hi) / 2, actualRate: 0 });
+    continue;
+  }
+  const predMean = bucket.reduce((a, o) => a + o.p, 0) / bucket.length;
+  const actualRate = bucket.reduce((a, o) => a + o.y, 0) / bucket.length;
+  top10CalibrationBins.push({
+    bin: b,
+    lo: Number(lo.toFixed(2)),
+    hi: Number(hi.toFixed(2)),
+    n: bucket.length,
+    predMean: Number(predMean.toFixed(4)),
+    actualRate: Number(actualRate.toFixed(4)),
+  });
+}
+
+const top10Brier = top10OosPreds.length
+  ? top10OosPreds.reduce((a, o) => a + (o.p - o.y) ** 2, 0) / top10OosPreds.length
+  : 0;
+
+console.log(`  Top-10 OOS AUC: ${oosAuc.toFixed(3)}, Brier: ${top10Brier.toFixed(4)}`);
+
+// Repurpose `finishModel` variable name so downstream JSON key stays `finish_model.json`
+// but with totally new schema (top-10 binary classifier).
+const finishModel = {
+  weights: top10Model.weights,
+  featMeans: top10Model.featMeans,
+  featStds: top10Model.featStds,
+  isAuc,
+  isBaseRate,
+  n: top10Model.n,
+  oosAuc,
+  oosFolds: top10Folds,
+  calibrationBins: top10CalibrationBins,
+  brierScore: top10Brier,
+  nOosPredictions: top10OosPreds.length,
+};
+
+// =====================================================================
+// === Per-season course-difficulty timeline (for animated Scene C4) ===
+// =====================================================================
+// For each course in top25 + each season, compute that season's avg SG-Total
+// at that course (using only that season's rows). Output a matrix: courses
+// × seasons → avgSg + n.
+
+console.log("\nBuilding per-season course-difficulty timeline...");
+
+const courseTimelineMap = new Map();
+for (const r of pga) {
+  const c = (r.course || "").trim();
+  const season = num(r.season);
+  const sgTotal = num(r.sg_total);
+  if (!c || !season || sgTotal == null) continue;
+  const key = `${c}__${season}`;
+  const cur = courseTimelineMap.get(key) ?? { course: c, season, sgs: [] };
+  cur.sgs.push(sgTotal);
+  courseTimelineMap.set(key, cur);
+}
+
+// Filter to the top25 courses (already computed earlier as `coursesDeepTop25`)
+const top25CourseSet = new Set(coursesDeepTop25.map((c) => c.course));
+const courseTimeline = {};
+for (const c of top25CourseSet) {
+  courseTimeline[c] = {};
+  for (const s of seasonsAll) {
+    const entry = courseTimelineMap.get(`${c}__${s}`);
+    if (!entry || entry.sgs.length < 5) {
+      courseTimeline[c][s] = { avgSg: null, n: entry?.sgs.length ?? 0 };
+      continue;
+    }
+    const avg = entry.sgs.reduce((a, b) => a + b, 0) / entry.sgs.length;
+    courseTimeline[c][s] = {
+      avgSg: Number(avg.toFixed(3)),
+      n: entry.sgs.length,
+    };
+  }
+}
+
+writeFileSync(
+  join(OUT_DIR, "pga_courses_timeline.json"),
+  JSON.stringify(
+    {
+      seasons: seasonsAll,
+      courses: coursesDeepTop25.map((c) => c.course),
+      timeline: courseTimeline,
+    },
+    null
+  )
+);
+
+// =====================================================================
+// === Per-player chronological SG-Total + rolling μ + EWMA σ
+// === (Used by Model D: GBM Career Simulator)
+// =====================================================================
+// For each top-50 player, build the per-event SG-Total series sorted by
+// date. Compute:
+//   · 12-event rolling mean (μ_t)            - the "true level" estimate
+//   · 12-event rolling std-dev (σ_t)         - raw rolling volatility
+//   · EWMA σ_t (λ=0.94, RiskMetrics standard) - time-varying vol that
+//     reacts to recent shocks (an IGARCH(1,1) special case)
+//   · Career μ and σ (defaults for GBM forward sim)
+
+console.log("\nBuilding per-player chronological career paths + rolling stats...");
+
+const careerPathsByPlayer = new Map();
+for (const r of pga) {
+  const player = (r.player || "").trim();
+  const sgTotal = num(r.sg_total);
+  const date = r.date;
+  if (!player || sgTotal == null || !date) continue;
+  const arr = careerPathsByPlayer.get(player) ?? [];
+  arr.push({ date, sgTotal });
+  careerPathsByPlayer.set(player, arr);
+}
+
+// Sort each player's events chronologically
+for (const arr of careerPathsByPlayer.values()) {
+  arr.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+// Top 50 players by total event count with ≥40 events
+const careerPathPlayers = [...careerPathsByPlayer.entries()]
+  .filter(([, arr]) => arr.length >= 40)
+  .map(([player, arr]) => ({ player, n: arr.length }))
+  .sort((a, b) => b.n - a.n)
+  .slice(0, 50)
+  .map((p) => p.player);
+
+const ROLLING_WINDOW = 12;
+const EWMA_LAMBDA = 0.94;
+
+function rollingMean(arr, window) {
+  const out = new Array(arr.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) {
+    sum += arr[i];
+    if (i >= window) sum -= arr[i - window];
+    if (i >= window - 1) out[i] = sum / window;
+  }
+  return out;
+}
+
+function rollingStd(arr, mean, window) {
+  const out = new Array(arr.length).fill(null);
+  for (let i = window - 1; i < arr.length; i++) {
+    let s2 = 0;
+    for (let k = i - window + 1; k <= i; k++) {
+      const d = arr[k] - mean[i];
+      s2 += d * d;
+    }
+    out[i] = Math.sqrt(s2 / window);
+  }
+  return out;
+}
+
+// EWMA variance: σ²_t = (1-λ) · ε²_{t-1} + λ · σ²_{t-1}
+// Initialize σ²_0 = sample variance of first 20 obs
+function ewmaSigma(arr, lambda) {
+  const out = new Array(arr.length).fill(null);
+  if (arr.length < 5) return out;
+  const initLen = Math.min(20, arr.length);
+  const initMean = arr.slice(0, initLen).reduce((a, b) => a + b, 0) / initLen;
+  let sigma2 = arr.slice(0, initLen).reduce((a, b) => a + (b - initMean) ** 2, 0) / initLen;
+  let runMean = initMean;
+  for (let i = 0; i < arr.length; i++) {
+    if (i > 0) {
+      runMean = (runMean * i + arr[i]) / (i + 1);
+      const eps = arr[i] - runMean;
+      sigma2 = (1 - lambda) * eps * eps + lambda * sigma2;
+    }
+    out[i] = Math.sqrt(sigma2);
+  }
+  return out;
+}
+
+const careerPaths = {};
+for (const player of careerPathPlayers) {
+  const arr = careerPathsByPlayer.get(player) ?? [];
+  const sgs = arr.map((e) => e.sgTotal);
+  const dates = arr.map((e) => e.date);
+  const rollMu = rollingMean(sgs, ROLLING_WINDOW);
+  const rollSig = rollingStd(sgs, rollMu, ROLLING_WINDOW);
+  const ewmaSig = ewmaSigma(sgs, EWMA_LAMBDA);
+
+  // Career-wide μ and σ (used as GBM defaults)
+  const careerMu = sgs.reduce((a, b) => a + b, 0) / sgs.length;
+  const careerVar = sgs.reduce((a, b) => a + (b - careerMu) ** 2, 0) / sgs.length;
+  const careerSig = Math.sqrt(careerVar);
+
+  // Trim payload: keep ~120 most recent events per player + every nth before
+  const events = arr.map((e, i) => ({
+    d: e.date,
+    sg: Number(sgs[i].toFixed(2)),
+    mu: rollMu[i] != null ? Number(rollMu[i].toFixed(3)) : null,
+    rs: rollSig[i] != null ? Number(rollSig[i].toFixed(3)) : null,
+    es: ewmaSig[i] != null ? Number(ewmaSig[i].toFixed(3)) : null,
+  }));
+
+  careerPaths[player] = {
+    events,
+    careerMu: Number(careerMu.toFixed(3)),
+    careerSig: Number(careerSig.toFixed(3)),
+    n: events.length,
   };
 }
 
-const finishModel = trainLinearRegression(finishRows);
-console.log(
-  `  Finish LR R²: ${finishModel.r2.toFixed(3)} · RMSE: ${finishModel.rmse.toFixed(2)} on ${finishModel.n} rows`
+writeFileSync(
+  join(OUT_DIR, "pga_career_paths.json"),
+  JSON.stringify(
+    {
+      players: careerPathPlayers,
+      paths: careerPaths,
+      rollingWindow: ROLLING_WINDOW,
+      ewmaLambda: EWMA_LAMBDA,
+    },
+    null
+  )
+);
+
+// =====================================================================
+// === Strategy backtest panel: per-month per-player avg SG-Total
+// === + horizon-bucketed vol cone data (for the Strategy Lab + Vol Cone)
+// =====================================================================
+
+console.log("\nBuilding strategy backtest panel + vol cone...");
+
+// Aggregate per-month per-player avg SG-Total. Format YYYY-MM.
+const monthly = new Map();
+for (const r of pga) {
+  const player = (r.player || "").trim();
+  const sgTotal = num(r.sg_total);
+  const date = r.date;
+  if (!player || sgTotal == null || !date) continue;
+  const month = date.slice(0, 7);
+  const key = `${month}__${player}`;
+  const cur = monthly.get(key) ?? { month, player, sgs: [] };
+  cur.sgs.push(sgTotal);
+  monthly.set(key, cur);
+}
+
+// Universe: top 100 players by event count
+const PANEL_UNIVERSE_SIZE = 100;
+const panelPlayers = [...careerPathsByPlayer.entries()]
+  .map(([player, arr]) => ({ player, n: arr.length }))
+  .sort((a, b) => b.n - a.n)
+  .slice(0, PANEL_UNIVERSE_SIZE)
+  .map((p) => p.player);
+const panelSet = new Set(panelPlayers);
+
+// All months that appear, sorted
+const allMonths = [...new Set([...monthly.values()].filter((e) => panelSet.has(e.player)).map((e) => e.month))].sort();
+
+// Build wide-format panel: months as rows, players as cols, value = avg sg
+const panel = {};
+for (const m of allMonths) panel[m] = {};
+for (const e of monthly.values()) {
+  if (!panelSet.has(e.player)) continue;
+  panel[e.month][e.player] = {
+    sg: Number((e.sgs.reduce((a, b) => a + b, 0) / e.sgs.length).toFixed(3)),
+    n: e.sgs.length,
+  };
+}
+
+// Coverage stats
+const monthsWithPlayer = new Map();
+for (const m of allMonths) {
+  for (const p of panelPlayers) {
+    if (panel[m][p]) {
+      monthsWithPlayer.set(p, (monthsWithPlayer.get(p) ?? 0) + 1);
+    }
+  }
+}
+
+writeFileSync(
+  join(OUT_DIR, "pga_strategy_panel.json"),
+  JSON.stringify(
+    {
+      months: allMonths,
+      players: panelPlayers,
+      panel,
+      universeSize: PANEL_UNIVERSE_SIZE,
+    },
+    null
+  )
+);
+
+// Vol cone: for each forward horizon k in {1, 3, 6, 12, 24, 48}, compute
+// rolling sample std of avg-SG over k events, pooled across all players.
+// Output: percentile (5/25/50/75/95) vol at each horizon.
+
+const HORIZONS = [1, 3, 6, 12, 24, 48];
+const volCone = {};
+for (const k of HORIZONS) {
+  const sigmas = [];
+  for (const player of careerPathPlayers) {
+    const arr = careerPathsByPlayer.get(player) ?? [];
+    const sgs = arr.map((e) => e.sgTotal);
+    if (sgs.length < k * 2) continue;
+    // Sliding-window σ of the average over k consecutive events
+    for (let i = k; i + k <= sgs.length; i++) {
+      const window = sgs.slice(i, i + k);
+      const m = window.reduce((a, b) => a + b, 0) / k;
+      const var2 = window.reduce((a, b) => a + (b - m) ** 2, 0) / k;
+      sigmas.push(Math.sqrt(var2));
+    }
+  }
+  sigmas.sort((a, b) => a - b);
+  const pct = (p) => sigmas[Math.floor(p * sigmas.length)];
+  volCone[k] = {
+    p5: Number(pct(0.05).toFixed(3)),
+    p25: Number(pct(0.25).toFixed(3)),
+    p50: Number(pct(0.50).toFixed(3)),
+    p75: Number(pct(0.75).toFixed(3)),
+    p95: Number(pct(0.95).toFixed(3)),
+    n: sigmas.length,
+  };
+}
+
+// Per-player current σ̂ per horizon (for "drop player on the cone")
+const playerVolByHorizon = {};
+for (const player of careerPathPlayers) {
+  const arr = careerPathsByPlayer.get(player) ?? [];
+  const sgs = arr.map((e) => e.sgTotal);
+  const out = {};
+  for (const k of HORIZONS) {
+    if (sgs.length < k * 2) continue;
+    // Use the most recent k events to compute σ
+    const recent = sgs.slice(-k);
+    const m = recent.reduce((a, b) => a + b, 0) / k;
+    const var2 = recent.reduce((a, b) => a + (b - m) ** 2, 0) / k;
+    out[k] = Number(Math.sqrt(var2).toFixed(3));
+  }
+  playerVolByHorizon[player] = out;
+}
+
+writeFileSync(
+  join(OUT_DIR, "pga_vol_cone.json"),
+  JSON.stringify(
+    {
+      horizons: HORIZONS,
+      cone: volCone,
+      perPlayer: playerVolByHorizon,
+      players: careerPathPlayers,
+    },
+    null,
+    2
+  )
 );
 
 writeFileSync(
   join(OUT_DIR, "finish_model.json"),
   JSON.stringify(
     {
+      // Phase D: Top-10 binary classifier replaces the v1 finish-position
+      // regression (R² ≈ 7%, essentially noise). Same lagged-feature spine,
+      // logistic regression, walk-forward OOS AUC, 10-decile calibration.
+      modelType: "logistic_classifier",
+      target: "made_top10 (binary): 1 if finish ≤ 10 else 0",
       weights: finishModel.weights,
       featMeans: finishModel.featMeans,
       featStds: finishModel.featStds,
-      yMean: finishModel.yMean,
-      yStd: finishModel.yStd,
       featureNames: [
         "bias",
         "prior_sg_putt",
@@ -1618,17 +2176,270 @@ writeFileSync(
         "Purse",
         "Major event",
       ],
-      r2: Number(finishModel.r2.toFixed(4)),
-      rmse: Number(finishModel.rmse.toFixed(2)),
+      // In-sample metrics
+      isAuc: Number(finishModel.isAuc.toFixed(4)),
+      isBaseRate: Number(finishModel.isBaseRate.toFixed(4)),
       trainedOn: finishModel.n,
-      target: "Finish position (1=win, capped at 100)",
-      yRange: [1, 100],
-      hyperparams: { epochs: 400, lr: 0.01, optimizer: "batch GD on standardized features" },
+      // Walk-forward OOS metrics
+      walkForward: {
+        method: "Per test season Y, train rows season<Y, test on season===Y",
+        folds: finishModel.oosFolds,
+        meanOosAuc: finishModel.oosFolds.length > 0
+          ? Number((finishModel.oosFolds.reduce((a, f) => a + f.auc, 0) / finishModel.oosFolds.length).toFixed(4))
+          : 0,
+        stitchedOosAuc: Number(finishModel.oosAuc.toFixed(4)),
+      },
+      calibration: {
+        method: "10-decile bucketing of stitched OOS predictions",
+        bins: finishModel.calibrationBins,
+        brierScore: Number(finishModel.brierScore.toFixed(4)),
+        nOosPredictions: finishModel.nOosPredictions,
+      },
+      hyperparams: { epochs: 600, lr: 0.1, optimizer: "batch GD on standardized features", target: "binary cross-entropy via sigmoid" },
     },
     null,
     2
   )
 );
+
+// =====================================================================
+// === Walk-forward backtest matrix: per-(year × signal) IS / OOS Sharpe
+// === Pre-computed to feed the 14th 3D scene (Walk-Forward Sharpe Heatmap)
+// =====================================================================
+
+console.log("\nBuilding walk-forward Sharpe matrix...");
+
+(function buildWalkforwardMatrix() {
+  const SIGNALS = ["momentum", "meanRev", "sharpe", "blend"];
+  const SIGNAL_LABELS = {
+    momentum: "Momentum",
+    meanRev: "Mean-Rev",
+    sharpe: "Sharpe-Rank",
+    blend: "Equal-Blend",
+  };
+  const lookback = 12;
+  const longPct = 0.2;
+  const shortPct = 0.2;
+  const targetVolMonthly = 0.005; // 0.5% monthly vol target
+  const minHistory = 6;
+  const months = allMonths;
+  const players = panelPlayers;
+  const T = months.length;
+  const P = players.length;
+
+  // Build X[t][p]
+  const X = Array.from({ length: T }, () => new Array(P).fill(null));
+  for (let ti = 0; ti < T; ti++) {
+    const m = months[ti];
+    for (let pi = 0; pi < P; pi++) {
+      const cell = panel[m]?.[players[pi]];
+      X[ti][pi] = cell?.sg ?? null;
+    }
+  }
+
+  // Per-player rolling mean/std + career mean
+  function rollMean(arr, k) {
+    const out = new Array(arr.length).fill(null);
+    for (let i = 0; i < arr.length; i++) {
+      if (i + 1 < k) continue;
+      let sum = 0; let cnt = 0;
+      for (let j = i + 1 - k; j <= i; j++) {
+        if (arr[j] != null) { sum += arr[j]; cnt++; }
+      }
+      out[i] = cnt > 0 ? sum / cnt : null;
+    }
+    return out;
+  }
+  function rollStd(arr, k) {
+    const out = new Array(arr.length).fill(null);
+    for (let i = 0; i < arr.length; i++) {
+      if (i + 1 < k) continue;
+      const window = [];
+      for (let j = i + 1 - k; j <= i; j++) if (arr[j] != null) window.push(arr[j]);
+      if (window.length < 2) continue;
+      const m = window.reduce((a, b) => a + b, 0) / window.length;
+      const v = window.reduce((a, b) => a + (b - m) ** 2, 0) / (window.length - 1);
+      out[i] = Math.sqrt(v);
+    }
+    return out;
+  }
+
+  const perPlayerMu = [];
+  const perPlayerSig = [];
+  // Phase A2 mirror: expanding past-only career mean (no full-sample look-ahead).
+  const perPlayerCareerMuTo = [];
+  for (let pi = 0; pi < P; pi++) {
+    const arr = X.map((row) => row[pi]);
+    perPlayerMu.push(rollMean(arr, lookback));
+    perPlayerSig.push(rollStd(arr, lookback));
+    const muTo = [];
+    let sum = 0;
+    let n = 0;
+    for (let t = 0; t < arr.length; t++) {
+      muTo.push(n > 0 ? sum / n : null);
+      if (arr[t] != null) {
+        sum += arr[t];
+        n++;
+      }
+    }
+    perPlayerCareerMuTo.push(muTo);
+  }
+
+  // Signal helpers
+  function signalAt(t, pi, signal) {
+    const mu = perPlayerMu[pi][t];
+    const sig = perPlayerSig[pi][t];
+    if (mu == null) return null;
+    const momVal = mu;
+    let mrVal = null;
+    {
+      const vals = [X[t - 2]?.[pi], X[t - 1]?.[pi], X[t]?.[pi]].filter((v) => v != null);
+      if (vals.length > 0) {
+        const m3 = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const careerMu = perPlayerCareerMuTo[pi][t];
+        if (careerMu != null) mrVal = -(m3 - careerMu);
+      }
+    }
+    let sharpeVal = null;
+    if (sig != null && sig > 0) sharpeVal = mu / sig;
+
+    if (signal === "momentum") return momVal;
+    if (signal === "meanRev") return mrVal;
+    if (signal === "sharpe") return sharpeVal;
+    if (signal === "blend") {
+      if (momVal == null || mrVal == null || sharpeVal == null) return null;
+      return (momVal + mrVal + sharpeVal) / 3;
+    }
+    return null;
+  }
+
+  // Run strategy through a list of (sorted) month indices, return monthly returns array
+  function runOnIndices(indices, signal) {
+    const returns = [];
+    for (const t of indices) {
+      // Need t+1 to realize a return
+      if (t + 1 >= T) continue;
+      // Eligible: minHistory observations up to t
+      const eligible = [];
+      const sigVals = [];
+      for (let pi = 0; pi < P; pi++) {
+        let priorN = 0;
+        for (let s = 0; s <= t; s++) if (X[s][pi] != null) priorN++;
+        if (priorN < minHistory) continue;
+        const sv = signalAt(t, pi, signal);
+        if (sv == null) continue;
+        eligible.push(pi);
+        sigVals.push(sv);
+      }
+      if (eligible.length < 10) continue;
+      // Quintile split by signal value
+      const sorted = eligible.map((pi, k) => ({ pi, sv: sigVals[k] })).sort((a, b) => b.sv - a.sv);
+      const longN = Math.max(1, Math.floor(sorted.length * longPct));
+      const shortN = Math.max(1, Math.floor(sorted.length * shortPct));
+      const longs = sorted.slice(0, longN);
+      const shorts = sorted.slice(sorted.length - shortN);
+      // Equal weights, vol-target sized via inverse rolling σ̂
+      const weights = new Array(P).fill(0);
+      const longInvSigs = longs.map((x) => {
+        const s = perPlayerSig[x.pi][t];
+        return s != null && s > 0 ? 1 / s : 1;
+      });
+      const longSum = longInvSigs.reduce((a, b) => a + b, 0);
+      longs.forEach((x, k) => { weights[x.pi] = +0.5 * (longInvSigs[k] / longSum); });
+      const shortInvSigs = shorts.map((x) => {
+        const s = perPlayerSig[x.pi][t];
+        return s != null && s > 0 ? 1 / s : 1;
+      });
+      const shortSum = shortInvSigs.reduce((a, b) => a + b, 0);
+      shorts.forEach((x, k) => { weights[x.pi] = -0.5 * (shortInvSigs[k] / shortSum); });
+      // Realize next-month return
+      let r = 0;
+      for (let pi = 0; pi < P; pi++) {
+        const nx = X[t + 1][pi];
+        if (nx == null || weights[pi] === 0) continue;
+        r += weights[pi] * nx;
+      }
+      returns.push(r);
+    }
+    return returns;
+  }
+
+  function meanStd(xs) {
+    if (xs.length < 2) return [0, 0];
+    const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const v = xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1);
+    return [m, Math.sqrt(v)];
+  }
+  function annualSharpe(xs) {
+    const [m, s] = meanStd(xs);
+    if (s === 0) return 0;
+    // Vol-target rescale to match StrategyLab: scale return series so realized σ ≈ targetVolMonthly
+    const scale = s > 0 ? targetVolMonthly / s : 1;
+    const m2 = m * scale;
+    const s2 = s * scale;
+    if (s2 === 0) return 0;
+    return (m2 / s2) * Math.sqrt(12);
+  }
+
+  const yearsPresent = [...new Set(months.map((m) => parseInt(m.slice(0, 4), 10)))].sort();
+  // Need 36 months prior data → start at the year where we have ≥ 36 months before Jan
+  const wfYears = yearsPresent.filter((y) => {
+    const beforeCount = months.filter((m) => parseInt(m.slice(0, 4), 10) < y).length;
+    const inYearCount = months.filter((m) => parseInt(m.slice(0, 4), 10) === y).length;
+    return beforeCount >= 24 && inYearCount >= 6;
+  });
+
+  const matrix = []; // [yearIdx][signalIdx] = { isSharpe, oosSharpe, isMonths, oosMonths }
+  for (const year of wfYears) {
+    const row = [];
+    const trainIdx = [];
+    const testIdx = [];
+    for (let ti = 0; ti < T; ti++) {
+      const y = parseInt(months[ti].slice(0, 4), 10);
+      if (y < year) trainIdx.push(ti);
+      else if (y === year) testIdx.push(ti);
+    }
+    for (const sig of SIGNALS) {
+      const isReturns = runOnIndices(trainIdx, sig);
+      const oosReturns = runOnIndices(testIdx, sig);
+      row.push({
+        signal: sig,
+        isSharpe: Number(annualSharpe(isReturns).toFixed(3)),
+        oosSharpe: Number(annualSharpe(oosReturns).toFixed(3)),
+        isMonths: isReturns.length,
+        oosMonths: oosReturns.length,
+      });
+    }
+    matrix.push({ year, signals: row });
+  }
+
+  // Median OOS Sharpe per signal (across years)
+  const medianOos = {};
+  for (const sig of SIGNALS) {
+    const vals = matrix.map((row) => row.signals.find((s) => s.signal === sig).oosSharpe).sort((a, b) => a - b);
+    medianOos[sig] = vals.length === 0 ? 0 : vals[Math.floor(vals.length / 2)];
+  }
+
+  writeFileSync(
+    join(OUT_DIR, "pga_walkforward.json"),
+    JSON.stringify({
+      years: wfYears,
+      signals: SIGNALS,
+      signalLabels: SIGNAL_LABELS,
+      matrix,
+      medianOos,
+      params: {
+        lookback,
+        longPct,
+        shortPct,
+        targetVolMonthly,
+        minHistory,
+        trainMonthsMin: 24,
+        testMonthsMin: 6,
+      },
+    })
+  );
+})();
 
 // ---------- Done ----------
 
@@ -1637,7 +2448,6 @@ const files = [
   "model.json",
   "scatter3d.json",
   "eda.json",
-  "text_samples.json",
   "pga_tour.json",
   "cut_model.json",
   "pga_analysis.json",
@@ -1648,6 +2458,12 @@ const files = [
   "pga_player_course.json",
   "pga_majors.json",
   "finish_model.json",
+  "pga_courses_timeline.json",
+  "pga_career_paths.json",
+  "pga_strategy_panel.json",
+  "pga_vol_cone.json",
+  "pga_walkforward.json",
+  "pga_kmeans_diagnostics.json",
 ];
 console.log("\nOutput sizes:");
 for (const f of files) {

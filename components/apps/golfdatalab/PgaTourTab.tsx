@@ -3,12 +3,12 @@
 /**
  * PGA Tour 2015-2022 tab: deep statistical analysis across 6 sub-views.
  *
- *   Season         — leaderboard of top 30 by avg SG-Total per season
- *   All-Time       — career leaderboard across all 8 seasons
- *   Courses        — top venues by tournament-rounds + avg SG-Total
- *   Archetypes     — k-means clusters of player SG signatures (NEW)
- *   Correlations   — Pearson matrix: SG components × performance (NEW)
- *   Trends         — year-over-year improvement leaders + decline (NEW)
+ *   Season         - leaderboard of top 30 by avg SG-Total per season
+ *   All-Time       - career leaderboard across all 8 seasons
+ *   Courses        - top venues by tournament-rounds + avg SG-Total
+ *   Archetypes     - k-means clusters of player SG signatures (NEW)
+ *   Correlations   - Pearson matrix: SG components × performance (NEW)
+ *   Trends         - year-over-year improvement leaders + decline (NEW)
  *
  * Player drill-down (right rail) shows full SG component breakdown.
  *
@@ -620,7 +620,7 @@ function PlayerDrilldown({
           value={
             valid.length > 0
               ? fmtSg(Math.max(...valid.map((t) => t.avgSgTotal ?? -99)))
-              : "—"
+              : "-"
           }
           colors={colors}
           fontMono={fontMono}
@@ -630,7 +630,7 @@ function PlayerDrilldown({
           value={
             trend.length > 0
               ? `${((trend.reduce((a, t) => a + t.cutPct * t.events, 0) / Math.max(1, totalEvents)) * 100).toFixed(0)}%`
-              : "—"
+              : "-"
           }
           colors={colors}
           fontMono={fontMono}
@@ -706,7 +706,7 @@ function SgRow({
   if (value == null)
     return (
       <div style={{ fontSize: 10, color: colors.textFaint, marginBottom: 2 }}>
-        {label}: <span style={{ fontFamily: fontMono }}>—</span>
+        {label}: <span style={{ fontFamily: fontMono }}>-</span>
       </div>
     );
   const pct = Math.min(100, (Math.abs(value) / maxAbs) * 100);
@@ -851,12 +851,12 @@ function Td({
 }
 
 function fmtSg(v: number | null | undefined): string {
-  if (v == null) return "—";
+  if (v == null) return "-";
   return (v >= 0 ? "+" : "") + v.toFixed(2);
 }
 
 // ============================================================
-// Archetypes view — k-means clusters of player SG signatures
+// Archetypes view - k-means clusters of player SG signatures
 // ============================================================
 
 function ArchetypesView({
@@ -879,14 +879,14 @@ function ArchetypesView({
   return (
     <div className="p-[16px]" style={{ fontFamily: fontUi }}>
       <h3 style={{ fontSize: 14, color: colors.text, fontWeight: 600, marginBottom: 6 }}>
-        Player archetypes — k-means clustering
+        Player archetypes - k-means clustering
       </h3>
       <p style={{ fontSize: 11.5, color: colors.textDim, lineHeight: 1.55, marginBottom: 14, maxWidth: 720 }}>
         The top 60 PGA pros by career SG-Total are clustered on their z-scored 4D
         signature <em>(SG-Putt, SG-Around-Green, SG-Approach, SG-Off-the-Tee)</em>.
         K-means with k=4, deterministic seed, 100 iterations max. Each cluster is
         named by its centroid&apos;s strongest dimension. The 3D Visuals tab
-        renders these clusters in the SG cube — each octahedron gem is a
+        renders these clusters in the SG cube - each octahedron gem is a
         centroid.
       </p>
 
@@ -1129,7 +1129,7 @@ function CentroidCell({
 }
 
 // ============================================================
-// Correlations view — Pearson matrix
+// Correlations view - Pearson matrix
 // ============================================================
 
 function CorrelationsView({
@@ -1171,7 +1171,7 @@ function CorrelationsView({
   return (
     <div className="p-[16px]" style={{ fontFamily: fontUi }}>
       <h3 style={{ fontSize: 14, color: colors.text, fontWeight: 600, marginBottom: 6 }}>
-        SG component correlations — Pearson r
+        SG component correlations - Pearson r
       </h3>
       <p style={{ fontSize: 11.5, color: colors.textDim, lineHeight: 1.55, marginBottom: 16, maxWidth: 720 }}>
         How strongly does each strokes-gained component correlate with overall career success?
@@ -1280,14 +1280,14 @@ function CorrelationsView({
           <span style={{ color: colors.text, fontWeight: 600 }}>SG-Off-the-Tee</span> at r ≈ 0.56,
           followed by <span style={{ color: colors.text, fontWeight: 600 }}>SG-Approach</span> at
           ≈ 0.42. Within an already-elite pool, putting and short-game baselines are similar
-          across players — what separates the very best is how far and how accurately they hit
+          across players - what separates the very best is how far and how accurately they hit
           it from the tee, then how clean their iron play is from there. Wins correlate with
           SG-Off-the-Tee at ≈ 0.41, the only single-component coefficient that crosses 0.4
           against career wins.
         </p>
         <p style={{ marginBottom: 8 }}>
           <span style={{ color: colors.text, fontWeight: 600 }}>SG-Putt</span> has the weakest
-          correlation with wins (≈ 0.14) — putting is volatile and noisy, so within an elite-only
+          correlation with wins (≈ 0.14) - putting is volatile and noisy, so within an elite-only
           pool it doesn&apos;t predict career wins cleanly. Conventional pro-tour wisdom:
           &quot;putt your way IN to a Tour card, ball-strike your way to wins.&quot; The data
           here supports that.
@@ -1295,7 +1295,7 @@ function CorrelationsView({
         <p>
           The <span style={{ color: colors.text, fontWeight: 600 }}>Total Events</span> column
           captures volume / durability. SG-Approach correlates <em>negatively</em> with events
-          (≈ −0.25) — a possible &quot;burns bright, plays fewer events&quot; pattern: top
+          (≈ −0.25) - a possible &quot;burns bright, plays fewer events&quot; pattern: top
           approach players make more cuts and play more weekends but may also be selective
           about their schedules. SG-Around-Green is the only component positively correlated
           with events, suggesting tour vets accumulate around-green skill over career.
@@ -1318,7 +1318,7 @@ function CorrelationsView({
 }
 
 // ============================================================
-// Trends view — improvement leaders
+// Trends view - improvement leaders
 // ============================================================
 
 function TrendsView({
@@ -1346,7 +1346,7 @@ function TrendsView({
       <p style={{ fontSize: 11.5, color: colors.textDim, lineHeight: 1.55, marginBottom: 16, maxWidth: 760 }}>
         For each player with at least 3 seasons of data, the largest gap between their best
         and worst season&apos;s avg SG-Total. <em>Risers</em> peak in a later season than they
-        bottom; <em>Fallers</em> peak earlier — these are the players with the steepest
+        bottom; <em>Fallers</em> peak earlier - these are the players with the steepest
         career arcs in either direction across the 2015–2022 window.
       </p>
 
@@ -1397,7 +1397,7 @@ function TrendsView({
         </div>
         <p style={{ marginBottom: 8 }}>
           ΔSG = best season&apos;s avg SG-Total − worst season&apos;s avg. A delta of +2.0 means
-          a swing of two strokes per round between the player&apos;s peak and trough years —
+          a swing of two strokes per round between the player&apos;s peak and trough years -
           that&apos;s a difference between &quot;competing for wins&quot; and &quot;fighting for
           a Tour card.&quot;
         </p>
@@ -1415,7 +1415,7 @@ function TrendsView({
 }
 
 // ============================================================
-// Majors view — big-game / choke-artist split
+// Majors view - big-game / choke-artist split
 // ============================================================
 
 function MajorsView({
@@ -1444,7 +1444,7 @@ function MajorsView({
         For each player with at least 4 major appearances and 20 regular events, the difference
         between their average SG-Total in majors vs regular events. <em>Big-game players</em>{" "}
         outperform their baseline at majors; <em>choke artists</em> underperform. Note: small
-        sample sizes (4-15 majors per player) make these signals noisy — interpret as suggestive,
+        sample sizes (4-15 majors per player) make these signals noisy - interpret as suggestive,
         not definitive.
       </p>
 
@@ -1488,7 +1488,7 @@ function MajorsView({
         <p style={{ marginBottom: 8 }}>
           Major edge = (avg SG-Total in majors) − (avg SG-Total in regular events). A +0.5 edge
           means a player gains an extra half-stroke per round at majors compared to their
-          baseline — a meaningful boost for an event with deep, strong fields.
+          baseline - a meaningful boost for an event with deep, strong fields.
         </p>
         <p>
           Course conditions at majors (firmer greens, taller rough, narrower fairways) tend to
@@ -1569,7 +1569,7 @@ function MajorsCol({
 }
 
 // ============================================================
-// Player × Course view — full heatmap of SG by venue
+// Player × Course view - full heatmap of SG by venue
 // ============================================================
 
 function PlayerCourseView({
@@ -1607,7 +1607,7 @@ function PlayerCourseView({
   return (
     <div className="p-[16px]" style={{ fontFamily: fontUi }}>
       <h3 style={{ fontSize: 14, color: colors.text, fontWeight: 600, marginBottom: 6 }}>
-        Player × Course matrix — avg SG-Total per venue
+        Player × Course matrix - avg SG-Total per venue
       </h3>
       <p style={{ fontSize: 11.5, color: colors.textDim, lineHeight: 1.55, marginBottom: 12, maxWidth: 760 }}>
         Top 15 players by career SG (rows) × top 15 most-played venues (columns). Cells show the
@@ -1678,9 +1678,9 @@ function PlayerCourseView({
                         fontFamily: fontMono,
                         fontSize: 10,
                       }}
-                      title={`${cell.course}: ${cell.avgSg != null ? fmtSg(cell.avgSg) : "—"} (n=${cell.n})`}
+                      title={`${cell.course}: ${cell.avgSg != null ? fmtSg(cell.avgSg) : "-"} (n=${cell.n})`}
                     >
-                      {cell.avgSg != null && cell.n >= 2 ? cell.avgSg.toFixed(2) : "—"}
+                      {cell.avgSg != null && cell.n >= 2 ? cell.avgSg.toFixed(2) : "-"}
                     </td>
                   ))}
                 </tr>
@@ -1710,7 +1710,7 @@ function PlayerCourseView({
           venue-dependent games.
         </p>
         <p>
-          Look for vertical patterns too — courses where most rows are green or red reveal
+          Look for vertical patterns too - courses where most rows are green or red reveal
           venues that disproportionately reward (or punish) the elite. Those are the courses
           where ranking matters most.
         </p>

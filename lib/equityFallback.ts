@@ -8,7 +8,7 @@
  * first impressions: Profile and Statistics.
  *
  * Discovery (gainers / losers / most-active) is derived from
- * SEED_QUOTES at request time — see `marketsFallback.ts`.
+ * SEED_QUOTES at request time - see `marketsFallback.ts`.
  */
 
 export interface ProfileSeed {
@@ -139,7 +139,7 @@ export const PROFILE_SEED: Record<string, ProfileSeed> = {
     longName: "Microsoft Corporation",
     shortName: "Microsoft",
     sector: "Technology",
-    industry: "Software—Infrastructure",
+    industry: "Software-Infrastructure",
     website: "https://www.microsoft.com",
     summary:
       "Microsoft develops and supports software, services, devices, and solutions. Productivity & Business Processes (Microsoft 365, Dynamics, LinkedIn), Intelligent Cloud (Azure, server products), and More Personal Computing (Windows, Surface, Xbox, Search) form the three reporting segments. Azure remains the primary growth driver as enterprise AI workloads scale on OpenAI-powered services.",
@@ -186,7 +186,7 @@ export const PROFILE_SEED: Record<string, ProfileSeed> = {
     industry: "Internet Retail",
     website: "https://www.amazon.com",
     summary:
-      "Amazon operates the largest e-commerce marketplace in the West and the largest cloud platform globally (AWS). Segments: North America retail, International retail, and AWS — where AWS provides the bulk of operating income. Advertising, Prime subscriptions, and logistics services have become meaningful additional profit centers.",
+      "Amazon operates the largest e-commerce marketplace in the West and the largest cloud platform globally (AWS). Segments: North America retail, International retail, and AWS - where AWS provides the bulk of operating income. Advertising, Prime subscriptions, and logistics services have become meaningful additional profit centers.",
     employees: 1_540_000,
     country: "United States",
     city: "Seattle",
@@ -208,7 +208,7 @@ export const PROFILE_SEED: Record<string, ProfileSeed> = {
     industry: "Internet Content & Information",
     website: "https://about.meta.com",
     summary:
-      "Meta builds technologies that help people connect — Facebook, Instagram, WhatsApp, Messenger, and Threads — alongside the Reality Labs division (Quest VR, Ray-Ban Meta, AI assistants). Family of Apps drives essentially all current revenue via advertising, while Reality Labs absorbs material operating losses as the company invests in next-generation computing.",
+      "Meta builds technologies that help people connect - Facebook, Instagram, WhatsApp, Messenger, and Threads - alongside the Reality Labs division (Quest VR, Ray-Ban Meta, AI assistants). Family of Apps drives essentially all current revenue via advertising, while Reality Labs absorbs material operating losses as the company invests in next-generation computing.",
     employees: 76000,
     country: "United States",
     city: "Menlo Park",
@@ -866,7 +866,7 @@ export function getStatsSeed(symbol: string): StatsSeed | null {
 }
 
 /**
- * Build screener rows from the existing seed quotes — sorted appropriately.
+ * Build screener rows from the existing seed quotes - sorted appropriately.
  * Returns a stable, realistic-looking gainers/losers/active list whenever
  * Yahoo's screener endpoint is rate-limiting. Source data lives in
  * `marketsFallback.ts` so we don't fork the price snapshot.
@@ -883,7 +883,7 @@ export function buildScreenerRows(
   volume: number | null;
   marketCap: number | null;
 }> {
-  // Approximate realistic daily volumes for derived rows — these are static
+  // Approximate realistic daily volumes for derived rows - these are static
   // per ticker so the screener doesn't look fake. Pull market caps from
   // the stats seed when we have it.
   const VOLUME_HINT: Record<string, number> = {
@@ -962,7 +962,7 @@ export function buildScreenerRows(
       .sort((a, b) => a.changePct - b.changePct)
       .slice(0, 25);
   }
-  // most_actives — sort by volume (where known)
+  // most_actives - sort by volume (where known)
   return items
     .filter((r) => r.volume != null)
     .sort((a, b) => (b.volume as number) - (a.volume as number))

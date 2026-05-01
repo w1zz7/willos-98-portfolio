@@ -6,7 +6,7 @@
  * Uses the official `tv.js` widget loader (no API key, no signup) so we get
  * TradingView's actual data feed, full toolbar with interval picker + drawing
  * tools + studies (RSI / MACD / Bollinger / etc), and the iconic candlestick
- * UI — all free and embedded under our Win98 chrome.
+ * UI - all free and embedded under our Win98 chrome.
  *
  * The widget is recreated only when `symbol`, `interval`, or `theme` change;
  * the host element gets a stable id assigned once on mount so we don't
@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef } from "react";
 
 // Default studies stack: 50-day SMA on the price pane (Will's primary trend
-// read), RSI(14) and MACD(12,26,9) below — the three indicators the trading
+// read), RSI(14) and MACD(12,26,9) below - the three indicators the trading
 // strategy actually checks before sizing in.
 const DEFAULT_STUDIES = [
   "MASimple@tv-basicstudies",
@@ -27,7 +27,7 @@ const DEFAULT_STUDIES = [
 interface Props {
   symbol: string; // raw user-style symbol e.g. "NVDA", "BTC-USD", "^GSPC"
   interval?: TVInterval;
-  /** Initial visible range — sets the zoom window when the widget mounts. */
+  /** Initial visible range - sets the zoom window when the widget mounts. */
   range?: TVRange;
   height?: number | string;
   studies?: readonly string[];
@@ -52,7 +52,7 @@ declare global {
  *
  * Indices (^XXX), futures (XXX=F), and crypto (XXX-USD) need explicit
  * exchange prefixes since their Yahoo notation isn't recognized by TV.
- * For watchlist equities we map every ticker explicitly — TradingView's
+ * For watchlist equities we map every ticker explicitly - TradingView's
  * bare-symbol resolver works for mega-caps but silently fails on
  * leveraged single-stock ETFs, recent IPOs, and obscure SPAC tickers,
  * leaving the user with a blank chart. Exchange prefixes are stable
@@ -69,7 +69,7 @@ const SYMBOL_MAP: Record<string, string> = {
   "CL=F": "NYMEX:CL1!",
   "GC=F": "COMEX:GC1!",
   "SI=F": "COMEX:SI1!",
-  // ---------- Crypto — Coinbase has cleanest USD pairs ----------
+  // ---------- Crypto - Coinbase has cleanest USD pairs ----------
   "BTC-USD": "COINBASE:BTCUSD",
   "ETH-USD": "COINBASE:ETHUSD",
   "SOL-USD": "COINBASE:SOLUSD",
@@ -188,12 +188,12 @@ const SYMBOL_MAP: Record<string, string> = {
   // NOTE: Leveraged single-stock ETFs (NVDG, MSFU, IREZ, NBIL, DAMD,
   // BMNZ, NOWL, NBIZ, RGTZ, NVOX, ADBG, SMCL) and many recent
   // SPAC/IPO tickers (DAMD, BLSH, BNC, NKLR, etc.) are deliberately
-  // unmapped — empirical testing showed forcing NASDAQ: prefixes on
+  // unmapped - empirical testing showed forcing NASDAQ: prefixes on
   // unverified symbols makes TV reject them ("Symbol doesn't exist"),
   // whereas bare passthrough lets TV's search resolver try multiple
   // exchanges and surface the correct one when available. If TV has
   // no listing at all, the user sees TV's stock-photo "Symbol doesn't
-  // exist" message — the canonical not-charting state, not a regression.
+  // exist" message - the canonical not-charting state, not a regression.
 };
 
 function translateSymbol(sym: string): string {
@@ -241,7 +241,7 @@ export default function TradingViewChart({
   const hostRef = useRef<HTMLDivElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const widgetRef = useRef<any>(null);
-  // Stable id per mount — avoids the "moving target" container_id problem
+  // Stable id per mount - avoids the "moving target" container_id problem
   // that caused TV's iframe to abort on re-render.
   const containerId = useMemo(
     () => "tv-chart-" + Math.random().toString(36).slice(2, 10),

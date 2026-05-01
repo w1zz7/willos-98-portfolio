@@ -333,7 +333,7 @@ interface Certification {
   /** Thumbnail preview (lives in /public/certs/previews/). */
   preview?: string;
   /** Issuer logo (lives in /public/certs/logos/). Shown when there's no
-   *  PDF preview to display — still gives the card a real brand anchor. */
+   *  PDF preview to display - still gives the card a real brand anchor. */
   logoUrl?: string;
   credentialId?: string;
   /** Skills badges LinkedIn shows under the cert. */

@@ -6,7 +6,7 @@
  * symbol, the proxy returns this seed snapshot so visitors don't stare at
  * empty panels. Each entry is a recent close + previous-close pair pulled
  * from the same week's market journal entries (data/marketRecaps.ts +
- * data/trades.ts), so the prices are realistic — not invented.
+ * data/trades.ts), so the prices are realistic - not invented.
  *
  * Quotes returned from this fallback ship `source: "seed"` so the UI can
  * surface a small "snapshot" badge for transparency.
@@ -185,7 +185,7 @@ export const SEED_QUOTES: Record<string, SeedQuote> = {
   MP: { symbol: "MP", shortName: "MP Materials", price: 58.42, previousClose: 56.85, currency: "USD", exchange: "NYQ" },
   TMC: { symbol: "TMC", shortName: "TMC the metals company", price: 8.42, previousClose: 8.18, currency: "USD", exchange: "NMS" },
 
-  // Will's screen — speculative / themes
+  // Will's screen - speculative / themes
   DJT: { symbol: "DJT", shortName: "Trump Media & Tech", price: 32.42, previousClose: 31.85, currency: "USD", exchange: "NMS" },
   SBET: { symbol: "SBET", shortName: "SharpLink Gaming", price: 14.42, previousClose: 13.85, currency: "USD", exchange: "NMS" },
   SNOW: { symbol: "SNOW", shortName: "Snowflake", price: 215.6, previousClose: 211.85, currency: "USD", exchange: "NYQ" },

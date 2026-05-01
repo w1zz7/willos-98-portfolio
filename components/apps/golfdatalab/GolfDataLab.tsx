@@ -1,20 +1,20 @@
 "use client";
 
 /**
- * Golf Data Lab — interactive analysis of three golf datasets:
+ * Golf Data Lab - interactive analysis of three golf datasets:
  *
  *   1. The classic 1,095-day weather × play dataset (3 years, 7 players)
  *   2. The 7,665-row long-format dataset with reviews / emails / maintenance
  *   3. PGA Tour tournament-level data 2015-2022 (36,864 rows, strokes-gained)
  *
  * Four tabs:
- *   · Learning      — what's in the data, EDA, sample text records
- *   · 3D Visuals    — rotatable Three.js scatter plot of weather × play
- *   · Predictions   — live in-browser logistic regression on weather inputs
- *   · PGA Tour      — season leaderboards by avg SG-Total + player drill-down
+ *   · Learning      - what's in the data, EDA, sample text records
+ *   · 3D Visuals    - rotatable Three.js scatter plot of weather × play
+ *   · Predictions   - live in-browser logistic regression on weather inputs
+ *   · PGA Tour      - season leaderboards by avg SG-Total + player drill-down
  *
  * All datasets pre-aggregated into JSON at build time by
- * scripts/prep-golf-data.mjs (~190KB total). No API calls — fully static.
+ * scripts/prep-golf-data.mjs (~190KB total). No API calls - fully static.
  */
 
 import { useState } from "react";
@@ -23,6 +23,7 @@ import LearningTab from "./LearningTab";
 import ThreeDTab from "./ThreeDTab";
 import PredictionsTab from "./PredictionsTab";
 import PgaTourTab from "./PgaTourTab";
+import StrategyLab from "./StrategyLab";
 
 const COLORS = {
   bg: "#0a1f12",
@@ -43,13 +44,14 @@ const COLORS = {
 const FONT_UI = "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
 const FONT_MONO = "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace";
 
-type TabId = "learning" | "threed" | "predictions" | "pga";
+type TabId = "learning" | "threed" | "predictions" | "pga" | "strategy";
 
 const TABS: { id: TabId; label: string; sub: string }[] = [
-  { id: "learning", label: "Learning", sub: "EDA + ML methodology" },
-  { id: "threed", label: "3D Visuals", sub: "8 scenes · 4 categories" },
-  { id: "predictions", label: "Predictions", sub: "3 in-browser ML models" },
+  { id: "learning", label: "Learning", sub: "EDA + ML + SG glossary" },
+  { id: "threed", label: "3D Visuals", sub: "10 scenes · 4 categories" },
+  { id: "predictions", label: "Predictions", sub: "4 in-browser ML models · GBM" },
   { id: "pga", label: "PGA Tour 2015–2022", sub: "8 analysis views" },
+  { id: "strategy", label: "Strategy Lab", sub: "L/S backtester · walk-forward CV" },
 ];
 
 export default function GolfDataLab({ window: _w }: { window: WindowState }) {
@@ -69,6 +71,7 @@ export default function GolfDataLab({ window: _w }: { window: WindowState }) {
           <PredictionsTab colors={COLORS} fontMono={FONT_MONO} fontUi={FONT_UI} />
         )}
         {tab === "pga" && <PgaTourTab colors={COLORS} fontMono={FONT_MONO} fontUi={FONT_UI} />}
+        {tab === "strategy" && <StrategyLab colors={COLORS} fontMono={FONT_MONO} fontUi={FONT_UI} />}
       </div>
       <StatusBar tab={tab} />
     </div>
@@ -108,9 +111,9 @@ function Header() {
         </span>
       </div>
       <div className="flex items-center gap-[10px]">
-        <Pill color={COLORS.brand} label="3 trained ML models" />
-        <Pill color={COLORS.warn} label="8 interactive 3D scenes" />
-        <Pill color={COLORS.accent} label="36,864 PGA tournament rows" />
+        <Pill color={COLORS.brand} label="4 ML models · stochastic" />
+        <Pill color={COLORS.warn} label="10 thesis-driven 3D scenes" />
+        <Pill color={COLORS.accent} label="L/S backtester · walk-forward · blend opt" />
       </div>
     </div>
   );
@@ -180,6 +183,7 @@ function StatusBar({ tab }: { tab: TabId }) {
     threed: "lab/viz/3d-scatter",
     predictions: "lab/model/logistic-regression",
     pga: "lab/pga/seasons",
+    strategy: "lab/strategy/backtest",
   };
   return (
     <div

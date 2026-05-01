@@ -81,7 +81,7 @@ async function ensureYahooSession(): Promise<{ cookie: string | null; crumb: str
     cookieJar = all.map((c) => c.split(";")[0]).filter(Boolean).join("; ") || null;
 
     // 2. Crumb (only used by quoteSummary). If this fails, we still return
-    //    cookies — most endpoints work without crumb.
+    //    cookies - most endpoints work without crumb.
     if (cookieJar) {
       const crumbRes = await fetch(
         "https://query2.finance.yahoo.com/v1/test/getcrumb",
@@ -723,7 +723,7 @@ async function modDividendsSplits(symbol: string, kind: "div" | "split") {
 
 async function modOptions(symbol: string, expiration?: string) {
   // Yahoo's options endpoint expects `date=<unix-seconds>`, not an ISO date.
-  // The UI sends "YYYY-MM-DD" — convert here so the user's expiration pick
+  // The UI sends "YYYY-MM-DD" - convert here so the user's expiration pick
   // actually filters the chain.
   let dateParam = "";
   if (expiration) {

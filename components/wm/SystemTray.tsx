@@ -24,7 +24,7 @@ export function SystemTray() {
           title={
             isFullscreen
               ? "Exit full screen (Esc)"
-              : "Enter full screen — run WillOS edge-to-edge"
+              : "Enter full screen - run WillOS edge-to-edge"
           }
           className="flex items-center justify-center px-[8px] hover:bg-[rgba(0,0,0,0.06)] active:bg-[rgba(0,0,0,0.12)] cursor-pointer"
           style={{

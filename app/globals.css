@@ -486,3 +486,19 @@ img.pixelated,
   border: 1px dotted var(--color-win-text);
   pointer-events: none;
 }
+
+/* ---- willBB live-tick animations -------------------------------------
+   `willbb-livepulse` is a subtle "heartbeat" on the live-tick dots in
+   the Cockpit / StrategyLab symbol header and on QuantChart's right-edge
+   live price tag. `willbb-liveping` is the expanding outer ring used on
+   the chart's live-tip pulsing dot (TradingView-style).
+   ---------------------------------------------------------------------- */
+@keyframes willbb-livepulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.18); }
+}
+
+@keyframes willbb-liveping {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.6); opacity: 0;   }
+}

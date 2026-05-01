@@ -8,7 +8,7 @@
  * in sync if the user exits via Esc, dev tools, or browser chrome.
  *
  * Some embedded contexts (iframes without `allow="fullscreen"`) reject the
- * request — we degrade gracefully and the toggle button hides.
+ * request - we degrade gracefully and the toggle button hides.
  */
 
 import { useCallback, useEffect, useState } from "react";
