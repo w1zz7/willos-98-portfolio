@@ -110,15 +110,17 @@ export function useLiveQuote(
       }
     }
 
-    // Initial tick: jittered 0–250ms so multiple panels don't fire at the
-    // exact same instant. Subsequent ticks are on a fixed interval.
-    const initialDelay = Math.random() * 250;
-    const initialTimer = window.setTimeout(load, initialDelay);
+    // Fire the first tick IMMEDIATELY so the live-price dot in the symbol
+    // header shows up on the first paint (the 0–250ms jitter that used to
+    // live here was meant to spread concurrent panels; the server-side
+    // 5s cache absorbs duplicates from the same symbol within ~50ms anyway,
+    // so the jitter wasn't buying us much in practice and made the chart
+    // feel non-live for the first quarter-second).
+    load();
     const intervalTimer = window.setInterval(load, intervalMs);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(initialTimer);
       window.clearInterval(intervalTimer);
       abortRef.current?.abort();
     };

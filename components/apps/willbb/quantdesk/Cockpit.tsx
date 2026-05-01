@@ -131,6 +131,13 @@ export default function Cockpit({
   const [loading, setLoading] = useState<boolean>(false);
   const [indicators, setIndicators] = useState<Record<IndicatorId, IndicatorState>>(DEFAULTS);
   const abortRef = useRef<AbortController | null>(null);
+  // Counter that user-initiated range button clicks bump. We pass &bypass=1
+  // when nonzero so the server-side success cache is skipped — guarantees
+  // the chart visibly redraws on every range click, not the cached stale
+  // version. Initial mount + symbol change still hit cache for fast paint.
+  const [rangeNonce, setRangeNonce] = useState<number>(0);
+  const rangeNonceRef = useRef<number>(0);
+  rangeNonceRef.current = rangeNonce;
 
   // Fetch asset bars + market bars (^GSPC) in parallel for beta/IR/etc.
   useEffect(() => {
@@ -139,11 +146,12 @@ export default function Cockpit({
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
+    const bypass = rangeNonceRef.current > 0 ? "&bypass=1" : "";
     Promise.all([
-      fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}`, { signal: ctrl.signal })
+      fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
         .then(async (r2) => (r2.ok ? r2.json() : null))
         .catch(() => null),
-      fetch(`/api/markets/chart?symbol=%5EGSPC&range=${r.id}&interval=${r.interval}`, { signal: ctrl.signal })
+      fetch(`/api/markets/chart?symbol=%5EGSPC&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
         .then(async (r2) => (r2.ok ? r2.json() : null))
         .catch(() => null),
     ]).then(([asset, mkt]: [ChartResp | null, ChartResp | null]) => {
@@ -152,7 +160,14 @@ export default function Cockpit({
       setLoading(false);
     });
     return () => ctrl.abort();
-  }, [symbol, range]);
+  }, [symbol, range, rangeNonce]);
+
+  // Wraps setRange so user-initiated clicks bump the bypass nonce; programmatic
+  // range changes (e.g., via an external link) skip the bump.
+  const onRangeClick = (id: string) => {
+    setRangeNonce((n) => n + 1);
+    setRange(id);
+  };
 
   // Static historical bars from the chart endpoint. These don't change on
   // every live tick — only on symbol/range change.
@@ -353,7 +368,7 @@ export default function Cockpit({
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setRange(r.id)}
+                onClick={() => onRangeClick(r.id)}
                 style={{
                   background: range === r.id ? COLORS.brandSoft : "transparent",
                   border: "1px solid " + (range === r.id ? COLORS.brand : COLORS.borderSoft),

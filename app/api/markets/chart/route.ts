@@ -95,7 +95,7 @@ const COOKIE_TTL_MS = 30 * 60 * 1000;
  * Stale-while-revalidate isn't strictly necessary here because the dev/prod
  * client already polls every 15s — the cache just damps duplicates.
  */
-const SUCCESS_TTL_MS = 90 * 1000;
+const SUCCESS_TTL_MS = 30 * 1000;
 const successCache = new Map<string, { payload: ChartPayload; at: number }>();
 function cacheKey(symbol: string, range: string, interval: string): string {
   return `${symbol.toUpperCase()}|${range}|${interval}`;
@@ -302,6 +302,11 @@ export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol");
   const range = req.nextUrl.searchParams.get("range") ?? "1mo";
   const interval = req.nextUrl.searchParams.get("interval") ?? "1d";
+  // ?bypass=1 skips the in-memory success cache. The Studies + Alpha Lab
+  // panels pass it when the user explicitly clicks a range button so they
+  // always get a fresh fetch (range-button feedback). Initial mount + symbol
+  // change still hits the cache for fast first paint.
+  const bypassCache = req.nextUrl.searchParams.get("bypass") === "1";
 
   if (!symbol) {
     return NextResponse.json({ error: "symbol required" }, { status: 400 });
@@ -314,20 +319,23 @@ export async function GET(req: NextRequest) {
   }
 
   // ============= Provider failover chain =============
-  // 1. In-memory success cache (90s TTL)
+  // 1. In-memory success cache (30s TTL, bypassed when ?bypass=1)
   // 2. Yahoo Finance v8 (primary, real-time, intraday)
   // 3. CoinGecko (crypto only, free, no key)
-  // 4. Stooq (real, no key, ~15min delay, daily resolution)
-  // 5. Synthetic regime-switching GBM (last resort - so panels render at all)
+  // 4. Alpha Vantage (free, ≤6mo only — skipped for 1y/2y/5y/10y)
+  // 5. Stooq (real, no key, ~15min delay, daily resolution, 25y of history)
+  // 6. Synthetic regime-switching GBM (last resort - so panels render at all)
 
   // Hot cache hit — return immediately without touching upstreams.
   const ck = cacheKey(symbol, range, interval);
-  const cached = successCache.get(ck);
-  if (cached && Date.now() - cached.at < SUCCESS_TTL_MS) {
-    return NextResponse.json(
-      { ...cached.payload, cached: true },
-      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } }
-    );
+  if (!bypassCache) {
+    const cached = successCache.get(ck);
+    if (cached && Date.now() - cached.at < SUCCESS_TTL_MS) {
+      return NextResponse.json(
+        { ...cached.payload, cached: true },
+        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } }
+      );
+    }
   }
 
   const yahoo = await yahooChart(symbol, range, interval);
@@ -394,16 +402,20 @@ export async function GET(req: NextRequest) {
 
 /**
  * Alpha Vantage adapter: pulls daily bars via lib/alphavantage.ts and
- * reshapes them into our standard {meta + points[]} response. Free-tier
- * compact = ~100 trading days, which covers ranges up to ~5mo. For longer
- * ranges (1y+), we still return what we have — the chart panels truncate
- * gracefully when there are fewer bars than requested.
+ * reshapes them into our standard {meta + points[]} response.
  *
- * Requires ALPHA_VANTAGE_API_KEY in the environment. Returns null when
- * the key is missing, the daily budget is exhausted, the symbol isn't
- * AV-supported on the free tier (crypto, FX, futures), or the upstream
- * returns an error.
+ * Free-tier `outputsize=compact` returns only ~100 trading days (~5 months).
+ * `outputsize=full` is premium-only on the 25-call/day free key. To prevent
+ * 1Y/2Y/5Y/10Y ranges from rendering as visually-truncated 5-month charts,
+ * we **short-circuit AV for any range longer than 6mo** and let the
+ * fallback chain reach Stooq (which has 25+ years of CSV history).
+ *
+ * Returns null when the key is missing, the daily budget is exhausted,
+ * the symbol isn't AV-supported on the free tier (crypto, FX, futures),
+ * the requested range exceeds compact's capacity, or the upstream errors.
  */
+const AV_LONG_RANGES = new Set(["1y", "2y", "5y", "10y", "ytd", "max"]);
+
 async function alphaVantageChartShim(
   symbol: string,
   range: string,
@@ -426,6 +438,9 @@ async function alphaVantageChartShim(
   interval: string;
   points: { t: number; c: number; o: number; h: number; l: number; v: number }[];
 } | null> {
+  // Skip AV for long ranges — its compact (~100 day) response would render
+  // as a visually-truncated 5-month chart even when the user clicks 5Y.
+  if (AV_LONG_RANGES.has(range)) return null;
   const bars = await alphaVantageDaily(symbol);
   if (!bars || bars.length === 0) return null;
   const last = bars[bars.length - 1];

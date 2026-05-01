@@ -122,6 +122,14 @@ export default function StrategyLab({
   const [markers, setMarkers] = useState<ChartMarker[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const tradeIdRef = useRef<number>(0);
+  // Counter that user-initiated range button clicks bump → ?bypass=1.
+  const [rangeNonce, setRangeNonce] = useState<number>(0);
+  const rangeNonceRef = useRef<number>(0);
+  rangeNonceRef.current = rangeNonce;
+  const onRangeClick = (id: string) => {
+    setRangeNonce((n) => n + 1);
+    setRange(id);
+  };
 
   // Live quote polled every 5s via the shared useLiveQuote hook. The live
   // tick is spliced into `liveBars` (visual) — backtests still run on the
@@ -141,14 +149,15 @@ export default function StrategyLab({
     return [...bars.slice(0, -1), merged];
   }, [bars, liveQuote?.price]);
 
-  // Load bars when symbol/range changes
+  // Load bars when symbol/range changes (or user explicitly clicks a range button)
   useEffect(() => {
     const r = RANGES.find((x) => x.id === range)!;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
-    fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}`, { signal: ctrl.signal })
+    const bypass = rangeNonceRef.current > 0 ? "&bypass=1" : "";
+    fetch(`/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${r.id}&interval=${r.interval}${bypass}`, { signal: ctrl.signal })
       .then(async (r2) => {
         if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
         return r2.json();
@@ -179,7 +188,7 @@ export default function StrategyLab({
         }
       });
     return () => ctrl.abort();
-  }, [symbol, range]);
+  }, [symbol, range, rangeNonce]);
 
   // Switch preset → reload code
   const onPickPreset = (id: string) => {
@@ -360,7 +369,7 @@ export default function StrategyLab({
             <button
               key={r.id}
               type="button"
-              onClick={() => setRange(r.id)}
+              onClick={() => onRangeClick(r.id)}
               style={{
                 background: range === r.id ? COLORS.brandSoft : "transparent",
                 border: "1px solid " + (range === r.id ? COLORS.brand : COLORS.borderSoft),

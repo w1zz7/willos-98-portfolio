@@ -13,7 +13,7 @@
  *   - Entry/exit triangle markers for trades
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COLORS, FONT_MONO } from "../OpenBB";
 import type { Bar } from "./indicators";
 
@@ -104,6 +104,42 @@ export default function QuantChart({
   const [hoverClient, setHoverClient] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ============================================================================
+  // Pan + zoom state
+  //
+  //   viewportStartIdx — first absolute bar index visible (null = auto, show all)
+  //   visibleBarsState — number of bars in the visible window (null = auto)
+  //   dragRef          — mouse-drag bookkeeping for click-and-drag pan
+  //
+  // When both states are null, the chart renders all bars stretched across the
+  // SVG width (legacy behavior). Once the user pans or zooms, both states get
+  // concrete values and we slice `bars` to the viewport. Resets to null on
+  // symbol/range change (i.e., when bars.length changes).
+  // ============================================================================
+  const [viewportStartIdx, setViewportStartIdx] = useState<number | null>(null);
+  const [visibleBarsState, setVisibleBarsState] = useState<number | null>(null);
+  const dragRef = useRef<{ startClientX: number; startIdx: number; widthCss: number; visibleAtStart: number } | null>(null);
+
+  // Reset pan/zoom whenever the underlying bar count changes (new symbol/range).
+  // We watch bars.length rather than bars (object identity) because the live-tick
+  // splice produces a new bars array on every poll.
+  const barsLen = bars.length;
+  const lastBarsLenRef = useRef<number>(barsLen);
+  if (lastBarsLenRef.current !== barsLen && Math.abs(lastBarsLenRef.current - barsLen) > 5) {
+    // bar count materially changed → reset (>5 to ignore live-tick array
+    // re-creates that don't change length)
+    lastBarsLenRef.current = barsLen;
+    if (viewportStartIdx !== null || visibleBarsState !== null) {
+      // Defer the reset to a microtask to avoid setState-in-render warnings
+      Promise.resolve().then(() => {
+        setViewportStartIdx(null);
+        setVisibleBarsState(null);
+      });
+    }
+  } else {
+    lastBarsLenRef.current = barsLen;
+  }
+
   const subPanes = useMemo(() => {
     const used = new Set<string>();
     overlays.forEach((o) => {
@@ -114,6 +150,37 @@ export default function QuantChart({
   }, [overlays, showVolume]);
 
   const mainOverlays = overlays.filter((o) => !o.pane || o.pane === "main");
+
+  // Pan: install global mousemove/mouseup ONCE on mount. Each handler checks
+  // dragRef.current itself — when null, it's a no-op. Stable ref `panRef`
+  // holds the latest values needed inside the global handlers (dx, viewBox W,
+  // bars.length); we update it on every render. We declare these BEFORE the
+  // empty-bars early return to keep hook order stable across renders.
+  const panRef = useRef({ dx: 1, W: 1000, barsLen: bars.length });
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!dragRef.current) return;
+      const { startClientX, startIdx, widthCss, visibleAtStart } = dragRef.current;
+      const { dx: dxNow, W: WNow, barsLen } = panRef.current;
+      const cssDeltaX = e.clientX - startClientX;
+      const cssPerBar = (widthCss / WNow) * dxNow;
+      const dragDeltaBars = -cssDeltaX / cssPerBar; // drag right = reveal earlier bars
+      const newStart = Math.max(0, Math.min(barsLen - visibleAtStart, Math.round(startIdx + dragDeltaBars)));
+      setViewportStartIdx(newStart);
+    }
+    function onUp() {
+      if (dragRef.current) {
+        dragRef.current = null;
+        document.body.style.cursor = "";
+      }
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
 
   if (bars.length === 0) {
     return (
@@ -136,8 +203,23 @@ export default function QuantChart({
 
   const W = 1000; // viewBox width; renders responsive via 100% width
   const innerW = W - PADDING_LEFT - PADDING_RIGHT;
-  const dx = innerW / Math.max(1, bars.length);
+
+  // === Viewport (pan/zoom) =================================================
+  // When viewportStartIdx + visibleBarsState are null, render all bars (legacy).
+  // When set, slice bars to [viewStart, viewEnd) and scale dx to the window.
+  // visBars is the working slice; localIdx in [0, visBars.length).
+  const isCustomView = viewportStartIdx !== null || visibleBarsState !== null;
+  const viewStart = Math.max(0, Math.min(bars.length - 1, viewportStartIdx ?? 0));
+  const viewCount = visibleBarsState ?? bars.length;
+  const viewEnd = Math.max(viewStart + 1, Math.min(bars.length, viewStart + viewCount));
+  const visBars = bars.slice(viewStart, viewEnd);
+  const dx = innerW / Math.max(1, visBars.length);
   const candleW = Math.max(2, dx * 0.7);
+  // Sync the panRef so global drag handlers (installed once on mount) see
+  // the current dx + bars.length. This is intentionally NOT a hook — it's
+  // a plain assignment that runs on every render after dx is known.
+  panRef.current = { dx, W, barsLen: bars.length };
+  // ==========================================================================
 
   // Sub-pane sizing
   const totalH = height;
@@ -147,28 +229,37 @@ export default function QuantChart({
   const subAreaTotal = totalH - PADDING_BOTTOM - mainH - PADDING_TOP;
   const subH = subPanes.length > 0 ? (subAreaTotal - SUB_PANE_PAD * subPanes.length) / subPanes.length : 0;
 
-  // Y-scale for main pane (price)
-  const allHi = Math.max(...bars.map((b) => b.h), ...mainOverlays.flatMap((o) => o.data.filter((v): v is number => v != null)));
-  const allLo = Math.min(...bars.map((b) => b.l), ...mainOverlays.flatMap((o) => o.data.filter((v): v is number => v != null)));
+  // Y-scale for main pane (price). Computed over the VISIBLE window so zooming
+  // into a 5% slice rescales the y-axis to that slice's hi/lo automatically.
+  const visMainOverlayValues = mainOverlays.flatMap((o) =>
+    o.data.slice(viewStart, viewEnd).filter((v): v is number => v != null)
+  );
+  const allHi = Math.max(...visBars.map((b) => b.h), ...visMainOverlayValues);
+  const allLo = Math.min(...visBars.map((b) => b.l), ...visMainOverlayValues);
   const padPrice = (allHi - allLo) * 0.05;
   const yHi = allHi + padPrice;
   const yLo = allLo - padPrice;
   const yScale = (price: number) => PADDING_TOP + ((yHi - price) / (yHi - yLo)) * mainH;
-  const xScale = (idx: number) => PADDING_LEFT + idx * dx + dx / 2;
+  // xScale takes a *window-local* index (0..visBars.length-1). Use absToLocal
+  // for absolute-bar-index conversion (markers, live-tip dot).
+  const xScale = (localIdx: number) => PADDING_LEFT + localIdx * dx + dx / 2;
+  const absToLocal = (absIdx: number) => absIdx - viewStart;
 
   // Y-grid for main
   const ySteps = 5;
   const yGrid: number[] = [];
   for (let s = 0; s <= ySteps; s++) yGrid.push(yLo + (s / ySteps) * (yHi - yLo));
 
-  // Sub-pane scale builder
+  // Sub-pane scale builder. Scales over the visible window only so panning
+  // / zooming auto-rescales each sub-pane (RSI keeps fixed [0,100]; volume
+  // and indicator-specific scales rescale to their visible portion).
   function subScale(paneId: string) {
     const seriesInPane = overlays.filter((o) => o.pane === paneId);
-    const flat: number[] = seriesInPane.flatMap((o) => o.data.filter((v): v is number => v != null));
+    const flat: number[] = seriesInPane.flatMap((o) => o.data.slice(viewStart, viewEnd).filter((v): v is number => v != null));
     let lo = flat.length ? Math.min(...flat) : 0;
     let hi = flat.length ? Math.max(...flat) : 1;
     if (paneId === "sub-rsi" || paneId === "sub-stoch") { lo = 0; hi = 100; }
-    if (paneId === "sub-volume") { lo = 0; hi = Math.max(...bars.map((b) => b.v)) || 1; }
+    if (paneId === "sub-volume") { lo = 0; hi = Math.max(...visBars.map((b) => b.v)) || 1; }
     if (lo === hi) { hi = lo + 1; }
     const padding = (hi - lo) * 0.08;
     const lo2 = paneId === "sub-rsi" || paneId === "sub-stoch" || paneId === "sub-volume" ? lo : lo - padding;
@@ -205,26 +296,67 @@ export default function QuantChart({
         background: COLORS.panel,
         position: "relative",
         height,
-        cursor: "crosshair",
+        cursor: isCustomView ? "grab" : "crosshair",
       }}
       onMouseLeave={() => {
         setHoverIdx(null);
         setHoverPx(null);
         setHoverClient(null);
       }}
+      onWheel={(e) => {
+        // Wheel-to-zoom. Up = zoom in (fewer bars), Down = zoom out (more).
+        // We anchor the zoom around the cursor's bar so the bar under the
+        // cursor stays put — natural TradingView behavior.
+        if (Math.abs(e.deltaY) < 1) return;
+        e.preventDefault();
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const xRel = ((e.clientX - rect.left) / rect.width) * W;
+        const localIdx = Math.max(0, Math.min(visBars.length - 1, Math.floor((xRel - PADDING_LEFT) / dx)));
+        const absUnderCursor = viewStart + localIdx;
+        const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15; // wheel down = zoom out
+        const currentCount = visibleBarsState ?? bars.length;
+        const newCount = Math.max(20, Math.min(bars.length, Math.round(currentCount * factor)));
+        // Anchor: keep the bar under the cursor at the same screen position.
+        const cursorFrac = newCount > 0 ? localIdx / Math.max(1, currentCount - 1) : 0;
+        const newStart = Math.max(0, Math.min(bars.length - newCount, Math.round(absUnderCursor - cursorFrac * (newCount - 1))));
+        setViewportStartIdx(newStart);
+        setVisibleBarsState(newCount);
+      }}
     >
       <svg
         viewBox={`0 0 ${W} ${totalH}`}
         preserveAspectRatio="none"
-        style={{ width: "100%", height: "100%", display: "block" }}
+        style={{ width: "100%", height: "100%", display: "block", userSelect: "none" }}
+        onMouseDown={(e) => {
+          // Begin a pan drag. Record the starting client X + viewportStart
+          // so the global move listener can compute deltas.
+          const rect = e.currentTarget.getBoundingClientRect();
+          const visibleAtStart = visibleBarsState ?? bars.length;
+          dragRef.current = {
+            startClientX: e.clientX,
+            startIdx: viewportStartIdx ?? 0,
+            widthCss: rect.width,
+            visibleAtStart,
+          };
+          document.body.style.cursor = "grabbing";
+          // If we weren't in a custom view, initialize visibleBars to the
+          // current bar count + viewportStart to 0 so the drag has something
+          // to slide and the slicing logic kicks in immediately.
+          if (visibleBarsState == null) setVisibleBarsState(bars.length);
+          if (viewportStartIdx == null) setViewportStartIdx(0);
+        }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const xRel = ((e.clientX - rect.left) / rect.width) * W;
           const yRel = ((e.clientY - rect.top) / rect.height) * totalH;
-          const idx = Math.floor((xRel - PADDING_LEFT) / dx);
-          if (idx >= 0 && idx < bars.length) {
-            setHoverIdx(idx);
-            setHoverPx({ x: xScale(idx), y: yRel });
+          // Compute window-local index, then convert to absolute so
+          // bars[hoverIdx] stays valid across pan/zoom.
+          const localIdx = Math.floor((xRel - PADDING_LEFT) / dx);
+          if (localIdx >= 0 && localIdx < visBars.length) {
+            const absIdx = viewStart + localIdx;
+            setHoverIdx(absIdx);
+            setHoverPx({ x: xScale(localIdx), y: yRel });
             setHoverClient({ x: e.clientX - rect.left, y: e.clientY - rect.top });
           }
         }}
@@ -274,8 +406,10 @@ export default function QuantChart({
         )}
 
         {/* Candles. Up-candles render hollow (stroke only) when hollowUp is
-            on — this is the TradingView default. Down-candles always fill. */}
-        {bars.map((b, i) => {
+            on — this is the TradingView default. Down-candles always fill.
+            We iterate visBars (the visible-window slice) so panning + zooming
+            naturally drop bars outside the viewport. */}
+        {visBars.map((b, i) => {
           const x = xScale(i);
           const up = b.c >= b.o;
           const color = up ? COLORS.up : COLORS.down;
@@ -310,13 +444,15 @@ export default function QuantChart({
           );
         })}
 
-        {/* Main pane overlays */}
+        {/* Main pane overlays — iterate the visible window only.
+            Local index `li` is window-local (0..visBars.length-1); the
+            absolute index into the overlay's data array is `viewStart + li`. */}
         {mainOverlays.map((s, si) => {
           const pts: string[] = [];
-          for (let i = 0; i < s.data.length; i++) {
-            const v = s.data[i];
+          for (let li = 0; li < visBars.length; li++) {
+            const v = s.data[viewStart + li];
             if (v == null) continue;
-            pts.push(`${xScale(i)},${yScale(v)}`);
+            pts.push(`${xScale(li)},${yScale(v)}`);
           }
           if (pts.length === 0) return null;
           return (
@@ -331,16 +467,21 @@ export default function QuantChart({
           );
         })}
 
-        {/* Trade markers */}
+        {/* Trade markers — only render those whose closest bar is inside the
+            visible window. */}
         {markers.map((m, i) => {
-          // find bar index closest to marker timestamp
+          // find bar index closest to marker timestamp (search the FULL
+          // bars array so we don't miss markers that fall on hidden bars
+          // — they just get filtered out below)
           let bestI = 0;
           let bestDt = Infinity;
           for (let bi = 0; bi < bars.length; bi++) {
             const dt = Math.abs(bars[bi].t - m.t);
             if (dt < bestDt) { bestDt = dt; bestI = bi; }
           }
-          const x = xScale(bestI);
+          const localI = absToLocal(bestI);
+          if (localI < 0 || localI >= visBars.length) return null;
+          const x = xScale(localI);
           const y = yScale(m.price);
           const color = m.type === "entryLong" ? COLORS.up : m.type === "entryShort" ? COLORS.down : COLORS.flat;
           const up = m.type === "entryLong" ? -1 : 1;
@@ -385,10 +526,10 @@ export default function QuantChart({
               >
                 {paneId.replace("sub-", "").toUpperCase()}
               </text>
-              {/* Volume special-case: histogram bars */}
+              {/* Volume special-case: histogram bars (window-local) */}
               {paneId === "sub-volume" && (
                 <>
-                  {bars.map((b, i) => {
+                  {visBars.map((b, i) => {
                     const h = ((b.v - s.lo) / Math.max(0.001, s.hi - s.lo)) * (s.bottom - s.top);
                     const up = b.c >= b.o;
                     return (
@@ -447,19 +588,22 @@ export default function QuantChart({
                   strokeWidth={0.5}
                 />
               )}
-              {/* Series in this pane */}
+              {/* Series in this pane — iterate window-local indices, lookup
+                  the data array by absolute idx (viewStart + localI). */}
               {seriesInPane.map((line, li) => {
                 if (line.style === "histogram") {
-                  return line.data.map((v, i) => {
-                    if (v == null) return null;
+                  const cells: React.ReactNode[] = [];
+                  for (let localI = 0; localI < visBars.length; localI++) {
+                    const v = line.data[viewStart + localI];
+                    if (v == null) continue;
                     const y0 = s.yFor(0);
                     const yV = s.yFor(v);
                     const top = Math.min(y0, yV);
                     const h = Math.abs(yV - y0);
-                    return (
+                    cells.push(
                       <rect
-                        key={`h-${paneId}-${li}-${i}`}
-                        x={xScale(i) - candleW / 2}
+                        key={`h-${paneId}-${li}-${localI}`}
+                        x={xScale(localI) - candleW / 2}
                         y={top}
                         width={candleW}
                         height={Math.max(0.5, h)}
@@ -467,13 +611,14 @@ export default function QuantChart({
                         opacity={0.7}
                       />
                     );
-                  });
+                  }
+                  return cells;
                 }
                 const pts: string[] = [];
-                for (let i = 0; i < line.data.length; i++) {
-                  const v = line.data[i];
+                for (let localI = 0; localI < visBars.length; localI++) {
+                  const v = line.data[viewStart + localI];
                   if (v == null) continue;
-                  pts.push(`${xScale(i)},${s.yFor(v)}`);
+                  pts.push(`${xScale(localI)},${s.yFor(v)}`);
                 }
                 if (pts.length === 0) return null;
                 return (
@@ -520,12 +665,17 @@ export default function QuantChart({
             =================================================================== */}
         {livePrice != null && bars.length > 0 && (() => {
           const lastIdx = bars.length - 1;
+          const lastLocalIdx = absToLocal(lastIdx);
           const lpY = yScale(livePrice);
-          // Only render if the live price is within the visible y-range.
+          // Only render if the live price is within the visible y-range AND
+          // the latest bar is inside the panned/zoomed window.
           if (lpY < PADDING_TOP || lpY > PADDING_TOP + mainH) return null;
+          const latestInWindow = lastLocalIdx >= 0 && lastLocalIdx < visBars.length;
           const up = livePrevClose == null ? null : livePrice >= livePrevClose;
           const tagColor = up == null ? COLORS.brand : up ? COLORS.up : COLORS.down;
-          const x0 = xScale(lastIdx);
+          // When the latest bar is panned off-screen, anchor the live-line
+          // at the right edge so the tag still shows the current price.
+          const x0 = latestInWindow ? xScale(lastLocalIdx) : W - PADDING_RIGHT;
           return (
             <g pointerEvents="none">
               {/* Dashed line from latest bar to right edge */}
@@ -539,31 +689,35 @@ export default function QuantChart({
                 strokeDasharray="4,4"
                 opacity={0.55}
               />
-              {/* Outer expanding ring (CSS animation) */}
-              <circle
-                cx={x0}
-                cy={lpY}
-                r={4}
-                fill="none"
-                stroke={tagColor}
-                strokeWidth={1.2}
-                opacity={0.7}
-                style={{
-                  transformOrigin: `${x0}px ${lpY}px`,
-                  animation: "willbb-liveping 1.6s ease-out infinite",
-                }}
-              />
-              {/* Solid inner dot */}
-              <circle
-                cx={x0}
-                cy={lpY}
-                r={3}
-                fill={tagColor}
-                opacity={0.95}
-                style={{
-                  filter: `drop-shadow(0 0 4px ${tagColor})`,
-                }}
-              />
+              {/* Outer expanding ring (CSS animation) — only when latest in view */}
+              {latestInWindow && (
+                <circle
+                  cx={x0}
+                  cy={lpY}
+                  r={4}
+                  fill="none"
+                  stroke={tagColor}
+                  strokeWidth={1.2}
+                  opacity={0.7}
+                  style={{
+                    transformOrigin: `${x0}px ${lpY}px`,
+                    animation: "willbb-liveping 1.6s ease-out infinite",
+                  }}
+                />
+              )}
+              {/* Solid inner dot — only when latest in view */}
+              {latestInWindow && (
+                <circle
+                  cx={x0}
+                  cy={lpY}
+                  r={3}
+                  fill={tagColor}
+                  opacity={0.95}
+                  style={{
+                    filter: `drop-shadow(0 0 4px ${tagColor})`,
+                  }}
+                />
+              )}
               {/* Right-axis live price tag */}
               <g>
                 <rect
@@ -621,17 +775,18 @@ export default function QuantChart({
           </g>
         )}
 
-        {/* X-axis dates */}
+        {/* X-axis dates — sampled from the VISIBLE window so the date range
+            shown matches what the user is currently looking at. */}
         {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
-          const idx = Math.floor(frac * (bars.length - 1));
-          const b = bars[idx];
+          const localIdx = Math.floor(frac * Math.max(0, visBars.length - 1));
+          const b = visBars[localIdx];
           if (!b) return null;
           const date = new Date(b.t * 1000);
           const label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
           return (
             <text
               key={`xl-${i}`}
-              x={xScale(idx)}
+              x={xScale(localIdx)}
               y={totalH - 8}
               fontSize={9}
               fill={COLORS.textFaint}
@@ -648,9 +803,9 @@ export default function QuantChart({
           <g pointerEvents="none">
             {/* Vertical line spans the entire chart (main + sub-panes) */}
             <line
-              x1={xScale(hoverIdx)}
+              x1={xScale(absToLocal(hoverIdx))}
               y1={PADDING_TOP}
-              x2={xScale(hoverIdx)}
+              x2={xScale(absToLocal(hoverIdx))}
               y2={totalH - PADDING_BOTTOM}
               stroke={COLORS.text}
               strokeWidth={0.6}
@@ -701,7 +856,7 @@ export default function QuantChart({
             {hover && (
               <g>
                 <rect
-                  x={xScale(hoverIdx) - 38}
+                  x={xScale(absToLocal(hoverIdx)) - 38}
                   y={totalH - PADDING_BOTTOM + 4}
                   width={76}
                   height={16}
@@ -710,7 +865,7 @@ export default function QuantChart({
                   rx={2}
                 />
                 <text
-                  x={xScale(hoverIdx)}
+                  x={xScale(absToLocal(hoverIdx))}
                   y={totalH - PADDING_BOTTOM + 15}
                   fontSize={9}
                   fontFamily={FONT_MONO}
@@ -725,6 +880,36 @@ export default function QuantChart({
           </g>
         )}
       </svg>
+
+      {/* Reset pan/zoom button — only shown when the user has actually
+          panned or zoomed. Click to revert to "show all bars" auto mode. */}
+      {isCustomView && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setViewportStartIdx(null);
+            setVisibleBarsState(null);
+          }}
+          title="Reset pan + zoom"
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: "rgba(33, 33, 36, 0.92)",
+            border: "1px solid " + COLORS.borderSoft,
+            color: COLORS.textDim,
+            padding: "3px 8px",
+            fontSize: 10,
+            fontFamily: FONT_MONO,
+            cursor: "pointer",
+            letterSpacing: "0.06em",
+            zIndex: 5,
+          }}
+        >
+          ↺ RESET
+        </button>
+      )}
 
       {/* Floating cursor-following tooltip — OHLC + change + volume + overlay
           values at the hovered bar. Positioned to stay within the container. */}
