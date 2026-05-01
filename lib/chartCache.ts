@@ -103,6 +103,17 @@ const inflight = new Map<string, Promise<CachedChartPayload | null>>();
  * Fetch + cache. If `bypass` is true (e.g. manual refresh), skips the cache
  * and forces a network fetch with `?bypass=1` on the server. If a fetch
  * for the same key is already in flight, returns the in-flight promise.
+ *
+ * NOTE: we deliberately do NOT pass the caller's AbortSignal to the
+ * underlying fetch. Reason: in-flight dedup means multiple callers can
+ * share one promise. If we let one caller's abort kill the fetch, every
+ * other caller waiting on the same key gets a `null` they didn't ask for.
+ * Callers handle their own abort by gating their state-updates on their
+ * own `signal.aborted` check. The underlying fetch always runs to
+ * completion — server-side cache absorbs the cost.
+ *
+ * We keep `signal` in the options type so callers can still pass it
+ * (forward-compat) — it just isn't used here.
  */
 export function fetchChart(
   symbol: string,
@@ -110,12 +121,28 @@ export function fetchChart(
   interval: string,
   opts: { bypass?: boolean; signal?: AbortSignal } = {},
 ): Promise<CachedChartPayload | null> {
+  void opts.signal; // intentionally unused — see comment above
   const key = cacheKey(symbol, range, interval);
+
+  // Fresh cache hit → no network at all. Callers (Cockpit, StrategyLab,
+  // OpenBB pre-warm) call this without first calling readChart, so without
+  // this short-circuit a fresh entry would still trigger a network fetch.
+  // Matches the pattern in lib/clientFetchCache.ts.
+  if (!opts.bypass) {
+    const entry = cache.get(key);
+    if (entry && Date.now() - entry.fetchedAt < STALE_AFTER_MS) {
+      // Refresh LRU position on hit.
+      cache.delete(key);
+      cache.set(key, entry);
+      return Promise.resolve(entry.payload);
+    }
+  }
+
   const existing = inflight.get(key);
   if (existing && !opts.bypass) return existing;
 
   const url = `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}${opts.bypass ? "&bypass=1" : ""}`;
-  const promise = fetch(url, { signal: opts.signal, cache: "no-store" })
+  const promise = fetch(url, { cache: "no-store" })
     .then(async (res) => {
       if (!res.ok) return null;
       const data = (await res.json()) as CachedChartPayload | null;
@@ -124,10 +151,7 @@ export function fetchChart(
       touchLRU(key, entry);
       return data;
     })
-    .catch((e) => {
-      if (e instanceof Error && e.name === "AbortError") return null;
-      return null;
-    })
+    .catch(() => null)
     .finally(() => {
       inflight.delete(key);
     });

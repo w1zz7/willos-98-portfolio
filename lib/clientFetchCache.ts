@@ -64,20 +64,23 @@ export function swrFetch<T>(
     };
   }
 
-  // Issue (or join) a network request.
+  // Issue (or join) a network request. NOTE: we deliberately do NOT pass
+  // the caller's AbortSignal — see lib/chartCache.ts for the same rationale.
+  // In-flight dedup means multiple callers share one promise; if any one of
+  // them aborts, all the others would unfairly see null. Callers gate their
+  // state updates via `signal.aborted` instead, and the underlying fetch
+  // always runs to completion.
+  void opts.signal;
   let promise = inflight.get(key) as Promise<T | null> | undefined;
   if (!promise || opts.bypass) {
-    promise = fetch(url, { signal: opts.signal, cache: "no-store" })
+    promise = fetch(url, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) return null;
         const data = (await r.json()) as T;
         touchLRU<T>(key, { data, at: Date.now() });
         return data;
       })
-      .catch((e) => {
-        if (e instanceof Error && e.name === "AbortError") return null;
-        return null;
-      })
+      .catch(() => null)
       .finally(() => {
         inflight.delete(key);
       });
