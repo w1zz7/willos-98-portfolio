@@ -97,6 +97,10 @@ const WillBB = dynamic(
   () => import("@/components/apps/willbb/OpenBB"),
   { ssr: false }
 );
+const WillBBPython = dynamic(
+  () => import("@/components/apps/willbb-py/WillBBPython"),
+  { ssr: false }
+);
 const GolfDataLab = dynamic(
   () => import("@/components/apps/golfdatalab/GolfDataLab"),
   { ssr: false }
@@ -303,6 +307,15 @@ export const APPS: Record<AppId, AppDef> = {
     defaultSize: { w: 980, h: 680 },
     minSize: { w: 640, h: 460 },
     component: WillBB,
+    singleton: true,
+  },
+  "willbb-py": {
+    appId: "willbb-py",
+    title: "WillBB Markets Terminal - Python Edition",
+    iconUrl: "/icons/willbb-py.svg",
+    defaultSize: { w: 980, h: 680 },
+    minSize: { w: 640, h: 460 },
+    component: WillBBPython,
     singleton: true,
   },
   golfdatalab: {
