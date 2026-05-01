@@ -6,6 +6,13 @@
 # on-demand Netlify Functions), and ISR cache headers automatically.
 #
 # Pin Node 20 LTS because Next 15 + React 19 requires Node 18.18+.
+#
+# Optional env var (set in Netlify dashboard → Site settings → Environment
+# variables — NOT here, secrets don't belong in checked-in TOML):
+#   ALPHA_VANTAGE_API_KEY  Powers willBB News+Sentiment, Smart Money, Macro,
+#                          Calendars, Symbol Search, Earnings Transcripts.
+#                          Free key: https://www.alphavantage.co/support/#api-key
+# See README.md → "Required environment variables" for the full list.
 
 [build]
   command = "npm run build"

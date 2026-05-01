@@ -282,6 +282,45 @@ export default function QuantChart({
   const prevBar = hoverIdx != null && hoverIdx > 0 ? bars[hoverIdx - 1] : null;
   const hoverChangePct =
     hover && prevBar && prevBar.c > 0 ? ((hover.c - prevBar.c) / prevBar.c) * 100 : null;
+
+  // Whether the latest (most-recent) bar is currently inside the visible window.
+  // When false (user has panned far enough back), we show a "→ jump to latest"
+  // hint in the top-right so the live-tip dot isn't lost.
+  const latestAbsIdx = bars.length - 1;
+  const latestInVisibleWindow = absToLocal(latestAbsIdx) >= 0 && absToLocal(latestAbsIdx) < visBars.length;
+
+  // Shared helpers for double-click + keyboard handlers.
+  const resetViewport = () => {
+    setViewportStartIdx(null);
+    setVisibleBarsState(null);
+  };
+  const zoomBy = (factor: number) => {
+    // factor < 1 = zoom in (fewer bars), factor > 1 = zoom out.
+    // Anchor: keep the visible window centered on its current midpoint.
+    const currentCount = visibleBarsState ?? bars.length;
+    const newCount = Math.max(20, Math.min(bars.length, Math.round(currentCount * factor)));
+    if (newCount === currentCount) return;
+    const currentStart = viewportStartIdx ?? 0;
+    const midpoint = currentStart + currentCount / 2;
+    const newStart = Math.max(0, Math.min(bars.length - newCount, Math.round(midpoint - newCount / 2)));
+    setViewportStartIdx(newStart);
+    setVisibleBarsState(newCount);
+  };
+  const panBy = (deltaBars: number) => {
+    const currentCount = visibleBarsState ?? Math.min(bars.length, Math.max(60, Math.floor(bars.length * 0.5)));
+    const currentStart = viewportStartIdx ?? Math.max(0, bars.length - currentCount);
+    const newStart = Math.max(0, Math.min(bars.length - currentCount, currentStart + deltaBars));
+    if (newStart === currentStart && visibleBarsState != null) return;
+    setViewportStartIdx(newStart);
+    if (visibleBarsState == null) setVisibleBarsState(currentCount);
+  };
+  const jumpToLatest = () => {
+    // Snap the viewport to the right edge while preserving zoom level.
+    const currentCount = visibleBarsState ?? Math.min(bars.length, Math.max(60, Math.floor(bars.length * 0.5)));
+    const newStart = Math.max(0, bars.length - currentCount);
+    setViewportStartIdx(newStart);
+    if (visibleBarsState == null) setVisibleBarsState(currentCount);
+  };
   // Reverse the y-scale to convert hovered cursor Y back into a price for
   // the crosshair label.
   const hoverPrice =
@@ -292,16 +331,58 @@ export default function QuantChart({
   return (
     <div
       ref={containerRef}
+      // tabIndex makes the chart focusable so onKeyDown fires for shortcuts
+      // (F = fit, +/- = zoom, arrows = pan). outline:none keeps the focus ring
+      // from clashing with the dark Bloomberg aesthetic.
+      tabIndex={0}
       style={{
         background: COLORS.panel,
         position: "relative",
         height,
         cursor: isCustomView ? "grab" : "crosshair",
+        outline: "none",
       }}
       onMouseLeave={() => {
         setHoverIdx(null);
         setHoverPx(null);
         setHoverClient(null);
+      }}
+      onDoubleClick={(e) => {
+        // Double-click anywhere on the chart resets pan + zoom — faster than
+        // aiming for the small ↺ RESET button in the top-right.
+        e.preventDefault();
+        e.stopPropagation();
+        resetViewport();
+      }}
+      onKeyDown={(e) => {
+        // TradingView-style keyboard shortcuts. We only intercept the keys
+        // we use; everything else (Tab, Esc) falls through to default.
+        const k = e.key;
+        if (k === "f" || k === "F") {
+          e.preventDefault();
+          resetViewport();
+        } else if (k === "+" || k === "=") {
+          e.preventDefault();
+          zoomBy(1 / 1.15); // zoom IN = fewer bars
+        } else if (k === "-" || k === "_") {
+          e.preventDefault();
+          zoomBy(1.15); // zoom OUT = more bars
+        } else if (k === "ArrowLeft") {
+          e.preventDefault();
+          panBy(-10);
+        } else if (k === "ArrowRight") {
+          e.preventDefault();
+          panBy(10);
+        } else if (k === "Home") {
+          e.preventDefault();
+          // Home = jump to oldest visible bar
+          const cnt = visibleBarsState ?? Math.min(bars.length, 60);
+          setViewportStartIdx(0);
+          setVisibleBarsState(cnt);
+        } else if (k === "End") {
+          e.preventDefault();
+          jumpToLatest();
+        }
       }}
       onWheel={(e) => {
         // Wheel-to-zoom. Up = zoom in (fewer bars), Down = zoom out (more).
@@ -882,16 +963,17 @@ export default function QuantChart({
       </svg>
 
       {/* Reset pan/zoom button — only shown when the user has actually
-          panned or zoomed. Click to revert to "show all bars" auto mode. */}
+          panned or zoomed. Click to revert to "show all bars" auto mode.
+          Hover tooltip lists the keyboard shortcuts so this also serves as
+          discoverability for the F / +/- / arrow shortcuts. */}
       {isCustomView && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setViewportStartIdx(null);
-            setVisibleBarsState(null);
+            resetViewport();
           }}
-          title="Reset pan + zoom"
+          title="Reset pan + zoom (F or double-click).&#10;Pan: drag or ←/→.  Zoom: wheel or +/-.  End: jump to latest."
           style={{
             position: "absolute",
             top: 8,
@@ -908,6 +990,37 @@ export default function QuantChart({
           }}
         >
           ↺ RESET
+        </button>
+      )}
+
+      {/* "Jump to latest →" hint — appears in the top-right when the user has
+          panned far enough back that the latest (live-tip) bar is no longer in
+          the visible window. One click snaps the viewport to the right edge
+          while preserving the current zoom level. */}
+      {isCustomView && !latestInVisibleWindow && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            jumpToLatest();
+          }}
+          title="Latest bar is off-screen — click to jump to right edge (or press End)."
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 76, // sits to the LEFT of the ↺ RESET button (which is at right:8)
+            background: "rgba(33, 33, 36, 0.92)",
+            border: "1px solid " + COLORS.brand,
+            color: COLORS.brand,
+            padding: "3px 8px",
+            fontSize: 10,
+            fontFamily: FONT_MONO,
+            cursor: "pointer",
+            letterSpacing: "0.06em",
+            zIndex: 5,
+          }}
+        >
+          LATEST →
         </button>
       )}
 

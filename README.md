@@ -120,9 +120,25 @@ npx netlify-cli deploy --prod
 built-in Next.js Runtime handles SSR, ISR, and on-demand functions for the
 API routes automatically — no plugin block needed.
 
-No environment variables are required. Quotes and equity-research data flow
-through `/api/markets/*` (server-side proxies of Yahoo Finance + CoinGecko;
-no API keys).
+### Required environment variables (Netlify deploys)
+
+The app **works fully without any env vars** — quotes and charts flow through
+`/api/markets/*` server-side proxies (Yahoo Finance → CoinGecko → Stooq →
+synthetic) with no API keys. However, several willBB Markets Terminal panels
+are powered by **Alpha Vantage** and will render empty without a key:
+
+| Env var                 | Powers                                                                                                 | Required? |
+|-------------------------|--------------------------------------------------------------------------------------------------------|-----------|
+| `ALPHA_VANTAGE_API_KEY` | News + Sentiment, Smart Money (Insider/Institutional), Macro (Yields/CPI/FFR/GDP), Earnings/IPO Calendars, Symbol Search autocomplete, Earnings Transcripts | Optional (recommended) |
+
+Get a free key from <https://www.alphavantage.co/support/#api-key> (25 calls/day,
+5/min — the app respects this budget).
+
+**To set on Netlify:** Site → Site settings → Environment variables → Add a
+variable. Then **Deploys → Trigger deploy → Clear cache and deploy site** so
+the function bundle picks up the new value.
+
+For local dev, copy `.env.example` to `.env.local` and add the key there.
 
 ---
 

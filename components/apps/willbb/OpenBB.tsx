@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import type { WindowState } from "@/lib/wm/types";
 import {
   INDEX_STRIP,
@@ -24,11 +25,47 @@ import {
 } from "./symbols";
 import type { ChartPoint } from "./PriceChart";
 import TradingViewChart, { type TVInterval, type TVRange } from "./TradingViewChart";
-import EquityResearch from "./EquityResearch";
-import Discovery from "./Discovery";
 import BootScreen from "./BootScreen";
-import QuantDesk from "./quantdesk/QuantDesk";
 import { SourceBadge, type DataSource, aggregateSource } from "./SourceBadge";
+
+// Lazy-loaded heavy panels — they don't ship in the Markets-tab initial chunk.
+// EquityResearch (multi-tab equity views), Discovery (screeners + macro +
+// calendars), and QuantDesk (Cockpit + StrategyLab DSL editor + regression
+// engine) only mount when the user clicks their respective tab. ssr:false
+// because all three are client-only (live polling, drag refs, setInterval).
+// Loading shim styled to match the panel background so there's no FOUC.
+const PaneLoader = ({ label }: { label: string }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      width: "100%",
+      background: "#212124",
+      color: "#9793b0",
+      fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
+      fontSize: 12,
+      letterSpacing: "0.16em",
+      textTransform: "uppercase",
+    }}
+  >
+    {label} ·
+  </div>
+);
+
+const EquityResearch = dynamic(() => import("./EquityResearch"), {
+  loading: () => <PaneLoader label="Loading Equity Research" />,
+  ssr: false,
+});
+const Discovery = dynamic(() => import("./Discovery"), {
+  loading: () => <PaneLoader label="Loading Discovery" />,
+  ssr: false,
+});
+const QuantDesk = dynamic(() => import("./quantdesk/QuantDesk"), {
+  loading: () => <PaneLoader label="Loading Research" />,
+  ssr: false,
+});
 
 interface Quote {
   symbol: string;
