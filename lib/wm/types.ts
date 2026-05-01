@@ -28,7 +28,6 @@ export type AppId =
   | "minesweeper"
   | "ie"
   | "willbb"
-  | "willbb-py"
   | "golfdatalab"
   | "notepad"
   | "welcome"

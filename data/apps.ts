@@ -25,7 +25,6 @@ export const DESKTOP_ICONS: DesktopIconDef[] = [
   { appId: "highschool", label: "High School", iconUrl: "/icons/about.svg" },
   { appId: "market-recaps", label: "Market Journal", iconUrl: "/icons/news.svg" },
   { appId: "willbb", label: "WillBB Terminal", iconUrl: "/icons/willbb.svg" },
-  { appId: "willbb-py", label: "WillBB · Python", iconUrl: "/icons/willbb-py.svg" },
   { appId: "golfdatalab", label: "Golf Data Lab", iconUrl: "/icons/golf-data-lab.svg" },
   { appId: "strategy", label: "Trading Strategy", iconUrl: "/icons/strategy.svg" },
 ];
@@ -58,7 +57,6 @@ export const START_MENU: StartMenuItem[] = [
   { appId: "highschool", label: "High School", iconUrl: "/icons/about.svg" },
   { appId: "market-recaps", label: "Market Journal", iconUrl: "/icons/news.svg" },
   { appId: "willbb", label: "WillBB Terminal", iconUrl: "/icons/willbb.svg" },
-  { appId: "willbb-py", label: "WillBB · Python Edition", iconUrl: "/icons/willbb-py.svg" },
   { appId: "golfdatalab", label: "Golf Data Lab", iconUrl: "/icons/golf-data-lab.svg" },
   { appId: "strategy", label: "Trading Strategy", iconUrl: "/icons/strategy.svg" },
   { appId: "minesweeper", label: "Games › Minesweeper", iconUrl: "/icons/mine.svg" },
