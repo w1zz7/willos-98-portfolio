@@ -4,6 +4,7 @@
   "private": true,
   "description": "Will Zhang's portfolio — a Windows 98 desktop with an interactive Excel workbook as the content hub.",
   "scripts": {
+    "predev": "node scripts/clean-next.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -11,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "clean": "node scripts/clean-next.cjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
