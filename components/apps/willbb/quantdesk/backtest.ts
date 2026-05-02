@@ -105,6 +105,38 @@ function meanStd(xs: number[]): { m: number; s: number } {
   return { m, s: Math.sqrt(v) };
 }
 
+/**
+ * Infer how many bars correspond to one trading year based on the median
+ * gap between consecutive bar timestamps. This lets the same Sharpe /
+ * Sortino / Calmar / annualReturn formulas work for daily, weekly,
+ * monthly, AND intraday data without overstating annual numbers.
+ *
+ * Heuristic anchors:
+ *   ≥ 28 days median gap   → monthly  (12 bars/year)
+ *   ≥  3 days              → weekly   (52 bars/year)
+ *   ≥  6 hours             → daily    (252 bars/year)  ← default
+ *   ≥ 30 min               → hourly   (252 × 6.5)
+ *   ≥  3 min               → 5-minute (252 × 78)
+ *   else                   → 1-minute (252 × 390)
+ */
+export function inferBarsPerYear(bars: { t: number }[]): number {
+  if (!bars || bars.length < 2) return 252;
+  const gaps: number[] = [];
+  for (let i = 1; i < bars.length && gaps.length < 200; i++) {
+    const g = bars[i].t - bars[i - 1].t;
+    if (Number.isFinite(g) && g > 0) gaps.push(g);
+  }
+  if (gaps.length === 0) return 252;
+  gaps.sort((a, b) => a - b);
+  const medianSec = gaps[Math.floor(gaps.length / 2)];
+  if (medianSec >= 28 * 86400) return 12;             // monthly
+  if (medianSec >= 3 * 86400)  return 52;             // weekly
+  if (medianSec >= 6 * 3600)   return 252;            // daily (incl. weekend gap)
+  if (medianSec >= 30 * 60)    return 252 * 6.5;      // hourly
+  if (medianSec >= 3 * 60)     return 252 * 78;       // 5-min (78 5-min/day)
+  return 252 * 390;                                   // 1-min
+}
+
 export function runBacktest(
   bars: Bar[],
   signals: Signal[],
@@ -208,56 +240,95 @@ export function runBacktest(
   }
 
   // ============== Stats ==============
+  // Hardening pass: every reduce/Math.max/divide is guarded to avoid the
+  // NaN / -Infinity propagation that the audit flagged on empty trades and
+  // single-bar inputs. We also derive `barsPerYear` from the actual bar
+  // cadence rather than hard-coding 252, so intraday strategies don't get
+  // wildly inflated annualized stats.
   const startCapital = params.startingCapital;
   const endCapital = cash;
-  const totalReturn = (endCapital - startCapital) / startCapital;
+  const totalReturn =
+    startCapital > 0 && Number.isFinite(endCapital)
+      ? (endCapital - startCapital) / startCapital
+      : 0;
 
   // Per-bar returns from the equity curve (used for Sharpe / Sortino / annualization)
   const eqVals = equity.map((e) => e.v);
   const dailyRet: number[] = [];
   for (let i = 1; i < eqVals.length; i++) {
-    if (eqVals[i - 1] > 0) dailyRet.push((eqVals[i] - eqVals[i - 1]) / eqVals[i - 1]);
+    const prev = eqVals[i - 1];
+    const cur = eqVals[i];
+    if (prev > 0 && Number.isFinite(prev) && Number.isFinite(cur)) {
+      dailyRet.push((cur - prev) / prev);
+    }
   }
   const { m: meanR, s: stdR } = meanStd(dailyRet);
-  // Annualize (assume daily bars; if bars are intraday, this overstates)
-  const sharpe = stdR > 0.0001 ? (meanR / stdR) * Math.sqrt(252) : 0;
+
+  // Annualization-aware: derive bars-per-year from the median bar duration
+  // instead of assuming daily. Falls back to 252 if duration can't be
+  // inferred (single-bar input or bars without timestamps).
+  const barsPerYear = inferBarsPerYear(bars);
+  const annFactor = Math.sqrt(barsPerYear);
+
+  // Tighten the zero-vol guard. 1e-12 is well below realistic per-bar vol
+  // (on the order of 1e-3) but above the float epsilon, so we don't divide
+  // by an effectively-zero value.
+  const ZERO_EPS = 1e-12;
+  const sharpe =
+    stdR > ZERO_EPS && Number.isFinite(meanR) ? (meanR / stdR) * annFactor : 0;
 
   const downside = dailyRet.filter((r) => r < 0);
   const dnVar = downside.length > 0
     ? downside.reduce((a, b) => a + b * b, 0) / downside.length
     : 0;
   const dnStd = Math.sqrt(dnVar);
-  const sortino = dnStd > 0.0001 ? (meanR / dnStd) * Math.sqrt(252) : 0;
+  const sortino =
+    dnStd > ZERO_EPS && Number.isFinite(meanR) ? (meanR / dnStd) * annFactor : 0;
 
-  // Max drawdown
+  // Max drawdown — peak guard against the empty-equity-curve case.
   let peak = eqVals[0] ?? startCapital;
   let maxDD = 0;
   for (const v of eqVals) {
+    if (!Number.isFinite(v)) continue;
     if (v > peak) peak = v;
-    const dd = (v - peak) / peak;
-    if (dd < maxDD) maxDD = dd;
+    if (peak > 0) {
+      const dd = (v - peak) / peak;
+      if (dd < maxDD) maxDD = dd;
+    }
   }
 
-  const annualReturn = bars.length > 0
-    ? Math.pow(1 + totalReturn, 252 / Math.max(1, bars.length)) - 1
-    : 0;
-  const calmar = Math.abs(maxDD) > 0.001 ? annualReturn / Math.abs(maxDD) : 0;
+  // Annualized return: convert (1 + totalReturn) over `bars.length` bars to
+  // (1 + r_annual). Guard against bars.length === 0 and against the case
+  // where (1 + totalReturn) goes non-positive (>=100% loss) which would make
+  // the geometric formula emit NaN.
+  const annualReturn =
+    bars.length > 1 && 1 + totalReturn > 0
+      ? Math.pow(1 + totalReturn, barsPerYear / bars.length) - 1
+      : 0;
+  const calmar =
+    Math.abs(maxDD) > ZERO_EPS && Number.isFinite(annualReturn)
+      ? annualReturn / Math.abs(maxDD)
+      : 0;
 
   const winners = trades.filter((t) => (t.pnl ?? 0) > 0);
   const losers = trades.filter((t) => (t.pnl ?? 0) < 0);
   const winRate = trades.length > 0 ? winners.length / trades.length : 0;
   const grossWins = winners.reduce((a, t) => a + (t.pnlAbs ?? 0), 0);
   const grossLosses = Math.abs(losers.reduce((a, t) => a + (t.pnlAbs ?? 0), 0));
-  const profitFactor = grossLosses > 0.001 ? grossWins / grossLosses : 0;
+  const profitFactor = grossLosses > ZERO_EPS ? grossWins / grossLosses : 0;
   const avgPnl = trades.length > 0
     ? trades.reduce((a, t) => a + (t.pnl ?? 0), 0) / trades.length
     : 0;
-  const bestTrade = trades.length > 0
-    ? Math.max(...trades.map((t) => t.pnl ?? 0))
-    : 0;
-  const worstTrade = trades.length > 0
-    ? Math.min(...trades.map((t) => t.pnl ?? 0))
-    : 0;
+  // Math.max([]) returns -Infinity, so we route through reduce with a
+  // sentinel and only compute when there are trades.
+  const bestTrade =
+    trades.length > 0
+      ? trades.reduce((m, t) => Math.max(m, t.pnl ?? 0), -Infinity)
+      : 0;
+  const worstTrade =
+    trades.length > 0
+      ? trades.reduce((m, t) => Math.min(m, t.pnl ?? 0), +Infinity)
+      : 0;
 
   return {
     trades,

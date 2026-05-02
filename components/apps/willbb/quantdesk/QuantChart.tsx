@@ -286,15 +286,41 @@ export default function QuantChart({
 
   // Y-scale for main pane (price). Computed over the VISIBLE window so zooming
   // into a 5% slice rescales the y-axis to that slice's hi/lo automatically.
+  //
+  // Hardening: `Math.max(...[])` returns -Infinity and `Math.min(...[])`
+  // returns +Infinity, which corrupts the axis when the visible window is
+  // empty (single-bar zoom, all-null overlays). We collect candidates first,
+  // then guard: if everything is empty we fall back to a tight window
+  // around the latest close so the chart shows a flat line instead of NaN.
   const visMainOverlayValues = mainOverlays.flatMap((o) =>
-    o.data.slice(viewStart, viewEnd).filter((v): v is number => v != null)
+    o.data.slice(viewStart, viewEnd).filter((v): v is number => Number.isFinite(v))
   );
-  const allHi = Math.max(...visBars.map((b) => b.h), ...visMainOverlayValues);
-  const allLo = Math.min(...visBars.map((b) => b.l), ...visMainOverlayValues);
+  const visHighs = visBars.map((b) => b.h).filter((v) => Number.isFinite(v));
+  const visLows = visBars.map((b) => b.l).filter((v) => Number.isFinite(v));
+  const allCandidatesHi = [...visHighs, ...visMainOverlayValues];
+  const allCandidatesLo = [...visLows, ...visMainOverlayValues];
+  let allHi = allCandidatesHi.length ? Math.max(...allCandidatesHi) : NaN;
+  let allLo = allCandidatesLo.length ? Math.min(...allCandidatesLo) : NaN;
+  // Single-flat-bar fallback: pad ±0.5% around the close so the candle
+  // doesn't collapse to a horizontal hairline.
+  if (!Number.isFinite(allHi) || !Number.isFinite(allLo)) {
+    const fallbackPx = visBars[0]?.c ?? bars[bars.length - 1]?.c ?? 100;
+    allHi = fallbackPx * 1.005;
+    allLo = fallbackPx * 0.995;
+  } else if (allHi - allLo < Number.EPSILON) {
+    // Flat window: same close on every visible bar (rare, but happens with
+    // 1-bar zoom on synthetic / paused-market data).
+    const half = Math.max(allHi * 0.005, 0.01);
+    allHi = allHi + half;
+    allLo = allLo - half;
+  }
   const padPrice = (allHi - allLo) * 0.05;
   const yHi = allHi + padPrice;
   const yLo = allLo - padPrice;
-  const yScale = (price: number) => PADDING_TOP + ((yHi - price) / (yHi - yLo)) * mainH;
+  // Final divide-by-zero guard for the mapping itself; with the flat-window
+  // expansion above this should never fire, but defense-in-depth is cheap.
+  const yRange = yHi - yLo > Number.EPSILON ? yHi - yLo : 1;
+  const yScale = (price: number) => PADDING_TOP + ((yHi - price) / yRange) * mainH;
   // xScale takes a *window-local* index (0..visBars.length-1). Use absToLocal
   // for absolute-bar-index conversion (markers, live-tip dot).
   const xScale = (localIdx: number) => PADDING_LEFT + localIdx * dx + dx / 2;
@@ -310,11 +336,19 @@ export default function QuantChart({
   // and indicator-specific scales rescale to their visible portion).
   function subScale(paneId: string) {
     const seriesInPane = overlays.filter((o) => o.pane === paneId);
-    const flat: number[] = seriesInPane.flatMap((o) => o.data.slice(viewStart, viewEnd).filter((v): v is number => v != null));
+    const flat: number[] = seriesInPane.flatMap((o) =>
+      o.data.slice(viewStart, viewEnd).filter((v): v is number => Number.isFinite(v))
+    );
     let lo = flat.length ? Math.min(...flat) : 0;
     let hi = flat.length ? Math.max(...flat) : 1;
     if (paneId === "sub-rsi" || paneId === "sub-stoch") { lo = 0; hi = 100; }
-    if (paneId === "sub-volume") { lo = 0; hi = Math.max(...visBars.map((b) => b.v)) || 1; }
+    if (paneId === "sub-volume") {
+      // visBars.map(...).filter(Number.isFinite) so an all-zero or empty
+      // volume window doesn't blow up Math.max with -Infinity.
+      const vols = visBars.map((b) => b.v).filter((v) => Number.isFinite(v));
+      lo = 0;
+      hi = vols.length ? Math.max(...vols) || 1 : 1;
+    }
     if (lo === hi) { hi = lo + 1; }
     const padding = (hi - lo) * 0.08;
     const lo2 = paneId === "sub-rsi" || paneId === "sub-stoch" || paneId === "sub-volume" ? lo : lo - padding;
@@ -328,7 +362,12 @@ export default function QuantChart({
       top,
       bottom,
       yFor(v: number) {
-        return top + ((hi2 - v) / Math.max(0.001, hi2 - lo2)) * (bottom - top);
+        // Use machine epsilon as the divide-by-zero guard rather than a
+        // magic 0.001, since that magic value silently truncated otherwise-
+        // valid sub-pane scales (e.g., a tight RSI window of 49.99 - 50.01).
+        const range = hi2 - lo2;
+        const denom = Math.abs(range) > Number.EPSILON ? range : 1;
+        return top + ((hi2 - v) / denom) * (bottom - top);
       },
     };
   }

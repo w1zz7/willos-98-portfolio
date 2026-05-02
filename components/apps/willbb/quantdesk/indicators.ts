@@ -57,7 +57,12 @@ export function log_ret(closes: Series): Series {
   for (let i = 1; i < closes.length; i++) {
     const cur = closes[i];
     const prev = closes[i - 1];
-    if (cur != null && prev != null && prev > 0) out[i] = Math.log(cur / prev);
+    // BOTH cur and prev must be strictly positive — log(0) = -Infinity
+    // contaminates downstream realized vol / Sharpe / Sortino. Verified by
+    // the indicators.test.ts edge-case test.
+    if (cur != null && prev != null && cur > 0 && prev > 0) {
+      out[i] = Math.log(cur / prev);
+    }
   }
   return out;
 }

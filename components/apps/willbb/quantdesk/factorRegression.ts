@@ -213,13 +213,25 @@ export function runFactorRegression(
  * Returns: { Mkt, SMB, HML, MOM } as aligned (number | null)[] arrays of the
  * same length as the SPY series.
  */
-export function buildFactorReturns(closesBySymbol: {
-  SPY: number[];
-  IWM: number[];
-  IUSV: number[];
-  IUSG: number[];
-  MTUM: number[];
-}): FactorReturns {
+/**
+ * Build Carhart 4-factor returns from ETF chart data.
+ *
+ * `riskFreeAnnualized` is the annualized risk-free rate proxy (e.g., the
+ * 3-month T-bill yield). Defaults to 0.045 (4.5%) which is roughly the
+ * 3M T-bill rate as of late 2024/2025; pass the live rate from the Macro
+ * panel for more accurate Carhart alphas. Set to 0 to disable RF
+ * subtraction entirely (treats Mkt as raw SPY return).
+ */
+export function buildFactorReturns(
+  closesBySymbol: {
+    SPY: number[];
+    IWM: number[];
+    IUSV: number[];
+    IUSG: number[];
+    MTUM: number[];
+  },
+  riskFreeAnnualized: number = 0.045,
+): FactorReturns {
   function logRet(closes: number[]): (number | null)[] {
     const out: (number | null)[] = new Array(closes.length).fill(null);
     for (let i = 1; i < closes.length; i++) {
@@ -233,13 +245,18 @@ export function buildFactorReturns(closesBySymbol: {
   const rIUSG = logRet(closesBySymbol.IUSG);
   const rMTUM = logRet(closesBySymbol.MTUM);
   const n = Math.min(rSPY.length, rIWM.length, rIUSV.length, rIUSG.length, rMTUM.length);
-  const RF_DAILY = 0.05 / 252; // 5% annualized risk-free, simple daily proxy
+  // Convert annualized RF to per-bar (assumes daily; intraday Carhart needs
+  // adjusted bars-per-year — see inferBarsPerYear in backtest.ts).
+  const rfDaily =
+    Number.isFinite(riskFreeAnnualized) && riskFreeAnnualized > 0
+      ? riskFreeAnnualized / 252
+      : 0;
   const Mkt: (number | null)[] = new Array(n).fill(null);
   const SMB: (number | null)[] = new Array(n).fill(null);
   const HML: (number | null)[] = new Array(n).fill(null);
   const MOM: (number | null)[] = new Array(n).fill(null);
   for (let i = 0; i < n; i++) {
-    if (rSPY[i] != null) Mkt[i] = (rSPY[i] as number) - RF_DAILY;
+    if (rSPY[i] != null) Mkt[i] = (rSPY[i] as number) - rfDaily;
     if (rIWM[i] != null && rSPY[i] != null) SMB[i] = (rIWM[i] as number) - (rSPY[i] as number);
     if (rIUSV[i] != null && rIUSG[i] != null) HML[i] = (rIUSV[i] as number) - (rIUSG[i] as number);
     if (rMTUM[i] != null && rSPY[i] != null) MOM[i] = (rMTUM[i] as number) - (rSPY[i] as number);
