@@ -28,20 +28,22 @@ export interface BootLine {
 /* Cadence: ~2400ms total                                             */
 /* ------------------------------------------------------------------ */
 
+/* Authentic Award/Phoenix BIOS POST cadence — header is rendered by the
+ * stage component (BIOS string + Energy Star ally line + memory counter),
+ * so these lines start AFTER the memory test settles. */
 export const BIOS_LINES: BootLine[] = [
-  { delayMs: 0, text: "WillOS 98 BIOS v1.0  ·  (C) 2026 Will Zhang Industries", status: "info" },
-  { delayMs: 180, text: "CPU: Drexel LeBow Quad-Core @ 4.0 GHz" },
-  { delayMs: 320, text: "Memory test: 524,288 KB OK" },
-  { delayMs: 480, text: "Detecting IDE devices ...", status: "info" },
-  { delayMs: 640, text: "  Primary master:  BulletproofAI.exe  · 200k-resume ATS engine", ok: true },
-  { delayMs: 780, text: "  Primary slave:   TheGoodIdeaFund.dat · $100k+ allocated", ok: true },
-  { delayMs: 920, text: "Detecting USB devices ...", status: "info" },
-  { delayMs: 1060, text: "  Found: Drexel Consulting Group → WOLF Financial (14.3M followers)", ok: true },
-  { delayMs: 1200, text: "  Found: Google Developer Group · Primary Technical Lead", ok: true },
-  { delayMs: 1340, text: "  Found: Drexel High Finance Program · Public Market cohort", ok: true },
-  { delayMs: 1500, text: "Loading boot record from /dev/willos/main ...", status: "info" },
-  { delayMs: 1700, text: "Verifying signature ... OK", ok: true },
-  { delayMs: 1860, text: "Hand-off to Windows 98 boot manager ...", status: "info" },
+  { delayMs: 0, text: "Detecting Primary Master ...   BulletproofAI.exe", ok: true },
+  { delayMs: 160, text: "Detecting Primary Slave  ...   TheGoodIdeaFund.dat", ok: true },
+  { delayMs: 320, text: "Detecting Secondary Master ... GolfDataLab.dll", ok: true },
+  { delayMs: 480, text: "Detecting Secondary Slave  ... WillBB-Markets.sys", ok: true },
+  { delayMs: 640, text: "Floppy disk(s) check ............. None" },
+  { delayMs: 800, text: "Plug & Play BIOS Extension v1.0A" },
+  { delayMs: 960, text: "  PnP Init Completed" },
+  { delayMs: 1120, text: "  Found: Drexel Consulting Group  -  WOLF Financial (14.3M followers)", ok: true },
+  { delayMs: 1280, text: "  Found: Google Developer Group   -  Primary Technical Lead", ok: true },
+  { delayMs: 1440, text: "  Found: Drexel High Finance Pgm  -  Public Market cohort", ok: true },
+  { delayMs: 1620, text: "Verifying DMI Pool Data ............." },
+  { delayMs: 1820, text: "Boot from CDROM : C:\\WIN98\\IO.SYS" },
 ];
 
 /** Total Stage 1 duration: last delay + a brief final pause. */
