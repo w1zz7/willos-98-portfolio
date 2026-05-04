@@ -389,13 +389,24 @@ function BiosLine({ line }: { line: BootLine }) {
       : line.status === "err"
       ? c.err
       : c.fg;
+  // Authentic Award BIOS rendered the [ OK ] tag IMMEDIATELY after the
+  // text, not pushed to the right margin. We render it inline by setting
+  // whitespace: pre so leading-space indents like "  Found: ..." survive,
+  // and skipping `flex: 1` on the text span.
   return (
     <div
-      className="flex items-baseline gap-[8px]"
-      style={{ opacity: 0, animation: "boot-line-fade 200ms ease-out forwards" }}
+      style={{
+        whiteSpace: "pre",
+        opacity: 0,
+        animation: "boot-line-fade 200ms ease-out forwards",
+      }}
     >
-      <span style={{ color: lineColor, flex: 1 }}>{line.text}</span>
-      {line.ok && <span style={{ color: c.fg, fontWeight: "bold" }}>[ OK ]</span>}
+      <span style={{ color: lineColor }}>{line.text}</span>
+      {line.ok && (
+        <span style={{ color: c.fg, fontWeight: "bold", marginLeft: 8 }}>
+          [ OK ]
+        </span>
+      )}
     </div>
   );
 }
@@ -452,33 +463,39 @@ function SplashStage() {
         }}
       >
         <Win98FlagLogo size={160} />
+        {/* "Microsoft" sat above "Windows 98" on the LOGO.SYS, both centered
+            and baseline-aligned. Two lines, not one — the smaller italic
+            "Microsoft" is its own line above the bigger bold "Windows 98". */}
         <div
           style={{
-            marginTop: 18,
+            marginTop: 14,
             fontFamily: FONT_FRANKLIN,
             color: "#000000",
-            // Franklin Gothic Medium, condensed-ish.
-            fontSize: 56,
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
+            textAlign: "center",
             lineHeight: 1,
           }}
         >
-          {/* "Microsoft" was set in italic on the actual LOGO.SYS,
-              smaller than "Windows 98" itself. */}
-          <span
+          <div
             style={{
               fontWeight: 400,
               fontStyle: "italic",
-              fontSize: 32,
-              marginRight: 12,
+              fontSize: 28,
               letterSpacing: 0,
+              marginBottom: 4,
             }}
           >
             Microsoft
-          </span>
-          <span style={{ fontWeight: 700 }}>Windows</span>
-          <span style={{ fontWeight: 700, marginLeft: 14 }}>98</span>
+          </div>
+          <div
+            style={{
+              fontSize: 60,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              lineHeight: 1,
+            }}
+          >
+            Windows<span style={{ marginLeft: 14 }}>98</span>
+          </div>
         </div>
       </div>
 
@@ -887,17 +904,26 @@ function BioLineRow({ line }: { line: BootLine }) {
       : line.status === "warn"
       ? c.warn
       : c.fg;
+  // Inline layout (no flex:1) so [ OK ] sits IMMEDIATELY after the text
+  // rather than getting stretched to the right margin — matches both
+  // real Win98 console output and the existing willBB Markets boot
+  // screen cadence we're echoing here.
   return (
     <div
-      className="flex items-baseline gap-[8px]"
-      style={{ opacity: 0, animation: "boot-line-fade 220ms ease-out forwards" }}
+      style={{
+        whiteSpace: "pre-wrap",
+        opacity: 0,
+        animation: "boot-line-fade 220ms ease-out forwards",
+      }}
     >
       <span style={{ color: c.fgFaint, opacity: 0.9 }}>
         [{((line.delayMs + 100) / 1000).toFixed(2)}s]
       </span>
-      <span style={{ color: lineColor, flex: 1 }}>{line.text}</span>
+      <span style={{ color: lineColor, marginLeft: 8 }}>{line.text}</span>
       {line.ok && (
-        <span style={{ color: c.ok, fontWeight: "bold" }}>[ OK ]</span>
+        <span style={{ color: c.ok, fontWeight: "bold", marginLeft: 8 }}>
+          [ OK ]
+        </span>
       )}
     </div>
   );
