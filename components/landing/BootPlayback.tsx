@@ -74,9 +74,14 @@ export function BootPlayback() {
 
   /** Drive stage transitions on a single chained timer. */
   useEffect(() => {
-    let timers: number[] = [];
+    const timers: number[] = [];
     timers.push(window.setTimeout(() => setStage("splash"), BIOS_DURATION_MS));
-    timers.push(window.setTimeout(() => setStage("bio"), BIOS_DURATION_MS + SPLASH_DURATION_MS));
+    timers.push(
+      window.setTimeout(
+        () => setStage("bio"),
+        BIOS_DURATION_MS + SPLASH_DURATION_MS,
+      ),
+    );
     timers.push(
       window.setTimeout(
         () => setStage("fade"),

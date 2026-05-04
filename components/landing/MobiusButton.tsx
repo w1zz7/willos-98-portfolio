@@ -35,8 +35,20 @@ import * as THREE from "three";
 const CYAN = "#33BBFF";
 const TWO_PI = Math.PI * 2;
 
-/** Build a Möbius strip BufferGeometry by tessellating the parametric form. */
-function makeMobiusGeometry(uSteps = 180, vSteps = 16, scale = 1): THREE.BufferGeometry {
+/**
+ * Build a Möbius strip BufferGeometry by tessellating the parametric form.
+ *
+ * `widthFactor` shrinks the half-width contribution; the canonical formula
+ * uses 0.5 (resulting in strips ~half the major radius), but that reads as
+ * a thick band where the twist is hard to see. 0.28 gives a slimmer ribbon
+ * whose half-twist is the visual hero.
+ */
+function makeMobiusGeometry(
+  uSteps = 220,
+  vSteps = 10,
+  scale = 1,
+  widthFactor = 0.28,
+): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
   const uvs: number[] = [];
@@ -47,10 +59,10 @@ function makeMobiusGeometry(uSteps = 180, vSteps = 16, scale = 1): THREE.BufferG
       const v = (j / vSteps) * 2 - 1; // [-1, 1]
       const cosHalfU = Math.cos(u / 2);
       const sinHalfU = Math.sin(u / 2);
-      const r = 1 + 0.5 * v * cosHalfU;
+      const r = 1 + widthFactor * v * cosHalfU;
       const x = r * Math.cos(u) * scale;
       const y = r * Math.sin(u) * scale;
-      const z = 0.5 * v * sinHalfU * scale;
+      const z = widthFactor * v * sinHalfU * scale;
       positions.push(x, y, z);
       uvs.push(i / uSteps, j / vSteps);
     }
@@ -87,7 +99,11 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   // Memo the geometry so it isn't recomputed on every re-render.
-  const geometry = useMemo(() => makeMobiusGeometry(180, 16, 1.05), []);
+  // Note: the parametric Möbius is intrinsically thin (width drops to zero
+  // at u=π); we use vSteps=10 (enough for the ribbon edges to look smooth)
+  // and a base scale of 1.0 so the strip lives in roughly a 2-unit cube.
+  // Camera at z=5.4 with fov=42 frames it nicely.
+  const geometry = useMemo(() => makeMobiusGeometry(220, 10, 1.0), []);
 
   // Click animation state (refs so useFrame can mutate without re-render).
   const clickStartRef = useRef<number | null>(null);
@@ -106,13 +122,12 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
     if (!m || !g || !mat) return;
 
     // Continuous rotation. Hover speeds it up 2×.
-    const speed = hovered ? 0.45 : 0.2;
+    const speed = hovered ? 0.55 : 0.25;
     m.rotation.y += speed * delta;
-    m.rotation.x += 0.05 * delta; // slight wobble
 
-    // Hover: scale toward 1.1, glow up. Otherwise back to 1.0.
-    const targetScale = hovered ? 1.1 : 1.0;
-    const targetEmissive = hovered ? 1.3 : 0.7;
+    // Hover: scale toward 1.12, glow up. Otherwise back to 1.0.
+    const targetScale = hovered ? 1.12 : 1.0;
+    const targetEmissive = hovered ? 0.9 : 0.35;
 
     // Click animation: 1.0 → 1.3 → 0.0 over 600ms.
     if (clickStartRef.current !== null) {
@@ -128,7 +143,7 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
         scale = 1.3 * (1 - easeInCubic(k));
       }
       g.scale.setScalar(scale);
-      mat.emissiveIntensity = 1.5 + (1 - t) * 1.5;
+      mat.emissiveIntensity = 1.0 + (1 - t) * 1.5;
       // Spin up dramatically during click.
       m.rotation.y += (4 + 6 * t) * delta;
       if (t >= 1 && !doneFiredRef.current) {
@@ -146,21 +161,19 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
   });
 
   return (
-    <group ref={groupRef}>
+    // Tilt the strip up a bit so the camera catches the half-twist; pure
+    // top-down would just look like a flat ring.
+    <group ref={groupRef} rotation={[-0.5, 0, 0.15]}>
       <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
           ref={matRef}
           color={CYAN}
           emissive={CYAN}
-          emissiveIntensity={0.7}
-          metalness={0.55}
-          roughness={0.25}
+          emissiveIntensity={0.35}
+          metalness={0.35}
+          roughness={0.45}
           side={THREE.DoubleSide}
         />
-      </mesh>
-      {/* A second, slightly larger ghost mesh in low-opacity for depth halo. */}
-      <mesh geometry={geometry} scale={1.02}>
-        <meshBasicMaterial color={CYAN} transparent opacity={0.08} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -174,25 +187,46 @@ function easeInCubic(t: number) {
 }
 
 interface MobiusButtonProps {
+  /** Externally controlled — when true, the click animation plays. */
+  clicked: boolean;
   /** Called once the click animation finishes (signal to advance to boot). */
   onActivate: () => void;
+  /** Called when pointer enters the mesh (for cursor + glow updates). */
+  onHoverChange?: (hovered: boolean) => void;
   /** If true, drop bloom + reduce particle count (mobile/perf). */
   reduced?: boolean;
 }
 
-export function MobiusButton({ onActivate, reduced = false }: MobiusButtonProps) {
+export function MobiusButton({
+  clicked,
+  onActivate,
+  onHoverChange,
+  reduced = false,
+}: MobiusButtonProps) {
   const [hovered, setHovered] = useState(false);
-  const [clicked, setClicked] = useState(false);
 
-  // Pointer handlers on the underlying Canvas wrapper, not the mesh, so the
-  // entire viewport responds (matches the "click anywhere" feel).
-  const handlePointerOver = () => {
-    setHovered(true);
-    document.body.style.cursor = "pointer";
-  };
-  const handlePointerOut = () => {
-    setHovered(false);
-    document.body.style.cursor = "";
+  // R3F's ResizeObserver does not fire on initial mount when the parent is
+  // already at its final size (since there's no size *change* to observe).
+  // Without this kick the canvas stays stuck at the default 300×150 — the
+  // mobius renders in the top-left corner and looks invisible against the
+  // black backdrop. Dispatching a resize after first paint forces R3F's
+  // useResize hook to measure and apply the correct canvas dimensions.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  // Hover via R3F mesh-pointer events (only fires on actual mesh hit).
+  // Clicks are NOT handled here — `onClick` on Canvas only fires on raycast
+  // hits, so clicking empty space wouldn't advance the experience. Instead,
+  // the parent shell owns the click → setClicked(true) flow so any click
+  // anywhere on the viewport plays the animation.
+  const handleHoverChange = (next: boolean) => {
+    setHovered(next);
+    onHoverChange?.(next);
+    document.body.style.cursor = next ? "pointer" : "";
   };
 
   // Animation done handler.
@@ -202,22 +236,27 @@ export function MobiusButton({ onActivate, reduced = false }: MobiusButtonProps)
 
   return (
     <Canvas
-      camera={{ position: [0, 0.6, 4.6], fov: 45 }}
+      camera={{ position: [0, 1.4, 5.4], fov: 42 }}
       dpr={[1, reduced ? 1.5 : 2]}
       frameloop="always" // continuous rotation looks better than demand here
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
-      onClick={() => {
-        if (!clicked) setClicked(true);
+      onPointerMove={(e) => {
+        // Approximate hover: any pointer over the canvas is treated as hover.
+        // We rely on raycaster events on the mesh for the actual hover state
+        // when available, but on Canvas pointermove the whole canvas counts.
+        handleHoverChange(true);
+        void e;
       }}
+      onPointerLeave={() => handleHoverChange(false)}
     >
-      {/* Lighting rig: key (front) + rim (back) for the glow halo. */}
-      <ambientLight intensity={0.35} />
+      {/* Lighting rig: a soft ambient + one strong key from upper-front so
+          the strip's twist gets specular highlights as it rotates, and a
+          cyan rim from below-back for the brand-color edge glow. */}
+      <ambientLight intensity={0.45} />
       <pointLight position={[3, 4, 5]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[-4, -2, -3]} intensity={0.7} color={CYAN} />
-      <directionalLight position={[0, 3, 2]} intensity={0.4} color={CYAN} />
+      <pointLight position={[-4, -2, -3]} intensity={0.55} color={CYAN} />
+      <directionalLight position={[0, 3, 2]} intensity={0.35} color="#ffffff" />
 
       <MobiusMesh
         hovered={hovered}
@@ -227,20 +266,21 @@ export function MobiusButton({ onActivate, reduced = false }: MobiusButtonProps)
 
       {/* Sparkle particles surround the strip; burst more on click. */}
       <Sparkles
-        count={reduced ? 24 : 80}
+        count={reduced ? 24 : 70}
         scale={[5, 5, 5]}
-        size={clicked ? 8 : 3.5}
-        speed={clicked ? 1.4 : 0.4}
-        opacity={0.85}
+        size={clicked ? 8 : 3.0}
+        speed={clicked ? 1.4 : 0.35}
+        opacity={0.7}
         color={CYAN}
       />
 
-      {/* Bloom postprocessing — desktop only. */}
+      {/* Bloom postprocessing — desktop only. Kept subtle so the strip's
+          actual surface (not just a glow blob) is the visual focus. */}
       {!reduced && (
         <EffectComposer>
           <Bloom
-            intensity={1.05}
-            luminanceThreshold={0.08}
+            intensity={0.45}
+            luminanceThreshold={0.65}
             luminanceSmoothing={0.4}
             mipmapBlur
           />

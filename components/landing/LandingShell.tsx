@@ -28,6 +28,9 @@ export function LandingShell() {
   const [hintVisible, setHintVisible] = useState(false);
   const [activated, setActivated] = useState(false);
   const [fading, setFading] = useState(false);
+  // `clicked` here drives the mobius collapse animation regardless of
+  // whether the user clicked the mesh itself or empty space.
+  const [clicked, setClicked] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -61,35 +64,37 @@ export function LandingShell() {
     window.setTimeout(() => setEntryStage("boot"), 220);
   }, [activated, setEntryStage]);
 
-  // Activation is also wired through clicking anywhere on the shell —
-  // R3F mesh click dispatches via MobiusButton's onActivate; the shell
-  // backdrop click is a fallback in case the user misses the canvas.
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only fire if click landed on the backdrop itself, not bubbled through
-    // the canvas (canvas drives its own click → animation → onActivate).
-    if (e.target === e.currentTarget && !activated) {
-      advance();
-    }
-  };
+  // Any click anywhere on the shell triggers the mobius collapse animation.
+  // We listen at the WINDOW level via a native listener instead of React's
+  // synthetic onClick — clicks on the R3F canvas don't reliably bubble
+  // through React's event delegation (the canvas absorbs the pointer event
+  // chain into its own pointer system), so React onClick on a div above
+  // the canvas can silently never fire. A native window listener guarantees
+  // we hear about every click on the page.
+  const triggerClick = useCallback(() => {
+    if (clicked) return;
+    setClicked(true);
+  }, [clicked]);
 
-  const handleKey = useCallback(
-    (e: KeyboardEvent) => {
+  useEffect(() => {
+    const onClick = () => triggerClick();
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
         e.preventDefault();
-        advance();
+        triggerClick();
       }
-    },
-    [advance],
-  );
-  useEffect(() => {
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [handleKey]);
+    };
+    window.addEventListener("click", onClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", onClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [triggerClick]);
 
   return (
     <div
       ref={wrapRef}
-      onClick={handleBackdropClick}
       className="fixed inset-0 z-[100000] overflow-hidden"
       style={{
         background: "radial-gradient(ellipse at center, #0a0d12 0%, #000 70%)",
@@ -116,7 +121,7 @@ export function LandingShell() {
         className="absolute inset-0"
         style={{ transition: "transform 120ms ease-out", willChange: "transform" }}
       >
-        <MobiusButton onActivate={advance} reduced={isMobile} />
+        <MobiusButton clicked={clicked} onActivate={advance} reduced={isMobile} />
       </div>
 
       {/* Brand watermark — top-left. */}
