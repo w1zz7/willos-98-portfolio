@@ -6,7 +6,6 @@ import { DesktopIcon } from "./DesktopIcon";
 import { Taskbar } from "./Taskbar";
 import { WindowLayer } from "./WindowLayer";
 import { DesktopContextMenu } from "./ContextMenu";
-import { BootSequence } from "./BootSequence";
 import { useWindowStore } from "@/lib/wm/store";
 import { APPS } from "@/lib/wm/registry";
 import { hydrateFromUrl, syncUrl } from "@/lib/wm/urlSync";
@@ -265,7 +264,6 @@ export function Desktop() {
       <WindowLayer />
       <DesktopContextMenu />
       <Taskbar />
-      <BootSequence />
       <ToastHost />
     </div>
   );

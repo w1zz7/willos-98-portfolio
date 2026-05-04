@@ -12,6 +12,19 @@
 import { create } from "zustand";
 import type { AppId, Point, Size, WindowState } from "./types";
 
+/**
+ * Three-stage entry experience driven from `lib/wm/store.ts`:
+ *
+ *   landing  → mobius button on a black backdrop, awaiting first click
+ *   boot     → 4-stage Win98 boot playback (BIOS POST → splash → bio → fade)
+ *   desktop  → the actual Win98 windowed desktop (or MobilePortfolio on small screens)
+ *
+ * Replaces the previous binary `bootComplete` flag. `bootComplete` itself is
+ * still exposed for back-compat (it is `entryStage === "desktop"`) so any
+ * downstream code that hadn't migrated yet keeps working.
+ */
+export type EntryStage = "landing" | "boot" | "desktop";
+
 export interface WMState {
   windows: Record<string, WindowState>;
   /** Low-index-first; last entry is top-most. */
@@ -20,7 +33,12 @@ export interface WMState {
   nextZ: number;
   /** Tracks whether the welcome dialog has been shown for this session. */
   welcomeSeen: boolean;
-  /** Tracks whether the boot sequence has played for this session. */
+  /** Current entry-experience stage. See {@link EntryStage}. */
+  entryStage: EntryStage;
+  /**
+   * @deprecated Read from `entryStage === "desktop"` directly.
+   * Kept as a derived getter for back-compat with Desktop.tsx + any deep-link logic.
+   */
   bootComplete: boolean;
 
   openWindow: (opts: OpenWindowOpts) => string;
@@ -33,6 +51,9 @@ export interface WMState {
   setSize: (id: string, size: Size) => void;
   updateWindow: (id: string, patch: Partial<WindowState>) => void;
   setWelcomeSeen: () => void;
+  /** Set the current entry stage. */
+  setEntryStage: (stage: EntryStage) => void;
+  /** @deprecated alias for `setEntryStage("desktop")`. */
   setBootComplete: () => void;
 }
 
@@ -111,6 +132,7 @@ export const useWindowStore = create<WMState>()((set, get) => ({
   focusedId: null,
   nextZ: 10,
   welcomeSeen: false,
+  entryStage: "landing",
   bootComplete: false,
 
   openWindow: (opts) => {
@@ -297,7 +319,10 @@ export const useWindowStore = create<WMState>()((set, get) => ({
     ),
 
   setWelcomeSeen: () => set({ welcomeSeen: true }),
-  setBootComplete: () => set({ bootComplete: true }),
+  setEntryStage: (stage) =>
+    set({ entryStage: stage, bootComplete: stage === "desktop" }),
+  // Back-compat alias used by anything still calling the old API.
+  setBootComplete: () => set({ entryStage: "desktop", bootComplete: true }),
 }));
 
 /* -------------------------------------------------------------
