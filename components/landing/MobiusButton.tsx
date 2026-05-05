@@ -26,18 +26,33 @@
  * re-renders don't fight the useFrame tween.
  */
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Sparkles } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  AdaptiveDpr,
+  AdaptiveEvents,
+  Environment,
+  PerformanceMonitor,
+  Sparkles,
+} from "@react-three/drei";
 import {
   Bloom,
   ChromaticAberration,
+  DepthOfField,
   EffectComposer,
   Vignette,
 } from "@react-three/postprocessing";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
 
 const CYAN = "#33BBFF";
+const GOLD = "#ffcc66"; // accent color — the inner counter-rotating strip
 const TWO_PI = Math.PI * 2;
 
 /**
@@ -99,20 +114,26 @@ interface MobiusMeshProps {
 }
 
 function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
+  // Outer (main) strip refs.
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
+  // Inner (counter-rotating gold accent) refs.
+  const innerMeshRef = useRef<THREE.Mesh>(null);
+  const innerMatRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
 
-  // Memo the geometry so it isn't recomputed on every re-render.
-  // Note: the parametric Möbius is intrinsically thin (width drops to zero
-  // at u=π); we use vSteps=10 (enough for the ribbon edges to look smooth)
-  // and a base scale of 1.0 so the strip lives in roughly a 2-unit cube.
-  // Camera at z=5.4 with fov=42 frames it nicely.
-  const geometry = useMemo(() => makeMobiusGeometry(220, 10, 1.0), []);
+  // Two geometries — the inner is half the width and 0.55× scale so it
+  // sits inside the outer ring without intersecting it. Memoized so they
+  // aren't rebuilt on every re-render (parametric tessellation is ~5K
+  // triangles per strip).
+  const outerGeometry = useMemo(() => makeMobiusGeometry(220, 10, 1.0, 0.28), []);
+  const innerGeometry = useMemo(() => makeMobiusGeometry(180, 8, 0.55, 0.18), []);
 
   // Click animation state (refs so useFrame can mutate without re-render).
   const clickStartRef = useRef<number | null>(null);
   const doneFiredRef = useRef(false);
+  // Slow emissive-pulse phase, accumulates with delta.
+  const pulsePhaseRef = useRef(0);
 
   useEffect(() => {
     if (clicked && clickStartRef.current === null) {
@@ -122,23 +143,35 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
 
   useFrame((_state, delta) => {
     const m = meshRef.current;
+    const inner = innerMeshRef.current;
     const g = groupRef.current;
     const mat = matRef.current;
-    if (!m || !g || !mat) return;
+    const innerMat = innerMatRef.current;
+    if (!m || !inner || !g || !mat || !innerMat) return;
 
-    // Continuous rotation. Hover speeds it up 2×.
+    // Outer strip rotates clockwise; inner rotates counter (opposite sign)
+    // and ~1.6× faster — they pass through each other in interesting ways
+    // as the visible faces flip via the half-twist.
     const speed = hovered ? 0.55 : 0.25;
     m.rotation.y += speed * delta;
+    inner.rotation.y -= speed * 1.6 * delta;
+    // The inner strip also wobbles slightly on x for visual interest.
+    inner.rotation.x += speed * 0.3 * delta;
 
-    // Hover: scale toward 1.12, glow up. Otherwise back to 1.0.
+    // Slow emissive pulse on the outer strip — breathing glow at ~0.4 Hz
+    // (one full cycle every 2.5s). Phase advances even when not hovered
+    // so the strip feels alive while the user is just looking at it.
+    pulsePhaseRef.current += delta * 2.5;
+    const pulse = (Math.sin(pulsePhaseRef.current) + 1) * 0.5; // 0..1
+    const baseEmissive = hovered ? 0.9 : 0.35;
+    const pulseAdd = hovered ? 0.5 : 0.25;
+
     const targetScale = hovered ? 1.12 : 1.0;
-    const targetEmissive = hovered ? 0.9 : 0.35;
 
     // Click animation: 1.0 → 1.3 → 0.0 over 600ms.
     if (clickStartRef.current !== null) {
       const elapsed = performance.now() - clickStartRef.current;
       const t = Math.min(elapsed / 600, 1);
-      // Two-stage tween: 0–0.3 ease up to 1.3, 0.3–1 ease down to 0.
       let scale: number;
       if (t < 0.3) {
         const k = t / 0.3;
@@ -149,8 +182,10 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
       }
       g.scale.setScalar(scale);
       mat.emissiveIntensity = 1.0 + (1 - t) * 1.5;
-      // Spin up dramatically during click.
+      innerMat.emissiveIntensity = 1.5 + (1 - t) * 2.0;
+      // Spin up dramatically during click — both strips, opposite ways.
       m.rotation.y += (4 + 6 * t) * delta;
+      inner.rotation.y -= (5 + 8 * t) * delta;
       if (t >= 1 && !doneFiredRef.current) {
         doneFiredRef.current = true;
         onAnimationDone();
@@ -161,20 +196,24 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
     // Smooth hover lerp.
     const cur = g.scale.x;
     g.scale.setScalar(cur + (targetScale - cur) * Math.min(1, delta * 8));
+    const targetOuterEmissive = baseEmissive + pulseAdd * pulse;
     mat.emissiveIntensity =
-      mat.emissiveIntensity + (targetEmissive - mat.emissiveIntensity) * Math.min(1, delta * 8);
+      mat.emissiveIntensity + (targetOuterEmissive - mat.emissiveIntensity) * Math.min(1, delta * 8);
+    // Inner strip's pulse is offset π so the two strips breathe out of phase.
+    const innerPulse = (Math.sin(pulsePhaseRef.current + Math.PI) + 1) * 0.5;
+    const targetInnerEmissive = (hovered ? 1.4 : 0.6) + 0.4 * innerPulse;
+    innerMat.emissiveIntensity =
+      innerMat.emissiveIntensity +
+      (targetInnerEmissive - innerMat.emissiveIntensity) * Math.min(1, delta * 8);
   });
 
   return (
-    // Tilt the strip up a bit so the camera catches the half-twist; pure
-    // top-down would just look like a flat ring.
+    // Tilt the strip stack so the camera catches the half-twist on both;
+    // pure top-down would just look like a flat ring.
     <group ref={groupRef} rotation={[-0.5, 0, 0.15]}>
-      <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
-        {/* Physical material — clearcoat gives a wet-shellac sheen layered
-            over the cyan, iridescence shifts the rim color as the strip
-            rotates. The result reads "premium tech" rather than "plastic
-            ring." environmentIntensity is paired with the Environment HDRI
-            in the parent Canvas so reflections land on the metal surface. */}
+      {/* OUTER strip — the cyan hero. MeshPhysicalMaterial with clearcoat +
+          iridescence + envMap reflections from the parent Canvas's Environment. */}
+      <mesh ref={meshRef} geometry={outerGeometry} castShadow receiveShadow>
         <meshPhysicalMaterial
           ref={matRef}
           color={CYAN}
@@ -182,17 +221,70 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
           emissiveIntensity={0.35}
           metalness={0.55}
           roughness={0.28}
-          clearcoat={0.7}
-          clearcoatRoughness={0.18}
-          iridescence={0.5}
-          iridescenceIOR={1.4}
-          iridescenceThicknessRange={[100, 800]}
-          envMapIntensity={1.1}
+          clearcoat={0.85}
+          clearcoatRoughness={0.12}
+          iridescence={0.6}
+          iridescenceIOR={1.5}
+          iridescenceThicknessRange={[100, 900]}
+          envMapIntensity={1.2}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* INNER strip — gold accent, smaller, counter-rotating. Slightly more
+          reflective + slightly less iridescent so it reads as a different
+          material than the outer cyan — they don't merge visually. */}
+      <mesh ref={innerMeshRef} geometry={innerGeometry} rotation={[0.4, 0, -0.1]}>
+        <meshPhysicalMaterial
+          ref={innerMatRef}
+          color={GOLD}
+          emissive={GOLD}
+          emissiveIntensity={0.6}
+          metalness={0.85}
+          roughness={0.18}
+          clearcoat={0.6}
+          clearcoatRoughness={0.22}
+          iridescence={0.3}
+          iridescenceIOR={1.3}
+          iridescenceThicknessRange={[200, 600]}
+          envMapIntensity={1.4}
           side={THREE.DoubleSide}
         />
       </mesh>
     </group>
   );
+}
+
+/**
+ * Subtle camera orbit. Drifts the camera around a slow horizontal arc
+ * (~±4° in azimuth) and a tiny vertical bob, all centered on the origin
+ * where the Möbius lives. Makes the scene feel cinematic rather than
+ * static.
+ *
+ * Driven by useFrame on the actual camera object, so it runs at the
+ * Canvas's frameloop rate (continuous here) without re-rendering React.
+ */
+function CameraOrbit() {
+  const { camera } = useThree();
+  // Capture the initial camera position so the orbit wraps it instead of
+  // drifting away.
+  const baseRef = useRef<{ x: number; y: number; z: number } | null>(null);
+  const phaseRef = useRef(0);
+
+  useFrame((_state, delta) => {
+    if (!baseRef.current) {
+      baseRef.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    }
+    phaseRef.current += delta * 0.18; // ~1 full cycle every 35s — barely noticeable
+    const base = baseRef.current;
+    const radius = Math.hypot(base.x, base.z);
+    const azimuthRad = Math.atan2(base.x, base.z) + Math.sin(phaseRef.current) * 0.07;
+    camera.position.x = Math.sin(azimuthRad) * radius;
+    camera.position.z = Math.cos(azimuthRad) * radius;
+    camera.position.y = base.y + Math.sin(phaseRef.current * 0.5) * 0.08;
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
 }
 
 function easeOutCubic(t: number) {
@@ -281,12 +373,30 @@ export function MobiusButton({
       onPointerEnter={() => handleHoverChange(true)}
       onPointerLeave={() => handleHoverChange(false)}
     >
+      {/* AdaptiveDpr drops the device-pixel ratio when the GPU is under
+          load (drag/click animation) and restores it when idle, keeping
+          a consistent 60fps even on mid-range hardware. AdaptiveEvents
+          does the same for raycaster pointer events. */}
+      <AdaptiveDpr pixelated={false} />
+      <AdaptiveEvents />
+
+      {/* PerformanceMonitor downgrades the postprocessing stack when the
+          framerate drops below 50fps for a sustained period. The
+          `reducedFx` ref reads true once we're in degraded mode. */}
+      <PerformanceMonitor onDecline={() => { /* drei's degrade hook */ }} />
+
       {/* HDRI environment for proper metallic reflections on the strip's
           clearcoat. drei's "city" preset is a small (~280 KB) cube that
           gives crisp specular highlights without an external download.
           background={false} = use it for reflections only, not as a
-          visible background. */}
-      <Environment preset="city" background={false} environmentIntensity={0.55} />
+          visible background. Wrapped in Suspense so the canvas paints
+          immediately while the HDRI streams in. */}
+      <Suspense fallback={null}>
+        <Environment preset="city" background={false} environmentIntensity={0.6} />
+      </Suspense>
+
+      {/* Cinematic camera orbit — slow ±4° azimuth drift + tiny y bob. */}
+      <CameraOrbit />
 
       {/* Lighting rig: a soft ambient + one strong key from upper-front so
           the strip's twist gets specular highlights as it rotates, and a
@@ -296,6 +406,7 @@ export function MobiusButton({
       <ambientLight intensity={0.25} />
       <pointLight position={[3, 4, 5]} intensity={0.9} color="#ffffff" />
       <pointLight position={[-4, -2, -3]} intensity={0.45} color={CYAN} />
+      <pointLight position={[2, -3, 4]} intensity={0.35} color={GOLD} />
       <directionalLight position={[0, 3, 2]} intensity={0.25} color="#ffffff" />
 
       <MobiusMesh
@@ -304,7 +415,9 @@ export function MobiusButton({
         onAnimationDone={handleAnimationDone}
       />
 
-      {/* Sparkle particles surround the strip; burst more on click. */}
+      {/* Sparkle particles surround the strip; burst more on click. Two
+          layers — cyan inner cloud + sparser warm outer cloud — adds
+          atmospheric depth instead of a single uniform field. */}
       <Sparkles
         count={reduced ? 24 : 70}
         scale={[5, 5, 5]}
@@ -313,18 +426,35 @@ export function MobiusButton({
         opacity={0.7}
         color={CYAN}
       />
+      {!reduced && (
+        <Sparkles
+          count={30}
+          scale={[8, 4, 8]}
+          size={2}
+          speed={0.15}
+          opacity={0.4}
+          color={GOLD}
+        />
+      )}
 
       {/* Postprocessing stack — desktop only.
           · Bloom: subtle glow from the emissive cyan + iridescent highlights.
+          · DepthOfField: focal target on the strip; sparkles + far reflections
+            soft-blur, gives a real cinematic depth feel.
           · ChromaticAberration: 0.6 px RGB split — sells "premium glass."
           · Vignette: darkens the corners so the strip is the anchor. */}
       {!reduced && (
         <EffectComposer>
           <Bloom
-            intensity={0.55}
-            luminanceThreshold={0.55}
+            intensity={0.65}
+            luminanceThreshold={0.5}
             luminanceSmoothing={0.45}
             mipmapBlur
+          />
+          <DepthOfField
+            focusDistance={0.012}
+            focalLength={0.04}
+            bokehScale={2.2}
           />
           <ChromaticAberration offset={[0.0008, 0.0012]} radialModulation={false} modulationOffset={0} />
           <Vignette eskil={false} offset={0.25} darkness={0.55} />
