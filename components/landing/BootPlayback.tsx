@@ -952,6 +952,38 @@ function Win98ChromeButton({
   );
 }
 
+/**
+ * Tiny markdown-bold parser. Splits a line on `**...**` boundaries and
+ * returns alternating plain / bold segments. Used to highlight company
+ * and project names in the bio playback.
+ *
+ * Examples:
+ *   "**Bulletproof AI** — career platform"
+ *      → [{bold:true, text:"Bulletproof AI"}, {bold:false, text:" — career platform"}]
+ *   "**WOLF Financial** / **Rallies.ai** · advising 14.3M followers"
+ *      → 5 segments alternating bold/plain
+ *
+ * Plain text passes through unchanged. Unmatched/unclosed `**` markers
+ * just render as literal characters (no error, no swallowed content).
+ */
+function parseBoldSegments(text: string): { bold: boolean; text: string }[] {
+  const out: { bold: boolean; text: string }[] = [];
+  const pattern = /\*\*([^*]+?)\*\*/g;
+  let lastIdx = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      out.push({ bold: false, text: text.slice(lastIdx, match.index) });
+    }
+    out.push({ bold: true, text: match[1] });
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < text.length) {
+    out.push({ bold: false, text: text.slice(lastIdx) });
+  }
+  return out;
+}
+
 function BioLineRow({ line }: { line: BootLine }) {
   const c = COLORS.prompt;
   const lineColor =
@@ -966,6 +998,7 @@ function BioLineRow({ line }: { line: BootLine }) {
   // rather than getting stretched to the right margin — matches both
   // real Win98 console output and the existing willBB Markets boot
   // screen cadence we're echoing here.
+  const segments = parseBoldSegments(line.text);
   return (
     <div
       style={{
@@ -977,7 +1010,26 @@ function BioLineRow({ line }: { line: BootLine }) {
       <span style={{ color: c.fgFaint, opacity: 0.9 }}>
         [{((line.delayMs + 100) / 1000).toFixed(2)}s]
       </span>
-      <span style={{ color: lineColor, marginLeft: 8 }}>{line.text}</span>
+      <span style={{ color: lineColor, marginLeft: 8 }}>
+        {segments.map((seg, i) =>
+          seg.bold ? (
+            <span
+              key={i}
+              style={{
+                color: c.accent,
+                fontWeight: 700,
+                // Slight letter-spacing tighten + brighter color so the
+                // bolded name reads as the visual anchor of the line.
+                letterSpacing: "0.01em",
+              }}
+            >
+              {seg.text}
+            </span>
+          ) : (
+            <span key={i}>{seg.text}</span>
+          ),
+        )}
+      </span>
       {line.ok && (
         <span style={{ color: c.ok, fontWeight: "bold", marginLeft: 8 }}>
           [ OK ]
