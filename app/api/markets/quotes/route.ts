@@ -399,10 +399,14 @@ async function fetchOne(symbol: string, bigBatch: boolean): Promise<QuoteResult>
     if (cached?.row?.price != null) return cached.row;
     const seed = seedAsResult(symbol);
     if (seed) return seed;
-    // No seed either — wait synchronously for the live refresh as a
-    // last resort so the UI doesn't show "—" for an unknown symbol.
-    const live = await refreshLive(symbol, isCrypto);
-    if (live) return live;
+    // No seed either — return `unavailable` IMMEDIATELY rather than
+    // awaiting the background refresh. A previous version awaited here
+    // "as a last resort," but that turned the 130-symbol watchlist poll
+    // into an 11-14 second wait whenever even ONE symbol had no seed:
+    // Promise.all blocked on the slowest task. The next poll cycle (15 s
+    // later) picks up the now-cached live result, so the user sees the
+    // symbol's data appear within one poll instead of blocking everyone
+    // for half a minute on cold start.
     return unavailable(symbol);
   }
 
@@ -435,12 +439,15 @@ export async function GET(req: NextRequest) {
   if (symbols.length === 0 || symbols.length > 200) {
     return NextResponse.json({ error: "1-200 symbols" }, { status: 400 });
   }
-  // The 30s in-memory cache means concurrent watchlist polls share
-  // upstream hits — fanning 130 symbols out is rare and bounded.
-  // The bigBatch flag widens the cache TTL for watchlist polls (so
-  // overlapping ticker-strip + watchlist polls coalesce), but does NOT
-  // change live-vs-seed priority — every symbol now tries Yahoo first.
-  const bigBatch = symbols.length > 24;
+  // Hybrid threshold: a SINGLE-symbol request is the focused-quote fetch
+  // (useLiveQuote) — that one needs fresh upstream data because it drives
+  // the per-symbol price header on Cockpit / StrategyLab. ANY multi-symbol
+  // request — ticker strip (13 syms), watchlist (130 syms), Scanner (32
+  // syms) — uses the hybrid seed-then-background-refresh path. That keeps
+  // the 13-symbol index-strip cold-start at ~10 ms instead of 12 s when
+  // Yahoo throttles, and the next poll cycle (15 s later) picks up live
+  // data from the now-warm cache.
+  const bigBatch = symbols.length > 1;
   const quotes = await Promise.all(symbols.map((s) => fetchOne(s, bigBatch)));
   const sourceCounts = quotes.reduce<Record<string, number>>(
     (acc, q) => ((acc[q.source] = (acc[q.source] ?? 0) + 1), acc),
