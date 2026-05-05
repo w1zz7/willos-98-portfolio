@@ -722,6 +722,16 @@ function MarketsTab({
               key={s.symbol}
               type="button"
               onClick={() => setFocused(s.symbol)}
+              // Hover-prefetch: when the cursor enters a watchlist row, kick
+              // off the chart fetch for that symbol in the background. By the
+              // time the user actually clicks (~150-300 ms later), the cache
+              // is already warm and the chart paints instantly. The same
+              // pattern is already used for the range buttons (1M / 1Y / 5Y).
+              onMouseEnter={() => {
+                if (s.symbol !== focused) {
+                  prefetchChart(s.symbol, range.id, range.interval);
+                }
+              }}
               className="w-full px-[12px] py-[8px] flex items-center justify-between text-left"
               style={{
                 background: active ? COLORS.brandSoft : "transparent",

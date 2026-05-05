@@ -127,21 +127,44 @@ export function fetchChart(
   // Fresh cache hit → no network at all. Callers (Cockpit, StrategyLab,
   // OpenBB pre-warm) call this without first calling readChart, so without
   // this short-circuit a fresh entry would still trigger a network fetch.
-  // Matches the pattern in lib/clientFetchCache.ts.
   if (!opts.bypass) {
     const entry = cache.get(key);
-    if (entry && Date.now() - entry.fetchedAt < STALE_AFTER_MS) {
+    if (entry) {
+      const age = Date.now() - entry.fetchedAt;
       // Refresh LRU position on hit.
       cache.delete(key);
       cache.set(key, entry);
+      if (age < STALE_AFTER_MS) {
+        // Fresh: serve immediately, no revalidate.
+        return Promise.resolve(entry.payload);
+      }
+      // STALE: serve the stale payload immediately AND fire a background
+      // revalidate so the cache is fresh for the next caller. Stale-while-
+      // revalidate at the client layer — the user sees the chart paint
+      // instantly even on a cold range click, then the new data lands on
+      // the next poll cycle.
+      if (!inflight.has(key)) {
+        // Don't await — this is a fire-and-forget refresh.
+        void doFetch(key, symbol, range, interval, false);
+      }
       return Promise.resolve(entry.payload);
     }
   }
 
   const existing = inflight.get(key);
   if (existing && !opts.bypass) return existing;
+  return doFetch(key, symbol, range, interval, !!opts.bypass);
+}
 
-  const url = `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}${opts.bypass ? "&bypass=1" : ""}`;
+/** Internal: actually hit the server. Updates `cache` + `inflight` map. */
+function doFetch(
+  key: string,
+  symbol: string,
+  range: string,
+  interval: string,
+  bypass: boolean,
+): Promise<CachedChartPayload | null> {
+  const url = `/api/markets/chart?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}${bypass ? "&bypass=1" : ""}`;
   const promise = fetch(url, { cache: "no-store" })
     .then(async (res) => {
       if (!res.ok) return null;

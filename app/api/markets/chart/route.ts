@@ -101,6 +101,19 @@ function cacheKey(symbol: string, range: string, interval: string): string {
   return `${symbol.toUpperCase()}|${range}|${interval}`;
 }
 
+/**
+ * In-flight request dedup. Without this, two callers fetching the same
+ * (symbol, range, interval) at the same instant — e.g., Cockpit + Strategy
+ * Lab both mount and fire chart requests for the focused symbol — each
+ * trigger a fresh Yahoo round-trip. With it, the second caller awaits
+ * the first caller's promise and shares the result. Halves upstream load
+ * during cold-start fan-outs.
+ *
+ * Keyed by the same cacheKey() the success cache uses, so a fresh hit
+ * to the cache short-circuits both layers.
+ */
+const inflight = new Map<string, Promise<NextResponse>>();
+
 const UA_LIST = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -351,8 +364,17 @@ export async function GET(req: NextRequest) {
         { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
       );
     }
+    // In-flight dedup: if another request for the same key is already
+    // running, await its promise instead of starting a duplicate Yahoo
+    // call. We clone the response (NextResponse.json returns a fresh body
+    // each time, but for a serial dedup we can re-emit the same payload).
+    const existing = inflight.get(ck);
+    if (existing) return existing;
   }
 
+  // Build the response promise once and cache it for concurrent callers.
+  // Cleared in `finally` whether the upstream succeeded or failed.
+  const responsePromise = (async (): Promise<NextResponse> => {
   const yahoo = await yahooChart(symbol, range, interval);
   if (yahoo && yahoo.points.length > 0) {
     successCache.set(ck, { payload: yahoo, at: Date.now() });
@@ -413,6 +435,17 @@ export async function GET(req: NextRequest) {
       headers: { "Cache-Control": "no-store" },
     }
   );
+  })();
+
+  // Register the in-flight promise so concurrent callers can share it,
+  // and remove it once the upstream completes (success OR failure).
+  if (!bypassCache) {
+    inflight.set(ck, responsePromise);
+    responsePromise.finally(() => {
+      if (inflight.get(ck) === responsePromise) inflight.delete(ck);
+    });
+  }
+  return responsePromise;
 }
 
 /**
