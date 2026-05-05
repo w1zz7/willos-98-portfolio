@@ -9,6 +9,7 @@
  */
 
 import type { Bar } from "./indicators";
+import { drawdownStats, probabilisticSharpe } from "./advancedStats";
 
 export type Direction = "long" | "short";
 
@@ -44,6 +45,27 @@ export interface BacktestStats {
   worstTrade: number;
   startCapital: number;
   endCapital: number;
+  /**
+   * Probabilistic Sharpe Ratio (López de Prado 2014). Probability that
+   * the *true* annualized Sharpe is above 0 given the observed sample,
+   * adjusted for skewness and kurtosis. PSR > 0.95 = "yes this is real."
+   * Set to NaN when the per-bar return series has < 10 observations.
+   */
+  psr: number;
+  /** Sample skewness of per-bar returns. */
+  returnSkew: number;
+  /** Sample excess kurtosis of per-bar returns. */
+  returnKurt: number;
+  /**
+   * Median drawdown duration in bars. Tells the trader how long a typical
+   * losing streak feels — paired with maxDrawdown gives a better picture
+   * than max drawdown alone.
+   */
+  medianDdDuration: number;
+  /** Longest drawdown duration in bars. */
+  maxDdDuration: number;
+  /** Time-Under-Water ratio: fraction of bars below the running peak. */
+  tuwRatio: number;
 }
 
 export interface BacktestResult {
@@ -96,6 +118,18 @@ export interface WalkForwardResult {
   isMedianSharpe: number;
   oosMedianSharpe: number;
   positiveFoldPct: number;
+  /**
+   * IS → OOS Sharpe decay ratio: median(OOS Sharpe) / median(IS Sharpe).
+   * 1.0 = no decay, < 1.0 = OOS underperforms IS (the typical sign of
+   * overfitting), 0 = OOS Sharpe is zero or negative. The single most
+   * important number on a walk-forward summary — a strategy with great
+   * IS Sharpe and a 0.2 decay ratio is overfit.
+   */
+  sharpeDecay: number;
+  /** IS Sharpe averaged across folds (not median). */
+  isMeanSharpe: number;
+  /** OOS Sharpe averaged across folds (not median). */
+  oosMeanSharpe: number;
 }
 
 function meanStd(xs: number[]): { m: number; s: number } {
@@ -330,6 +364,21 @@ export function runBacktest(
       ? trades.reduce((m, t) => Math.min(m, t.pnl ?? 0), +Infinity)
       : 0;
 
+  // ── Advanced quant metrics (PSR, return moments, drawdown distribution) ──
+  // PSR(0) = probability the true Sharpe > 0, accounting for skew/kurtosis.
+  // Skip if we have < 10 per-bar returns (PSR is meaningless on tiny samples).
+  let psr = NaN;
+  let returnSkew = 0;
+  let returnKurt = 0;
+  if (dailyRet.length >= 10) {
+    const psrOut = probabilisticSharpe(dailyRet, 0, barsPerYear);
+    psr = psrOut.psr;
+    returnSkew = psrOut.skew;
+    returnKurt = psrOut.kurt;
+  }
+  // Full drawdown duration distribution from the equity curve.
+  const ddStats = drawdownStats(eqVals.filter((v) => Number.isFinite(v)));
+
   return {
     trades,
     equity,
@@ -349,6 +398,12 @@ export function runBacktest(
       worstTrade,
       startCapital,
       endCapital,
+      psr,
+      returnSkew,
+      returnKurt,
+      medianDdDuration: ddStats.medianDuration,
+      maxDdDuration: ddStats.maxDuration,
+      tuwRatio: ddStats.tuwRatio,
     },
   };
 
@@ -442,7 +497,14 @@ export function runWalkForward(
   const oosSharpes = folds.map((f) => f.oosStats.sharpe).sort((a, b) => a - b);
   const isMedian = isSharpes.length > 0 ? isSharpes[Math.floor(isSharpes.length / 2)] : 0;
   const oosMedian = oosSharpes.length > 0 ? oosSharpes[Math.floor(oosSharpes.length / 2)] : 0;
+  const isMean = isSharpes.length > 0 ? isSharpes.reduce((a, b) => a + b, 0) / isSharpes.length : 0;
+  const oosMean = oosSharpes.length > 0 ? oosSharpes.reduce((a, b) => a + b, 0) / oosSharpes.length : 0;
   const positiveFoldPct = folds.length > 0 ? folds.filter((f) => f.oosStats.sharpe > 0).length / folds.length : 0;
+  // IS → OOS Sharpe decay. The headline overfitting indicator: a strategy
+  // with great IS Sharpe and a low decay ratio is fitting noise. Guard
+  // the divisor so a near-zero IS Sharpe doesn't blow up the ratio.
+  const sharpeDecay =
+    Math.abs(isMedian) > 0.01 ? oosMedian / isMedian : 0;
   // Aggregate OOS stats from stitched equity
   const oosBars: Bar[] = stitchedOos.map((e) => ({ t: e.t, o: e.v, h: e.v, l: e.v, c: e.v, v: 0 }));
   const oosResult = runBacktest(oosBars, [], params);
@@ -452,6 +514,9 @@ export function runWalkForward(
     oosStats: oosResult.stats,
     isMedianSharpe: isMedian,
     oosMedianSharpe: oosMedian,
+    isMeanSharpe: isMean,
+    oosMeanSharpe: oosMean,
     positiveFoldPct,
+    sharpeDecay,
   };
 }

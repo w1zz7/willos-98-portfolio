@@ -154,6 +154,52 @@ describe("runBacktest stats hardening", () => {
   });
 });
 
+describe("BacktestStats: advanced quant fields", () => {
+  it("PSR + skew + kurtosis + drawdown duration fields are present and finite", () => {
+    const bars = makeBars(120, 100, 0.0008);
+    const signals: Signal[] = [
+      { t: bars[5].t, type: "long", price: bars[5].c },
+      { t: bars[60].t, type: "exit", price: bars[60].c },
+      { t: bars[70].t, type: "long", price: bars[70].c },
+      { t: bars[110].t, type: "exit", price: bars[110].c },
+    ];
+    const r = runBacktest(bars, signals);
+    const s = r.stats;
+    // PSR may be NaN if returns < 10 bars, but for 120 bars it's defined.
+    expect(Number.isFinite(s.psr)).toBe(true);
+    expect(s.psr).toBeGreaterThanOrEqual(0);
+    expect(s.psr).toBeLessThanOrEqual(1);
+    expect(Number.isFinite(s.returnSkew)).toBe(true);
+    expect(Number.isFinite(s.returnKurt)).toBe(true);
+    expect(Number.isFinite(s.medianDdDuration)).toBe(true);
+    expect(Number.isFinite(s.maxDdDuration)).toBe(true);
+    expect(s.tuwRatio).toBeGreaterThanOrEqual(0);
+    expect(s.tuwRatio).toBeLessThanOrEqual(1);
+  });
+
+  it("PSR is NaN for tiny samples (< 10 returns), other fields default to 0", () => {
+    const bars = makeBars(5);
+    const r = runBacktest(bars, []);
+    expect(Number.isNaN(r.stats.psr)).toBe(true);
+    expect(r.stats.returnSkew).toBe(0);
+    expect(r.stats.returnKurt).toBe(0);
+  });
+
+  it("PSR > 0.5 for a clearly winning strategy on noisy data", () => {
+    // 250 bars with a steady up-drift. The strategy should have PSR > 0.5
+    // because positive realized Sharpe → P(true SR > 0) > 50%.
+    const bars = makeBars(250, 100, 0.0015);
+    const signals: Signal[] = [
+      { t: bars[1].t, type: "long", price: bars[1].c },
+      { t: bars[249].t, type: "exit", price: bars[249].c },
+    ];
+    const r = runBacktest(bars, signals);
+    if (Number.isFinite(r.stats.psr)) {
+      expect(r.stats.psr).toBeGreaterThan(0.5);
+    }
+  });
+});
+
 describe("runWalkForward stats hardening", () => {
   it("zero train bars produces a sensible (no folds) result", () => {
     const bars = makeBars(60);
@@ -187,5 +233,64 @@ describe("runWalkForward stats hardening", () => {
       expect(Number.isFinite(f.oosStats.bestTrade)).toBe(true);
       expect(Number.isFinite(f.oosStats.worstTrade)).toBe(true);
     }
+    // New fields: IS/OOS mean Sharpe + decay ratio.
+    expect(Number.isFinite(result.isMeanSharpe)).toBe(true);
+    expect(Number.isFinite(result.oosMeanSharpe)).toBe(true);
+    expect(Number.isFinite(result.sharpeDecay)).toBe(true);
+  });
+
+  it("sharpeDecay = 0 when IS Sharpe is near-zero (avoids divide-by-near-zero)", () => {
+    const bars = makeBars(80, 100, 0); // flat — no drift
+    const result = runWalkForward(
+      bars,
+      () => [], // no trades
+      30,
+      20,
+      20,
+    );
+    expect(result.sharpeDecay).toBe(0);
+  });
+});
+
+describe("runFactorRegression: HAC standard errors", () => {
+  it("returns both classical and HAC t-stats for alpha + each factor", () => {
+    const N = 200;
+    let s = 42;
+    const rand = () => {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      return s / 0x7fffffff - 0.5;
+    };
+    const noisyCloses = (drift: number, vol: number) => {
+      const out = [100];
+      for (let i = 1; i < N; i++) out.push(out[i - 1] * (1 + drift + vol * rand()));
+      return out;
+    };
+    const SPY = noisyCloses(0.0008, 0.01);
+    const IWM = noisyCloses(0.0006, 0.012);
+    const IUSV = noisyCloses(0.0007, 0.011);
+    const IUSG = noisyCloses(0.0009, 0.013);
+    const MTUM = noisyCloses(0.001, 0.014);
+    // Re-import locally for this single test.
+    return import(
+      "@/components/apps/willbb/quantdesk/factorRegression"
+    ).then(({ buildFactorReturns, runFactorRegression }) => {
+      const factors = buildFactorReturns({ SPY, IWM, IUSV, IUSG, MTUM });
+      const result = runFactorRegression(factors.Mkt.slice(), factors);
+      expect(result).not.toBeNull();
+      if (!result) return;
+      expect(Number.isFinite(result.alphaTStat)).toBe(true);
+      expect(Number.isFinite(result.alphaTStatHAC)).toBe(true);
+      expect(Number.isFinite(result.alphaPValueHAC)).toBe(true);
+      expect(result.alphaPValueHAC).toBeGreaterThanOrEqual(0);
+      expect(result.alphaPValueHAC).toBeLessThanOrEqual(1);
+      expect(result.hacLag).toBeGreaterThanOrEqual(1);
+      for (const l of result.loadings) {
+        expect(Number.isFinite(l.tStat)).toBe(true);
+        expect(Number.isFinite(l.tStatHAC)).toBe(true);
+        expect(l.pValueHAC).toBeGreaterThanOrEqual(0);
+        expect(l.pValueHAC).toBeLessThanOrEqual(1);
+      }
+      expect(Number.isFinite(result.adjRSquared)).toBe(true);
+    });
   });
 });

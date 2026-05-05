@@ -1,8 +1,11 @@
 /**
- * Factor regression - Carhart 4-factor (Mkt-RF / SMB / HML / MOM) on
+ * Factor regression — Carhart 4-factor (Mkt-RF / SMB / HML / MOM) on
  * strategy returns, computed client-side via ordinary least squares with
- * Newey-West-style standard errors (OLS-flavored, no AR correction since
- * daily data + bias-corrected SE = good enough for a portfolio piece).
+ * **Newey-West HAC standard errors** (Bartlett kernel, automatic lag
+ * selection L = ⌊4·(T/100)^(2/9)⌋ per Newey & West 1994). Financial
+ * returns are heteroskedastic and autocorrelated; classical OLS t-stats
+ * are wrong on this kind of data, so we report HAC t-stats by default
+ * and expose both for transparency.
  *
  * Factor proxies via ETFs (we don't have access to the official Fama-French
  * library client-side, so we approximate with liquid ETF spreads):
@@ -17,6 +20,8 @@
  * exposure picture.
  */
 
+import { hacOLS } from "./advancedStats";
+
 export interface FactorReturns {
   Mkt: (number | null)[];
   SMB: (number | null)[];
@@ -27,105 +32,37 @@ export interface FactorReturns {
 export interface FactorRegressionResult {
   alpha: number; // daily alpha (intercept)
   alphaAnnualized: number;
+  /** Classical OLS t-stat on alpha. Use for academic comparison. */
   alphaTStat: number;
-  loadings: { factor: "Mkt" | "SMB" | "HML" | "MOM"; beta: number; tStat: number }[];
+  /** Newey-West HAC t-stat on alpha. Use for inference on financial data. */
+  alphaTStatHAC: number;
+  /** Two-sided HAC p-value on alpha. < 0.05 = real edge after factor exposure. */
+  alphaPValueHAC: number;
+  loadings: {
+    factor: "Mkt" | "SMB" | "HML" | "MOM";
+    beta: number;
+    /** Classical OLS t-stat. */
+    tStat: number;
+    /** Newey-West HAC t-stat. The one to report. */
+    tStatHAC: number;
+    /** HAC p-value, two-sided. */
+    pValueHAC: number;
+  }[];
   rSquared: number;
+  /** Adjusted R-squared accounting for parameter count. */
+  adjRSquared: number;
   residualVol: number; // daily idiosyncratic σ
   totalVol: number; // daily total σ
   systematicShare: number; // 0..1 - fraction of variance from factors
   idiosyncraticShare: number;
   n: number; // sample size
+  /** Newey-West lag length used for the HAC adjustment. */
+  hacLag: number;
 }
 
-/**
- * OLS multivariate regression with intercept.
- *   y = α + β₁·X₁ + β₂·X₂ + … + ε
- * Returns coefficients, t-statistics, and R².
- */
-function olsRegression(
-  y: number[],
-  X: number[][]
-): { coef: number[]; tStats: number[]; rSquared: number; residVar: number; ok: boolean } {
-  const n = y.length;
-  const k = X.length; // number of regressors (excluding intercept)
-  if (n < k + 5) {
-    return { coef: [0, ...new Array(k).fill(0)], tStats: [0, ...new Array(k).fill(0)], rSquared: 0, residVar: 0, ok: false };
-  }
-  // Build design matrix Z (n × (k+1)) with leading column of 1s for intercept
-  const Z: number[][] = [];
-  for (let i = 0; i < n; i++) {
-    const row = [1];
-    for (let j = 0; j < k; j++) row.push(X[j][i]);
-    Z.push(row);
-  }
-  // ZtZ
-  const m = k + 1;
-  const ZtZ: number[][] = Array.from({ length: m }, () => new Array(m).fill(0));
-  for (let i = 0; i < n; i++) {
-    for (let a = 0; a < m; a++) for (let b = 0; b < m; b++) ZtZ[a][b] += Z[i][a] * Z[i][b];
-  }
-  // Zt y
-  const ZtY: number[] = new Array(m).fill(0);
-  for (let i = 0; i < n; i++) for (let a = 0; a < m; a++) ZtY[a] += Z[i][a] * y[i];
-  // Invert ZtZ via Gauss-Jordan (m is small: ≤5). Singular matrix means
-  // factors are perfectly collinear (e.g., constant series during a holiday) -
-  // bubble that up via ok=false rather than returning silent zeros.
-  const inv = invertMatrix(ZtZ);
-  if (!inv) return { coef: [0, ...new Array(k).fill(0)], tStats: [0, ...new Array(k).fill(0)], rSquared: 0, residVar: 0, ok: false };
-  // β = (ZtZ)^-1 · ZtY
-  const coef: number[] = new Array(m).fill(0);
-  for (let a = 0; a < m; a++) for (let b = 0; b < m; b++) coef[a] += inv[a][b] * ZtY[b];
-  // Residuals + R²
-  const yMean = y.reduce((s, v) => s + v, 0) / n;
-  let ssTot = 0;
-  let ssRes = 0;
-  for (let i = 0; i < n; i++) {
-    let pred = 0;
-    for (let a = 0; a < m; a++) pred += coef[a] * Z[i][a];
-    ssRes += (y[i] - pred) ** 2;
-    ssTot += (y[i] - yMean) ** 2;
-  }
-  const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-  const residVar = ssRes / Math.max(1, n - m);
-  // SE(β_a) = sqrt(residVar · inv[a][a])
-  const tStats: number[] = new Array(m).fill(0);
-  for (let a = 0; a < m; a++) {
-    const se = Math.sqrt(Math.max(0, residVar * inv[a][a]));
-    tStats[a] = se > 0 ? coef[a] / se : 0;
-  }
-  return { coef, tStats, rSquared, residVar, ok: true };
-}
-
-function invertMatrix(A: number[][]): number[][] | null {
-  const n = A.length;
-  const aug: number[][] = A.map((row, i) => [...row, ...new Array(n).fill(0).map((_, j) => (i === j ? 1 : 0))]);
-  for (let i = 0; i < n; i++) {
-    // Find pivot
-    let pivot = aug[i][i];
-    if (Math.abs(pivot) < 1e-12) {
-      // Find a row to swap with
-      let swap = -1;
-      for (let k = i + 1; k < n; k++) {
-        if (Math.abs(aug[k][i]) > 1e-12) {
-          swap = k;
-          break;
-        }
-      }
-      if (swap === -1) return null; // singular
-      [aug[i], aug[swap]] = [aug[swap], aug[i]];
-      pivot = aug[i][i];
-    }
-    // Normalize pivot row
-    for (let j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
-    // Eliminate other rows
-    for (let k = 0; k < n; k++) {
-      if (k === i) continue;
-      const factor = aug[k][i];
-      for (let j = 0; j < 2 * n; j++) aug[k][j] -= factor * aug[i][j];
-    }
-  }
-  return aug.map((row) => row.slice(n));
-}
+// OLS regression + matrix-inversion logic moved to ./advancedStats hacOLS,
+// which returns both classical and Newey-West HAC standard errors. This
+// file just orchestrates the factor alignment and unwraps the result.
 
 /**
  * Run Carhart-style factor regression.
@@ -167,36 +104,53 @@ export function runFactorRegression(
   }
   if (yArr.length < 30) return null;
 
-  const fit = olsRegression(yArr, [xMkt, xSMB, xHML, xMOM]);
-  // Bubble singular-matrix failures up to the UI so it can show "not enough
-  // factor diversity" instead of silently rendering zero loadings.
-  if (!fit.ok) return null;
-  const [alpha, betaMkt, betaSMB, betaHML, betaMOM] = fit.coef;
-  const [tAlpha, tMkt, tSMB, tHML, tMOM] = fit.tStats;
+  // Build design matrix for hacOLS — leading column of 1s for intercept,
+  // then the 4 factor columns. hacOLS returns both classical and HAC SEs
+  // so the UI can label the HAC t-stat as the headline number while still
+  // showing the classical figure for academic comparison.
+  const T = yArr.length;
+  const X: number[][] = new Array(T);
+  for (let i = 0; i < T; i++) X[i] = [1, xMkt[i], xSMB[i], xHML[i], xMOM[i]];
+  const fit = hacOLS(yArr, X);
+  if (!Number.isFinite(fit.beta[0])) return null;
+  const [alpha, betaMkt, betaSMB, betaHML, betaMOM] = fit.beta;
+  const [tAlpha, tMkt, tSMB, tHML, tMOM] = fit.tStat;
+  const [tAlphaHAC, tMktHAC, tSMBHAC, tHMLHAC, tMOMHAC] = fit.tStatHAC;
+  const [, pMktHAC, pSMBHAC, pHMLHAC, pMOMHAC] = fit.pValueHAC;
+  const alphaPValueHAC = fit.pValueHAC[0];
 
-  // Total variance vs residual variance for the systematic share
-  const yMean = yArr.reduce((s, v) => s + v, 0) / yArr.length;
-  const totalVar = yArr.reduce((s, v) => s + (v - yMean) ** 2, 0) / Math.max(1, yArr.length - 1);
+  const yMean = yArr.reduce((s, v) => s + v, 0) / T;
+  let totalSS = 0;
+  for (const v of yArr) totalSS += (v - yMean) ** 2;
+  const totalVar = totalSS / Math.max(1, T - 1);
   const totalVol = Math.sqrt(totalVar);
-  const residualVol = Math.sqrt(fit.residVar);
-  const systematicShare = totalVar > 0 ? Math.max(0, Math.min(1, 1 - fit.residVar / totalVar)) : 0;
+
+  // Residual variance from the OLS fit — derive from R² since hacOLS gives
+  // it: SSR = SST · (1 - R²), residVar = SSR / (T - k)
+  const residVar = (totalSS * (1 - fit.rSquared)) / Math.max(1, T - fit.k);
+  const residualVol = Math.sqrt(Math.max(0, residVar));
+  const systematicShare = totalVar > 0 ? Math.max(0, Math.min(1, fit.rSquared)) : 0;
 
   return {
     alpha,
     alphaAnnualized: alpha * 252,
     alphaTStat: tAlpha,
+    alphaTStatHAC: tAlphaHAC,
+    alphaPValueHAC,
     loadings: [
-      { factor: "Mkt", beta: betaMkt, tStat: tMkt },
-      { factor: "SMB", beta: betaSMB, tStat: tSMB },
-      { factor: "HML", beta: betaHML, tStat: tHML },
-      { factor: "MOM", beta: betaMOM, tStat: tMOM },
+      { factor: "Mkt", beta: betaMkt, tStat: tMkt, tStatHAC: tMktHAC, pValueHAC: pMktHAC },
+      { factor: "SMB", beta: betaSMB, tStat: tSMB, tStatHAC: tSMBHAC, pValueHAC: pSMBHAC },
+      { factor: "HML", beta: betaHML, tStat: tHML, tStatHAC: tHMLHAC, pValueHAC: pHMLHAC },
+      { factor: "MOM", beta: betaMOM, tStat: tMOM, tStatHAC: tMOMHAC, pValueHAC: pMOMHAC },
     ],
     rSquared: fit.rSquared,
+    adjRSquared: fit.adjRSquared,
     residualVol,
     totalVol,
     systematicShare,
     idiosyncraticShare: 1 - systematicShare,
-    n: yArr.length,
+    n: T,
+    hacLag: fit.hacLag,
   };
 }
 
