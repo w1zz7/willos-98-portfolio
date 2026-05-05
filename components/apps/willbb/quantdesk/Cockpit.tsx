@@ -38,9 +38,7 @@ import {
   acf,
   pacf,
 } from "./indicators";
-// Canvas-rendered chart — drop-in for the SVG QuantChart, ~10× faster drag
-// with 1000+ bars. Same prop shape, same keyboard shortcuts, same semantics.
-import QuantChart, { type OverlaySeries } from "./QuantChartCanvas";
+import QuantChart, { type OverlaySeries } from "./QuantChart";
 import { SourceBadge, type DataSource } from "../SourceBadge";
 import { useLiveQuote } from "@/lib/useLiveQuote";
 import { readChart, fetchChart, prefetchChart } from "@/lib/chartCache";

@@ -126,16 +126,7 @@ function cascadePosition(existing: WindowState[]): Point {
   return { x: startX + (n % 10) * 24, y: startY + (n % 10) * 24 };
 }
 
-export const useWindowStore = create<WMState>()((set, get) => {
-  // Expose the store on window for dev-only debugging — lets us bypass
-  // landing/boot during automated testing without UI interaction. Strictly
-  // dev-only; production builds tree-shake `process.env.NODE_ENV` checks.
-  if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-    setTimeout(() => {
-      (window as unknown as { __wm?: unknown }).__wm = useWindowStore;
-    }, 0);
-  }
-  return {
+export const useWindowStore = create<WMState>()((set, get) => ({
   windows: {},
   order: [],
   focusedId: null,
@@ -332,8 +323,7 @@ export const useWindowStore = create<WMState>()((set, get) => {
     set({ entryStage: stage, bootComplete: stage === "desktop" }),
   // Back-compat alias used by anything still calling the old API.
   setBootComplete: () => set({ entryStage: "desktop", bootComplete: true }),
-  };
-});
+}));
 
 /* -------------------------------------------------------------
    Selectors
