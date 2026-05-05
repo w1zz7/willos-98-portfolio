@@ -27,9 +27,14 @@
  */
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Sparkles } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Environment, Sparkles } from "@react-three/drei";
+import {
+  Bloom,
+  ChromaticAberration,
+  EffectComposer,
+  Vignette,
+} from "@react-three/postprocessing";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 const CYAN = "#33BBFF";
@@ -95,7 +100,7 @@ interface MobiusMeshProps {
 
 function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
 
   // Memo the geometry so it isn't recomputed on every re-render.
@@ -165,13 +170,24 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
     // top-down would just look like a flat ring.
     <group ref={groupRef} rotation={[-0.5, 0, 0.15]}>
       <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
-        <meshStandardMaterial
+        {/* Physical material — clearcoat gives a wet-shellac sheen layered
+            over the cyan, iridescence shifts the rim color as the strip
+            rotates. The result reads "premium tech" rather than "plastic
+            ring." environmentIntensity is paired with the Environment HDRI
+            in the parent Canvas so reflections land on the metal surface. */}
+        <meshPhysicalMaterial
           ref={matRef}
           color={CYAN}
           emissive={CYAN}
           emissiveIntensity={0.35}
-          metalness={0.35}
-          roughness={0.45}
+          metalness={0.55}
+          roughness={0.28}
+          clearcoat={0.7}
+          clearcoatRoughness={0.18}
+          iridescence={0.5}
+          iridescenceIOR={1.4}
+          iridescenceThicknessRange={[100, 800]}
+          envMapIntensity={1.1}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -223,11 +239,24 @@ export function MobiusButton({
   // hits, so clicking empty space wouldn't advance the experience. Instead,
   // the parent shell owns the click → setClicked(true) flow so any click
   // anywhere on the viewport plays the animation.
-  const handleHoverChange = (next: boolean) => {
-    setHovered(next);
-    onHoverChange?.(next);
-    document.body.style.cursor = next ? "pointer" : "";
-  };
+  //
+  // PERF: short-circuit when the new hover state matches the current one.
+  // Without this, pointermove (which fires hundreds of times per second)
+  // re-runs setState + cursor mutation + onHoverChange callback every
+  // frame even when the hover state hasn't changed. setHovered batches
+  // identical updates inside React but the cursor mutation is a real
+  // DOM write that triggers style invalidation.
+  const hoveredRef = useRef(false);
+  const handleHoverChange = useCallback(
+    (next: boolean) => {
+      if (hoveredRef.current === next) return;
+      hoveredRef.current = next;
+      setHovered(next);
+      onHoverChange?.(next);
+      document.body.style.cursor = next ? "pointer" : "";
+    },
+    [onHoverChange],
+  );
 
   // Animation done handler.
   const handleAnimationDone = () => {
@@ -239,24 +268,35 @@ export function MobiusButton({
       camera={{ position: [0, 1.4, 5.4], fov: 42 }}
       dpr={[1, reduced ? 1.5 : 2]}
       frameloop="always" // continuous rotation looks better than demand here
-      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-      style={{ width: "100%", height: "100%", background: "transparent" }}
-      onPointerMove={(e) => {
-        // Approximate hover: any pointer over the canvas is treated as hover.
-        // We rely on raycaster events on the mesh for the actual hover state
-        // when available, but on Canvas pointermove the whole canvas counts.
-        handleHoverChange(true);
-        void e;
+      // ACES Filmic tone mapping + sRGB output makes the bloom + emissive
+      // colors land in a perceptually correct space rather than washing out.
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+        toneMapping: THREE.ACESFilmicToneMapping,
+        outputColorSpace: THREE.SRGBColorSpace,
       }}
+      style={{ width: "100%", height: "100%", background: "transparent" }}
+      onPointerEnter={() => handleHoverChange(true)}
       onPointerLeave={() => handleHoverChange(false)}
     >
+      {/* HDRI environment for proper metallic reflections on the strip's
+          clearcoat. drei's "city" preset is a small (~280 KB) cube that
+          gives crisp specular highlights without an external download.
+          background={false} = use it for reflections only, not as a
+          visible background. */}
+      <Environment preset="city" background={false} environmentIntensity={0.55} />
+
       {/* Lighting rig: a soft ambient + one strong key from upper-front so
           the strip's twist gets specular highlights as it rotates, and a
-          cyan rim from below-back for the brand-color edge glow. */}
-      <ambientLight intensity={0.45} />
-      <pointLight position={[3, 4, 5]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[-4, -2, -3]} intensity={0.55} color={CYAN} />
-      <directionalLight position={[0, 3, 2]} intensity={0.35} color="#ffffff" />
+          cyan rim from below-back for the brand-color edge glow. With the
+          HDRI bringing 360° reflections, we drop the lights a touch so
+          the metal doesn't blow out. */}
+      <ambientLight intensity={0.25} />
+      <pointLight position={[3, 4, 5]} intensity={0.9} color="#ffffff" />
+      <pointLight position={[-4, -2, -3]} intensity={0.45} color={CYAN} />
+      <directionalLight position={[0, 3, 2]} intensity={0.25} color="#ffffff" />
 
       <MobiusMesh
         hovered={hovered}
@@ -274,16 +314,20 @@ export function MobiusButton({
         color={CYAN}
       />
 
-      {/* Bloom postprocessing — desktop only. Kept subtle so the strip's
-          actual surface (not just a glow blob) is the visual focus. */}
+      {/* Postprocessing stack — desktop only.
+          · Bloom: subtle glow from the emissive cyan + iridescent highlights.
+          · ChromaticAberration: 0.6 px RGB split — sells "premium glass."
+          · Vignette: darkens the corners so the strip is the anchor. */}
       {!reduced && (
         <EffectComposer>
           <Bloom
-            intensity={0.45}
-            luminanceThreshold={0.65}
-            luminanceSmoothing={0.4}
+            intensity={0.55}
+            luminanceThreshold={0.55}
+            luminanceSmoothing={0.45}
             mipmapBlur
           />
+          <ChromaticAberration offset={[0.0008, 0.0012]} radialModulation={false} modulationOffset={0} />
+          <Vignette eskil={false} offset={0.25} darkness={0.55} />
         </EffectComposer>
       )}
     </Canvas>

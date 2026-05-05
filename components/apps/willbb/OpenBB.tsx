@@ -15,7 +15,7 @@
  * No external chart libs - all SVG is hand-rolled in PriceChart.tsx.
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { WindowState } from "@/lib/wm/types";
 import {
@@ -582,44 +582,14 @@ function TickerStrip({ quotes, symbols }: { quotes: Quote[]; symbols: SymbolMeta
         borderBottom: "1px solid " + COLORS.border,
       }}
     >
-      {symbols.map((s) => {
-        const q = byKey.get(s.symbol);
-        const c = pctColor(q?.changePct);
-        return (
-          <div
-            key={s.symbol}
-            className="px-[14px] py-[7px] flex flex-col leading-tight whitespace-nowrap"
-            style={{
-              borderRight: "1px solid " + COLORS.borderSoft,
-              minWidth: 138,
-            }}
-          >
-            <span
-              className="text-[10px] uppercase tracking-[0.14em]"
-              style={{ color: COLORS.textFaint, fontFamily: FONT_UI }}
-            >
-              {s.label}
-            </span>
-            <div
-              className="flex items-baseline gap-[8px] mt-[2px]"
-              style={{ fontFamily: FONT_MONO }}
-            >
-              <span
-                className="text-[14px] font-semibold tabular-nums"
-                style={{ color: COLORS.text }}
-              >
-                {fmtPrice(q?.price)}
-              </span>
-              <span
-                className="text-[12px] tabular-nums"
-                style={{ color: c }}
-              >
-                {fmtPct(q?.changePct)}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+      {symbols.map((s) => (
+        <TickerCell
+          key={s.symbol}
+          label={s.label}
+          price={byKey.get(s.symbol)?.price ?? null}
+          changePct={byKey.get(s.symbol)?.changePct ?? null}
+        />
+      ))}
     </div>
   );
 }
@@ -713,57 +683,18 @@ function MarketsTab({
         >
           Watchlist
         </div>
-        {watchlist.map((s) => {
-          const q = byKey.get(s.symbol);
-          const c = pctColor(q?.changePct);
-          const active = s.symbol === focused;
-          return (
-            <button
-              key={s.symbol}
-              type="button"
-              onClick={() => setFocused(s.symbol)}
-              // Hover-prefetch: when the cursor enters a watchlist row, kick
-              // off the chart fetch for that symbol in the background. By the
-              // time the user actually clicks (~150-300 ms later), the cache
-              // is already warm and the chart paints instantly. The same
-              // pattern is already used for the range buttons (1M / 1Y / 5Y).
-              onMouseEnter={() => {
-                if (s.symbol !== focused) {
-                  prefetchChart(s.symbol, range.id, range.interval);
-                }
-              }}
-              className="w-full px-[12px] py-[8px] flex items-center justify-between text-left"
-              style={{
-                background: active ? COLORS.brandSoft : "transparent",
-                borderLeft: active
-                  ? "2px solid " + COLORS.brand
-                  : "2px solid transparent",
-                borderBottom: "1px solid " + COLORS.borderSoft,
-              }}
-            >
-              <span
-                className="text-[13px] font-semibold"
-                style={{
-                  color: active ? COLORS.brand : COLORS.text,
-                  fontFamily: FONT_MONO,
-                }}
-              >
-                {s.symbol}
-              </span>
-              <span
-                className="flex flex-col items-end leading-tight tabular-nums"
-                style={{ fontFamily: FONT_MONO }}
-              >
-                <span className="text-[12px]" style={{ color: COLORS.text }}>
-                  {fmtPrice(q?.price)}
-                </span>
-                <span className="text-[11px]" style={{ color: c }}>
-                  {fmtPct(q?.changePct)}
-                </span>
-              </span>
-            </button>
-          );
-        })}
+        {watchlist.map((s) => (
+          <WatchlistRow
+            key={s.symbol}
+            symbol={s.symbol}
+            price={byKey.get(s.symbol)?.price ?? null}
+            changePct={byKey.get(s.symbol)?.changePct ?? null}
+            active={s.symbol === focused}
+            rangeId={range.id}
+            rangeInterval={range.interval}
+            setFocused={setFocused}
+          />
+        ))}
       </div>
 
       {/* Chart pane */}
@@ -925,6 +856,114 @@ function MarketsTab({
     </div>
   );
 }
+
+// ---------- status bar ----------
+
+// ---------- ticker strip cell (memoized) ----------
+//
+// Same memoization win as WatchlistRow but for the index strip across the
+// top. 13 cells × 4 child elements = 52 React fibers; without the memo,
+// the whole strip re-mounts on every 15-second poll. With it, only cells
+// whose price actually changed re-render.
+
+const TickerCell = memo(function TickerCell({
+  label,
+  price,
+  changePct,
+}: {
+  label: string;
+  price: number | null;
+  changePct: number | null;
+}) {
+  const c = pctColor(changePct);
+  return (
+    <div
+      className="px-[14px] py-[7px] flex flex-col leading-tight whitespace-nowrap"
+      style={{ borderRight: "1px solid " + COLORS.borderSoft, minWidth: 138 }}
+    >
+      <span
+        className="text-[10px] uppercase tracking-[0.14em]"
+        style={{ color: COLORS.textFaint, fontFamily: FONT_UI }}
+      >
+        {label}
+      </span>
+      <div className="flex items-baseline gap-[8px] mt-[2px]" style={{ fontFamily: FONT_MONO }}>
+        <span className="text-[14px] font-semibold tabular-nums" style={{ color: COLORS.text }}>
+          {fmtPrice(price)}
+        </span>
+        <span className="text-[12px] tabular-nums" style={{ color: c }}>
+          {fmtPct(changePct)}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+// ---------- watchlist row (memoized) ----------
+//
+// Extracted into its own component + wrapped in React.memo so a poll that
+// only changes ONE symbol's price doesn't re-render all 130 rows. The
+// memo's default shallow-equality compare on the props (symbol, price,
+// changePct, active, rangeId, rangeInterval, setFocused) does the right
+// thing — most rows pass identical props poll-over-poll and skip rendering.
+//
+// Without this, a 15-second watchlist poll re-renders ~130 button + 4 span
+// nodes = ~520 React fiber updates per poll, which shows up as visible jank
+// on the chart pane during the poll. With the memo, only the symbol whose
+// quote actually changed re-renders.
+
+const WatchlistRow = memo(function WatchlistRow({
+  symbol,
+  price,
+  changePct,
+  active,
+  rangeId,
+  rangeInterval,
+  setFocused,
+}: {
+  symbol: string;
+  price: number | null;
+  changePct: number | null;
+  active: boolean;
+  rangeId: string;
+  rangeInterval: string;
+  setFocused: (s: string) => void;
+}) {
+  const c = pctColor(changePct);
+  return (
+    <button
+      type="button"
+      onClick={() => setFocused(symbol)}
+      // Hover-prefetch: when the cursor enters a row, kick off the chart
+      // fetch for that symbol so by the time the user clicks (~150-300 ms
+      // later) the cache is already warm and the chart paints instantly.
+      onMouseEnter={() => {
+        if (!active) prefetchChart(symbol, rangeId, rangeInterval);
+      }}
+      className="w-full px-[12px] py-[8px] flex items-center justify-between text-left"
+      style={{
+        background: active ? COLORS.brandSoft : "transparent",
+        borderLeft: active ? "2px solid " + COLORS.brand : "2px solid transparent",
+        borderBottom: "1px solid " + COLORS.borderSoft,
+      }}
+    >
+      <span
+        className="text-[13px] font-semibold"
+        style={{ color: active ? COLORS.brand : COLORS.text, fontFamily: FONT_MONO }}
+      >
+        {symbol}
+      </span>
+      <span className="flex flex-col items-end leading-tight tabular-nums" style={{ fontFamily: FONT_MONO }}>
+        <span className="text-[12px]" style={{ color: COLORS.text }}>
+          {fmtPrice(price)}
+        </span>
+        <span className="text-[11px]" style={{ color: c }}>
+          {fmtPct(changePct)}
+        </span>
+      </span>
+    </button>
+  );
+});
 
 // ---------- status bar ----------
 
