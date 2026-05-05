@@ -309,70 +309,106 @@ function seedAsResult(symbol: string): QuoteResult | null {
 }
 
 /**
- * Single-mode fetch: ALWAYS try live providers first (Yahoo → CoinGecko →
- * Stooq → Alpha Vantage), fall back to the static seed cache only when
- * every live provider has actually failed for that specific symbol.
+ * In-flight background refreshes. Prevents stampedes when 130 watchlist
+ * symbols are all "missing from cache" on first paint and we want to
+ * background-refresh each one without firing duplicate upstream calls.
+ */
+const inFlight = new Map<string, Promise<QuoteResult | null>>();
+
+/** Walk the live providers (Yahoo → CoinGecko → Stooq → Alpha Vantage),
+ *  cache the first success, and return it. Fire-and-forget safe. */
+async function refreshLive(
+  symbol: string,
+  isCrypto: boolean,
+): Promise<QuoteResult | null> {
+  const upper = symbol.toUpperCase();
+  const existing = inFlight.get(upper);
+  if (existing) return existing;
+  const task = (async () => {
+    try {
+      const y = await yahooChart(symbol);
+      if (y.price != null) {
+        quoteCache.set(upper, { row: y, at: Date.now() });
+        return y;
+      }
+      if (isCrypto) {
+        const cg = await coingeckoQuote(symbol);
+        if (cg.price != null) {
+          quoteCache.set(upper, { row: cg, at: Date.now() });
+          return cg;
+        }
+      }
+      const sq = await stooqQuote(symbol);
+      if (sq.price != null) {
+        quoteCache.set(upper, { row: sq, at: Date.now() });
+        return sq;
+      }
+      const av = await avQuote(symbol);
+      if (av.price != null) {
+        quoteCache.set(upper, { row: av, at: Date.now() });
+        return av;
+      }
+      return null;
+    } finally {
+      inFlight.delete(upper);
+    }
+  })();
+  inFlight.set(upper, task);
+  return task;
+}
+
+/**
+ * Two-mode fetch with seed-on-miss + background-refresh:
  *
- * Previously this had a `liveFirst=false` "batch-friendly" path that
- * returned seed data instantly for any request with > 24 symbols. The
- * watchlist (130+ symbols) hit that path on every poll, so the watchlist
- * NEVER showed live data — even when Yahoo was healthy. The focused-symbol
- * chart pane DID hit live (single-symbol path), causing the visible
- * inconsistency where the watchlist showed seed-era prices while the
- * chart showed today's prices.
+ *   bigBatch=true  (watchlist, ≥25 symbols)
+ *     - Cache hit → return cached value immediately.
+ *     - Cache miss → return seed snapshot AND fire a background live
+ *       refresh that lands in the cache for the next poll. The watchlist
+ *       paints in <100 ms with the seed snapshot, then the second poll
+ *       (15 s later) gets fresh Yahoo data with no user-visible wait.
+ *     - Subsequent polls within `BATCH_TTL_MS` reuse the live cache.
  *
- * The 30s in-memory cache + AbortController on the route handler mean
- * concurrent watchlist polls share upstream hits, so fanning 130 symbols
- * to Yahoo on a cold start is rare and bounded — far better than the
- * previous behavior of permanently masking live data behind seeds.
+ *   bigBatch=false (focused symbol, ≤24 symbols)
+ *     - Synchronous live-first: tries Yahoo → CG → Stooq → AV in order
+ *       and only falls back to seed when EVERY live provider has failed
+ *       for that symbol. The chart pane needs accuracy more than speed,
+ *       and on a 1-symbol fan-out Yahoo always answers in ~300 ms.
  *
- * The `bigBatch` flag (set when symbols.length > 24) only widens the
- * cache TTL so the second poll within 30s reuses the first poll's data
- * without re-fetching; it does NOT change the seed-vs-live priority.
+ * The previous implementation always returned seed for big batches even
+ * when live data was already cached, OR (after a partial fix) blocked the
+ * watchlist for 27 s waiting on Yahoo to fan out 130 calls. Neither was
+ * acceptable — this hybrid gives instant paint AND eventual live data.
  */
 async function fetchOne(symbol: string, bigBatch: boolean): Promise<QuoteResult> {
   const upper = symbol.toUpperCase();
   const isCrypto = upper.endsWith("-USD") && !!CG_MAP[upper];
-
-  // Bigger watchlist polls get a longer TTL so concurrent polls share
-  // the same upstream hit; small live polls get a tighter window so the
-  // ticker strip feels fresh.
   const ttl = bigBatch ? BATCH_TTL_MS : LIVE_TTL_MS;
 
-  // Hot in-memory cache hit — we already fetched this symbol within `ttl` ms.
-  // Concurrent fan-outs (e.g. ticker tape + watchlist polling at the same
-  // instant) share the same upstream call.
+  // Hot cache hit — applies to both modes.
   const cached = quoteCache.get(upper);
   if (cached && Date.now() - cached.at < ttl && cached.row.price != null) {
     return cached.row;
   }
 
-  // Live providers in order. We cache successful responses; seed is the
-  // last-resort and is NOT cached (so the next poll can retry the live
-  // upstream — otherwise a transient 429 would be sticky for 30s).
-  const y = await yahooChart(symbol);
-  if (y.price != null) {
-    quoteCache.set(upper, { row: y, at: Date.now() });
-    return y;
+  if (bigBatch) {
+    // Background-refresh the live cache. Don't await — we want this to
+    // populate the cache for the NEXT poll, not block the current one.
+    void refreshLive(symbol, isCrypto);
+    // Stale cache (older than TTL but still has a price) is preferable
+    // to seed — it's at least real upstream data from a recent poll.
+    if (cached?.row?.price != null) return cached.row;
+    const seed = seedAsResult(symbol);
+    if (seed) return seed;
+    // No seed either — wait synchronously for the live refresh as a
+    // last resort so the UI doesn't show "—" for an unknown symbol.
+    const live = await refreshLive(symbol, isCrypto);
+    if (live) return live;
+    return unavailable(symbol);
   }
-  if (isCrypto) {
-    const cg = await coingeckoQuote(symbol);
-    if (cg.price != null) {
-      quoteCache.set(upper, { row: cg, at: Date.now() });
-      return cg;
-    }
-  }
-  // Stooq is real data with ~15min delay — try before seed cache.
-  const sq = await stooqQuote(symbol);
-  if (sq.price != null) {
-    quoteCache.set(upper, { row: sq, at: Date.now() });
-    return sq;
-  }
-  const av = await avQuote(symbol);
-  if (av.price != null) {
-    quoteCache.set(upper, { row: av, at: Date.now() });
-    return av;
-  }
+
+  // Small-batch path: synchronous live-first.
+  const live = await refreshLive(symbol, isCrypto);
+  if (live) return live;
   // Every live provider failed for this symbol. Fall back to the static
   // seed snapshot so the UI shows *something* meaningful, with marketState
   // = "CACHED" + source = "seed" so the SourceBadge can flag it. Crucially,
@@ -380,7 +416,7 @@ async function fetchOne(symbol: string, bigBatch: boolean): Promise<QuoteResult>
   // transient 429 doesn't pin the symbol to seed for 30 seconds.
   const seed = seedAsResult(symbol);
   if (seed) return seed;
-  return y;
+  return unavailable(symbol);
 }
 
 export async function GET(req: NextRequest) {
