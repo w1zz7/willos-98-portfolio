@@ -173,7 +173,7 @@ export function LandingShell() {
           transition: "opacity 800ms ease-out 200ms",
         }}
       >
-        Will Zhang · Drexel LeBow · 2028
+        Will Zhang · Drexel LeBow · 2029
       </div>
 
       {/* Pulsing dot in the corner for "live" feel. */}

@@ -103,9 +103,15 @@ export function BootPlayback() {
   const [stage, setStage] = useState<Stage>("bios");
   const [skipVisible, setSkipVisible] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  // bioReady = the bio playback has finished streaming all lines.
+  // We hold the user on the bio screen indefinitely once this is true,
+  // and require a click / keypress to advance to the desktop. This gives
+  // recruiters time to actually read the intro instead of having it
+  // auto-fade out after a fixed timeout.
+  const [bioReady, setBioReady] = useState(false);
   const skippingRef = useRef(false);
 
-  /** Force-quit boot — drop straight to desktop. */
+  /** Force-quit boot — drop straight to desktop. ESC + Skip Intro button. */
   const skip = useCallback(() => {
     if (skippingRef.current) return;
     skippingRef.current = true;
@@ -114,7 +120,26 @@ export function BootPlayback() {
     window.setTimeout(() => setEntryStage("desktop"), 200);
   }, [setEntryStage]);
 
-  /** Drive stage transitions on a single chained timer. */
+  /**
+   * User explicitly chose to advance from the bio page → desktop.
+   * Plays the proper FADE_DURATION_MS fade so the desktop slides in
+   * smoothly instead of cutting like skip() does.
+   */
+  const advanceToDesktop = useCallback(() => {
+    if (skippingRef.current) return;
+    skippingRef.current = true;
+    setStage("fade");
+    window.setTimeout(() => setEntryStage("desktop"), FADE_DURATION_MS);
+  }, [setEntryStage]);
+
+  /**
+   * Drive stage transitions on a single chained timer.
+   *
+   * BIOS (auto, 2.4s) → splash (auto, 2.2s) → bio (auto-streams, then
+   * holds indefinitely waiting for user click). The bio→fade→desktop
+   * transition is NOT scheduled here — it's driven by advanceToDesktop()
+   * once the user clicks or presses a key on the bio screen.
+   */
   useEffect(() => {
     const timers: number[] = [];
     timers.push(window.setTimeout(() => setStage("splash"), BIOS_DURATION_MS));
@@ -124,22 +149,17 @@ export function BootPlayback() {
         BIOS_DURATION_MS + SPLASH_DURATION_MS,
       ),
     );
+    // Mark bio as "ready for user input" once all lines have streamed.
     timers.push(
       window.setTimeout(
-        () => setStage("fade"),
+        () => setBioReady(true),
         BIOS_DURATION_MS + SPLASH_DURATION_MS + BIO_DURATION_MS,
-      ),
-    );
-    timers.push(
-      window.setTimeout(
-        () => setEntryStage("desktop"),
-        BIOS_DURATION_MS + SPLASH_DURATION_MS + BIO_DURATION_MS + FADE_DURATION_MS,
       ),
     );
     return () => {
       for (const t of timers) window.clearTimeout(t);
     };
-  }, [setEntryStage]);
+  }, []);
 
   /** Reveal "skip intro" affordance after 1 s so users discover it. */
   useEffect(() => {
@@ -147,22 +167,42 @@ export function BootPlayback() {
     return () => window.clearTimeout(t);
   }, []);
 
-  /** ESC anywhere → skip. */
+  /**
+   * Keyboard:
+   *   - ESC anywhere → instant skip to desktop (cuts past whatever stage)
+   *   - Enter/Space on the bio "ready" prompt → graceful advance to desktop
+   */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" || e.key === "Enter") {
+      if (e.key === "Escape") {
         e.preventDefault();
         skip();
+        return;
+      }
+      if ((e.key === "Enter" || e.key === " ") && stage === "bio" && bioReady) {
+        e.preventDefault();
+        advanceToDesktop();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [skip]);
+  }, [skip, advanceToDesktop, stage, bioReady]);
 
-  /** Click on the backdrop (but not on the skip button) → skip. */
-  const onBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) skip();
+  /**
+   * Click anywhere on the boot surface:
+   *   - During BIOS/splash/mid-bio-stream: inert (don't let the user
+   *     accidentally skip past the bio they came here to read).
+   *   - After the bio has finished streaming: advance to desktop.
+   * The Skip Intro button + ESC remain available for power-users to
+   * bypass everything; the button stops propagation so it doesn't also
+   * trigger this handler.
+   */
+  const onBackdropClick = () => {
+    if (stage === "bio" && bioReady) advanceToDesktop();
   };
+
+  // Cursor flips to a pointer once clicks become meaningful.
+  const showPointerCursor = stage === "bio" && bioReady;
 
   // Background per stage. Splash is a vertical sky gradient.
   const bgForStage =
@@ -173,17 +213,18 @@ export function BootPlayback() {
   return (
     <div
       onClick={onBackdropClick}
-      className="fixed inset-0 z-[100000] overflow-hidden cursor-pointer"
+      className="fixed inset-0 z-[100000] overflow-hidden"
       style={{
         background: bgForStage,
         opacity: skipping || stage === "fade" ? 0 : 1,
         transition: `opacity ${FADE_DURATION_MS}ms ease-out, background 220ms ease`,
+        cursor: showPointerCursor ? "pointer" : "default",
       }}
       aria-label="Booting WillOS 98"
     >
       {stage === "bios" && <BiosStage />}
       {stage === "splash" && <SplashStage />}
-      {(stage === "bio" || stage === "fade") && <BioStage />}
+      {(stage === "bio" || stage === "fade") && <BioStage bioReady={bioReady} />}
 
       {/* "skip intro" bottom-right — Win98 raised button. */}
       {skipVisible && stage !== "fade" && (
@@ -628,7 +669,7 @@ function Win98FlagLogo({ size }: { size: number }) {
 /* Stage 3 — MS-DOS Prompt window framing the bio playback             */
 /* ------------------------------------------------------------------ */
 
-function BioStage() {
+function BioStage({ bioReady }: { bioReady: boolean }) {
   const [visible, setVisible] = useState(0);
 
   useEffect(() => {
@@ -799,7 +840,10 @@ function BioStage() {
             {BIO_LINES.slice(0, visible).map((line, i) => (
               <BioLineRow key={i} line={line} />
             ))}
-            {/* Cursor / final prompt. */}
+            {/* Mid-stream: blinking cursor. After all lines are visible
+                AND the parent has marked bio "ready": a fresh DOS prompt
+                line + the "press any key to continue" hint that mimics
+                the classic Win98 setup screens. */}
             {visible < BIO_LINES.length ? (
               <span
                 aria-hidden
@@ -813,19 +857,33 @@ function BioStage() {
                 }}
               />
             ) : (
-              <div style={{ marginTop: 12 }}>
-                C:\WINDOWS&gt;
-                <span
-                  aria-hidden
-                  className="inline-block ml-[6px]"
-                  style={{
-                    width: 9,
-                    height: 14,
-                    background: COLORS.prompt.fg,
-                    animation: "boot-prompt-cursor 0.9s steps(2) infinite",
-                    verticalAlign: "middle",
-                  }}
-                />
+              <div style={{ marginTop: 14 }}>
+                <div>
+                  C:\WINDOWS&gt;
+                  <span
+                    aria-hidden
+                    className="inline-block ml-[6px]"
+                    style={{
+                      width: 9,
+                      height: 14,
+                      background: COLORS.prompt.fg,
+                      animation: "boot-prompt-cursor 0.9s steps(2) infinite",
+                      verticalAlign: "middle",
+                    }}
+                  />
+                </div>
+                {bioReady && (
+                  <div
+                    style={{
+                      marginTop: 22,
+                      color: COLORS.prompt.accent,
+                      // Soft pulse so the eye finds the prompt.
+                      animation: "boot-prompt-cursor 1.2s ease-in-out infinite",
+                    }}
+                  >
+                    &gt; Press any key or click anywhere to continue . . .
+                  </div>
+                )}
               </div>
             )}
           </div>
