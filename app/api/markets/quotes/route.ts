@@ -124,11 +124,31 @@ async function yahooChart(symbol: string): Promise<QuoteResult> {
       }
       if (!res.ok) break;
       const data = await res.json();
-      const meta = data?.chart?.result?.[0]?.meta;
+      const result = data?.chart?.result?.[0];
+      const meta = result?.meta;
       if (!meta) break;
       const price: number | null = meta.regularMarketPrice ?? null;
+      // Derive yesterday's close from the actual time-series rather than
+      // meta.chartPreviousClose (which is the close BEFORE the visible
+      // 5-day range, i.e. ~5 trading days ago — gives misleading daily %
+      // changes for a stock that's moved meaningfully over the week).
+      const closes: (number | null)[] =
+        result?.indicators?.quote?.[0]?.close ?? [];
+      let yesterdayClose: number | null = null;
+      // Walk back from the most recent non-null close; yesterday's close
+      // is the SECOND such value (since the most recent is today's bar).
+      let seenLatest = false;
+      for (let i = closes.length - 1; i >= 0; i--) {
+        if (closes[i] == null) continue;
+        if (!seenLatest) {
+          seenLatest = true;
+          continue;
+        }
+        yesterdayClose = closes[i] as number;
+        break;
+      }
       const previousClose: number | null =
-        meta.chartPreviousClose ?? meta.previousClose ?? null;
+        yesterdayClose ?? meta.previousClose ?? meta.chartPreviousClose ?? null;
       const changePct =
         price != null && previousClose != null && previousClose !== 0
           ? ((price - previousClose) / previousClose) * 100
@@ -289,65 +309,47 @@ function seedAsResult(symbol: string): QuoteResult | null {
 }
 
 /**
- * Two-mode fetch:
- *   liveFirst=true  → Try Yahoo / CoinGecko / Stooq before falling back to
- *                     seed. Used for single-symbol requests (the focused
- *                     ticker) so we always try real data when available.
- *   liveFirst=false → Seed-first. Used for big watchlist batches so we
- *                     don't fan 100+ requests into Yahoo and trigger a
- *                     guaranteed 429 storm. Real-data refresh is async-able
- *                     by the caller.
+ * Single-mode fetch: ALWAYS try live providers first (Yahoo → CoinGecko →
+ * Stooq → Alpha Vantage), fall back to the static seed cache only when
+ * every live provider has actually failed for that specific symbol.
+ *
+ * Previously this had a `liveFirst=false` "batch-friendly" path that
+ * returned seed data instantly for any request with > 24 symbols. The
+ * watchlist (130+ symbols) hit that path on every poll, so the watchlist
+ * NEVER showed live data — even when Yahoo was healthy. The focused-symbol
+ * chart pane DID hit live (single-symbol path), causing the visible
+ * inconsistency where the watchlist showed seed-era prices while the
+ * chart showed today's prices.
+ *
+ * The 30s in-memory cache + AbortController on the route handler mean
+ * concurrent watchlist polls share upstream hits, so fanning 130 symbols
+ * to Yahoo on a cold start is rare and bounded — far better than the
+ * previous behavior of permanently masking live data behind seeds.
+ *
+ * The `bigBatch` flag (set when symbols.length > 24) only widens the
+ * cache TTL so the second poll within 30s reuses the first poll's data
+ * without re-fetching; it does NOT change the seed-vs-live priority.
  */
-async function fetchOne(symbol: string, liveFirst: boolean): Promise<QuoteResult> {
+async function fetchOne(symbol: string, bigBatch: boolean): Promise<QuoteResult> {
   const upper = symbol.toUpperCase();
   const isCrypto = upper.endsWith("-USD") && !!CG_MAP[upper];
 
-  // Pick TTL based on call shape: live polls (≤3 symbols) get 5s freshness;
-  // batch polls (watchlist) get 30s. See block comment on the cache decl.
-  const ttl = liveFirst ? LIVE_TTL_MS : BATCH_TTL_MS;
+  // Bigger watchlist polls get a longer TTL so concurrent polls share
+  // the same upstream hit; small live polls get a tighter window so the
+  // ticker strip feels fresh.
+  const ttl = bigBatch ? BATCH_TTL_MS : LIVE_TTL_MS;
 
   // Hot in-memory cache hit — we already fetched this symbol within `ttl` ms.
   // Concurrent fan-outs (e.g. ticker tape + watchlist polling at the same
-  // instant) should share the same upstream call.
+  // instant) share the same upstream call.
   const cached = quoteCache.get(upper);
   if (cached && Date.now() - cached.at < ttl && cached.row.price != null) {
     return cached.row;
   }
 
-  if (liveFirst) {
-    const y = await yahooChart(symbol);
-    if (y.price != null) {
-      quoteCache.set(upper, { row: y, at: Date.now() });
-      return y;
-    }
-    if (isCrypto) {
-      const cg = await coingeckoQuote(symbol);
-      if (cg.price != null) {
-        quoteCache.set(upper, { row: cg, at: Date.now() });
-        return cg;
-      }
-    }
-    // Stooq is real data with ~15min delay - try before seed cache.
-    const sq = await stooqQuote(symbol);
-    if (sq.price != null) {
-      quoteCache.set(upper, { row: sq, at: Date.now() });
-      return sq;
-    }
-    // Alpha Vantage GLOBAL_QUOTE (EOD-only on free tier) - last-resort
-    // real provider before we fall back to the static seed cache.
-    const av = await avQuote(symbol);
-    if (av.price != null) {
-      quoteCache.set(upper, { row: av, at: Date.now() });
-      return av;
-    }
-    const seed = seedAsResult(symbol);
-    if (seed) return seed;
-    return y;
-  }
-
-  // Batch-friendly path: seed instantly when known.
-  const seed = seedAsResult(symbol);
-  if (seed) return seed;
+  // Live providers in order. We cache successful responses; seed is the
+  // last-resort and is NOT cached (so the next poll can retry the live
+  // upstream — otherwise a transient 429 would be sticky for 30s).
   const y = await yahooChart(symbol);
   if (y.price != null) {
     quoteCache.set(upper, { row: y, at: Date.now() });
@@ -360,6 +362,7 @@ async function fetchOne(symbol: string, liveFirst: boolean): Promise<QuoteResult
       return cg;
     }
   }
+  // Stooq is real data with ~15min delay — try before seed cache.
   const sq = await stooqQuote(symbol);
   if (sq.price != null) {
     quoteCache.set(upper, { row: sq, at: Date.now() });
@@ -370,6 +373,13 @@ async function fetchOne(symbol: string, liveFirst: boolean): Promise<QuoteResult
     quoteCache.set(upper, { row: av, at: Date.now() });
     return av;
   }
+  // Every live provider failed for this symbol. Fall back to the static
+  // seed snapshot so the UI shows *something* meaningful, with marketState
+  // = "CACHED" + source = "seed" so the SourceBadge can flag it. Crucially,
+  // we do NOT cache the seed response — the next poll retries Yahoo, so a
+  // transient 429 doesn't pin the symbol to seed for 30 seconds.
+  const seed = seedAsResult(symbol);
+  if (seed) return seed;
   return y;
 }
 
@@ -389,12 +399,13 @@ export async function GET(req: NextRequest) {
   if (symbols.length === 0 || symbols.length > 200) {
     return NextResponse.json({ error: "1-200 symbols" }, { status: 400 });
   }
-  // With the in-memory cache layer (QUOTE_TTL_MS = 30s) every symbol's
-  // first upstream hit is shared across all concurrent callers, so we can
-  // safely live-first for up to ~24 symbols. Beyond that, fall back to
-  // seed-first to keep the watchlist responsive on cold start.
-  const liveFirst = symbols.length <= 24;
-  const quotes = await Promise.all(symbols.map((s) => fetchOne(s, liveFirst)));
+  // The 30s in-memory cache means concurrent watchlist polls share
+  // upstream hits — fanning 130 symbols out is rare and bounded.
+  // The bigBatch flag widens the cache TTL for watchlist polls (so
+  // overlapping ticker-strip + watchlist polls coalesce), but does NOT
+  // change live-vs-seed priority — every symbol now tries Yahoo first.
+  const bigBatch = symbols.length > 24;
+  const quotes = await Promise.all(symbols.map((s) => fetchOne(s, bigBatch)));
   const sourceCounts = quotes.reduce<Record<string, number>>(
     (acc, q) => ((acc[q.source] = (acc[q.source] ?? 0) + 1), acc),
     {}

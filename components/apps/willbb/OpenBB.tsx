@@ -785,15 +785,38 @@ function MarketsTab({
               className="flex items-baseline gap-[10px] mt-[2px] tabular-nums"
               style={{ fontFamily: FONT_MONO }}
             >
-              <span className="text-[26px] font-semibold" style={{ color: COLORS.text }}>
-                {fmtPrice(chart?.price ?? focusQ?.price)}
-              </span>
-              <span
-                className="text-[14px]"
-                style={{ color: pctColor(focusQ?.changePct) }}
-              >
-                {fmtPct(focusQ?.changePct)}
-              </span>
+              {(() => {
+                // Derive the displayed % change from the same source as the
+                // displayed price so the two stay internally consistent. If
+                // the chart endpoint has both fields, compute pct from those
+                // (chart.price/chart.previousClose - 1). Else fall back to
+                // the watchlist quote. Without this, a stale watchlist poll
+                // can show a fresh chart price next to an unrelated %, e.g.
+                // "GOOG $379.64 +0.83%" while the actual today-vs-yesterday
+                // delta is +8.93%.
+                const price =
+                  chart?.price != null ? chart.price : focusQ?.price ?? null;
+                const pct =
+                  chart?.price != null && chart?.previousClose != null
+                    ? (chart.price / chart.previousClose - 1) * 100
+                    : focusQ?.changePct ?? null;
+                return (
+                  <>
+                    <span
+                      className="text-[26px] font-semibold"
+                      style={{ color: COLORS.text }}
+                    >
+                      {fmtPrice(price)}
+                    </span>
+                    <span
+                      className="text-[14px]"
+                      style={{ color: pctColor(pct) }}
+                    >
+                      {fmtPct(pct)}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           </div>
           <div

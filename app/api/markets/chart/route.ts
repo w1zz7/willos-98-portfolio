@@ -194,13 +194,23 @@ async function yahooChart(
         if (vols[i] != null) p.v = vols[i] as number;
         points.push(p);
       }
+      // Yahoo's chart endpoint gives `chartPreviousClose` (the close BEFORE
+      // the visible range began — e.g. 1 month ago for range=1mo) but does
+      // NOT include the prior trading session's close. Using
+      // chartPreviousClose for "Prev close" would show a ~30% "daily change"
+      // for a stock up 30% over the month. Derive yesterday's close from
+      // the second-to-last bar in the actual points series, which is by
+      // definition the most recent prior session.
+      const yesterdayClose =
+        points.length >= 2 ? points[points.length - 2].c : null;
       return {
         symbol: meta.symbol ?? symbol,
         currency: meta.currency ?? null,
         exchange: meta.exchangeName ?? null,
         shortName: meta.shortName ?? meta.longName ?? null,
         price: meta.regularMarketPrice ?? null,
-        previousClose: meta.chartPreviousClose ?? meta.previousClose ?? null,
+        previousClose:
+          yesterdayClose ?? meta.previousClose ?? meta.chartPreviousClose ?? null,
         open: meta.regularMarketOpen ?? null,
         dayHigh: meta.regularMarketDayHigh ?? null,
         dayLow: meta.regularMarketDayLow ?? null,
@@ -274,13 +284,18 @@ async function coingeckoChart(
     if (points.length === 0) return null;
     const first = points[0].c;
     const last = points[points.length - 1].c;
+    // Use the second-to-last point as the "previous close" — that's
+    // yesterday's close, NOT the first point of the visible range (which
+    // would inflate the % change to a month-over-month figure for a 1mo
+    // chart).
+    const prev = points.length > 1 ? points[points.length - 2].c : last;
     return {
       symbol: symbol.toUpperCase(),
       currency: "USD",
       exchange: "CoinGecko",
       shortName: m.name,
       price: last,
-      previousClose: first,
+      previousClose: prev,
       open: first,
       dayHigh: Math.max(...points.map((p) => p.c)),
       dayLow: Math.min(...points.map((p) => p.c)),
