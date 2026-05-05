@@ -348,7 +348,7 @@ export async function GET(req: NextRequest) {
     if (cached && Date.now() - cached.at < SUCCESS_TTL_MS) {
       return NextResponse.json(
         { ...cached.payload, cached: true },
-        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } }
+        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
       );
     }
   }
@@ -358,7 +358,7 @@ export async function GET(req: NextRequest) {
     successCache.set(ck, { payload: yahoo, at: Date.now() });
     return NextResponse.json(
       { ...yahoo, source: "yahoo" },
-      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } }
+      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
     );
   }
 
@@ -369,7 +369,7 @@ export async function GET(req: NextRequest) {
       successCache.set(ck, { payload: cg, at: Date.now() });
       return NextResponse.json(
         { ...cg, source: "coingecko" },
-        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } }
+        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
       );
     }
   }
@@ -382,7 +382,7 @@ export async function GET(req: NextRequest) {
     successCache.set(ck, { payload: avPayload, at: Date.now() });
     return NextResponse.json(
       { ...avPayload, message: "real data via Alpha Vantage (daily, 1h cache)" },
-      { headers: { "Cache-Control": "public, max-age=300, s-maxage=600" } }
+      { headers: { "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=900" } }
     );
   }
 
@@ -393,7 +393,7 @@ export async function GET(req: NextRequest) {
     successCache.set(ck, { payload: stooqPayload, at: Date.now() });
     return NextResponse.json(
       { ...stooqPayload, message: "real data via Stooq (~15min delay, daily)" },
-      { headers: { "Cache-Control": "public, max-age=120, s-maxage=300" } }
+      { headers: { "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=600" } }
     );
   }
 

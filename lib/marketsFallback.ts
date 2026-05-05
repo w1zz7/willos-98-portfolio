@@ -51,7 +51,7 @@ export const SEED_QUOTES: Record<string, SeedQuote> = {
   META: { symbol: "META", shortName: "Meta Platforms", price: 614.23, previousClose: 605.51, currency: "USD", exchange: "NMS" },
   TSLA: { symbol: "TSLA", shortName: "Tesla", price: 442.18, previousClose: 438.6, currency: "USD", exchange: "NMS" },
   AMD: { symbol: "AMD", shortName: "AMD", price: 187.4, previousClose: 184.06, currency: "USD", exchange: "NMS" },
-  INTC: { symbol: "INTC", shortName: "Intel", price: 47.86, previousClose: 37.95, currency: "USD", exchange: "NMS" },
+  INTC: { symbol: "INTC", shortName: "Intel", price: 47.86, previousClose: 47.20, currency: "USD", exchange: "NMS" },
   HOOD: { symbol: "HOOD", shortName: "Robinhood", price: 110.32, previousClose: 108.22, currency: "USD", exchange: "NMS" },
 
   // ── Will's frequently-traded names ────────────────────────────────────

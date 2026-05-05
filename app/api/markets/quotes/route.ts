@@ -469,7 +469,18 @@ export async function GET(req: NextRequest) {
       degraded: seedCount > 0 || naCount > 0,
       message,
     },
-    // Shorter cache so polling actually feels live.
-    { headers: { "Cache-Control": "public, max-age=10, s-maxage=15" } }
+    // Cache shape: short browser cache (10s — polling-aware), slightly
+    // longer shared/CDN cache (15s — coalesces concurrent users), and a
+    // stale-while-revalidate window of 60s — if the cache is stale but
+    // within SWR, the edge serves the stale copy instantly while
+    // background-revalidating, so a refresh during a transient Yahoo
+    // hiccup never blocks. Combined with the in-flight dedup map and
+    // hybrid seed-then-live fetch in fetchOne, steady-state polls are
+    // ~free even under upstream load.
+    {
+      headers: {
+        "Cache-Control": "public, max-age=10, s-maxage=15, stale-while-revalidate=60",
+      },
+    }
   );
 }

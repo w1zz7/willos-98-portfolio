@@ -55,7 +55,9 @@ import {
 } from "./indicators";
 import { runFactorRegression, buildFactorReturns } from "./factorRegression";
 import { runBacktest, type BacktestResult, type Signal } from "./backtest";
-import QuantChart, { type OverlaySeries, type ChartMarker } from "./QuantChart";
+// Canvas-rendered chart — drop-in for the SVG QuantChart, ~10× faster drag
+// with 1000+ bars. Same prop shape, same keyboard shortcuts, same semantics.
+import QuantChart, { type OverlaySeries, type ChartMarker } from "./QuantChartCanvas";
 import { PRESETS } from "./presets";
 import type { PaperTrade } from "./PaperBlotter";
 import { SourceBadge, type DataSource } from "../SourceBadge";
