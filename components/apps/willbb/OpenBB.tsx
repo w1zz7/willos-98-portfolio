@@ -264,6 +264,22 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     });
   }, [focused]);
 
+  // Pre-warm the Carhart 4-factor ETFs (SPY / IWM / IUSV / IUSG / MTUM)
+  // on terminal open so that when the user clicks the Research tab, the
+  // factor regression has data immediately instead of waiting on five
+  // serial Yahoo round-trips. Runs ONCE on mount; the chart cache LRU
+  // holds the warmed entries for 60 s.
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      prefetchChart("SPY", "1mo", "1d");
+      prefetchChart("IWM", "1mo", "1d");
+      prefetchChart("IUSV", "1mo", "1d");
+      prefetchChart("IUSG", "1mo", "1d");
+      prefetchChart("MTUM", "1mo", "1d");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Strip quotes - poll every 15s while window is open. Pauses when the
   // tab is hidden so we don't hammer the upstream from background tabs.
   // AbortController kills in-flight requests on cleanup so a stale poll
