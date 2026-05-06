@@ -202,11 +202,28 @@ function marketStateLabel(d: Date): { label: string; color: string } {
 
 // ---------- main component ----------
 
+/** sessionStorage flag — flipped after the BootScreen finishes once.
+ *  Subsequent terminal opens within the same browser session skip the
+ *  boot entirely so the user lands on the dashboard instantly. The page-
+ *  level boot already plays once per session; making the user sit
+ *  through a SECOND ~2.4 s flavor boot every time they reopen the
+ *  terminal turns into noise instead of polish. */
+const WILLBB_BOOTED_SESSION_KEY = "willbb-booted-once";
+
 export default function WillBBTerminal({ window: _w }: { window: WindowState }) {
   const watchlist = useMemo(() => buildWatchlist(), []);
 
-  // Boot animation runs once per window open. Skip with click or any key.
-  const [booted, setBooted] = useState(false);
+  // Boot animation runs once per session, not per window open.
+  // Skip with click or any key during the first run; auto-skipped on
+  // every subsequent open within the same session.
+  const [booted, setBooted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return sessionStorage.getItem(WILLBB_BOOTED_SESSION_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [tab, setTab] = useState<TabId>("markets");
   const [focused, setFocused] = useState<string>(watchlist[0]?.symbol ?? "NVDA");
   const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[1]);
@@ -394,7 +411,20 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
         fontFamily: FONT_UI,
       }}
     >
-      {!booted && <BootScreen onComplete={() => setBooted(true)} />}
+      {!booted && (
+        <BootScreen
+          onComplete={() => {
+            setBooted(true);
+            // Persist the boot so subsequent terminal opens (e.g., user
+            // closes + reopens the window) skip straight to the dashboard.
+            try {
+              sessionStorage.setItem(WILLBB_BOOTED_SESSION_KEY, "1");
+            } catch {
+              /* private mode / quota — skip persistence, no harm done */
+            }
+          }}
+        />
+      )}
       <Header
         now={now}
         marketLabel={market.label}

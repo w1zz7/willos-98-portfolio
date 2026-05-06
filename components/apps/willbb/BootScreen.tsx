@@ -39,58 +39,35 @@ interface Line {
 }
 
 /**
- * Extended ~7-second boot script. Five phases pace the streaming so the
- * progress bar feels purposeful rather than a single lump:
+ * Tight ~2.4-second boot script. The page-level boot (LandingShell ➜
+ * BIOS POST ➜ Win98 splash ➜ bio playback) is the cinematic intro;
+ * this terminal-level boot is just the "app starting" beat — short
+ * enough to feel like flavor instead of a wait.
  *
- *   Phase 1 — System init        (0   → 1.0 s) header + config + auth
- *   Phase 2 — Data feed wiring   (1.2 → 2.6 s) Yahoo / CG / Stooq / AV
- *   Phase 3 — Watchlist + cache  (2.8 → 4.0 s) symbols, cache warm-up
- *   Phase 4 — Research engine    (4.2 → 5.4 s) indicators, regression,
- *                                              backtester, scanner
- *   Phase 5 — Final handshake    (5.6 → 6.5 s) snapshot, ready
+ * Earlier versions ran ~7 s here, but layered on top of the 10+ s
+ * landing boot it added up to ~17 s before users could actually
+ * interact with the dashboard. Cut to 12 lines paced 0–2200 ms.
  *
- * Each line lists a real subsystem in the terminal so the boot reads
- * like an actual cold-start log, not Hollywood typing-into-the-Matrix.
  * Users can click or press any key to skip — see the keydown handler.
+ * On subsequent terminal opens within the same session we skip this
+ * boot entirely (see willbbBooted sessionStorage flag in OpenBB.tsx).
  */
 const LINES: Line[] = [
-  // Phase 1 — System init
   { prefix: ">", text: "WillBB Markets Terminal · v1.0 · build 2026.05", status: "info", delayMs: 0 },
-  { prefix: ">", text: "boot · loading config from /etc/willbb.toml", status: "ok", delayMs: 320 },
-  { prefix: ">", text: "auth · cookies seeded from fc.yahoo.com · crumb cached (30 min TTL)", status: "ok", delayMs: 560 },
-  { prefix: ">", text: "auth · alpha vantage key verified · 5 req/min budget", status: "ok", delayMs: 800 },
-
-  // Phase 2 — Data feed wiring
-  { prefix: ">", text: "feed · primary: Yahoo Finance v8 chart endpoint", status: "ok", delayMs: 1200 },
-  { prefix: ">", text: "feed · crypto fallback: CoinGecko /coins/{id}/market_chart", status: "ok", delayMs: 1440 },
-  { prefix: ">", text: "feed · delayed fallback: Stooq EOD (15 min)", status: "ok", delayMs: 1680 },
-  { prefix: ">", text: "feed · last-resort fallback: Alpha Vantage GLOBAL_QUOTE", status: "ok", delayMs: 1920 },
-  { prefix: ">", text: "feed · 4-tier failover routing engaged", status: "info", delayMs: 2160 },
-
-  // Phase 3 — Watchlist + cache
-  { prefix: ">", text: "watchlist · 144 symbols loaded from will.watchlist", status: "ok", delayMs: 2480 },
-  { prefix: ">", text: "indices · ^GSPC ^IXIC ^DJI ^RUT ^VIX CL=F GC=F BZ=F BTC-USD ETH-USD", status: "ok", delayMs: 2720 },
-  { prefix: ">", text: "cache · in-flight dedup map online · BATCH_TTL_MS=30s", status: "ok", delayMs: 2960 },
-  { prefix: ">", text: "cache · seed snapshot: 144 entries · April 24, 2026", status: "ok", delayMs: 3200 },
-
-  // Phase 4 — Research engine
-  { prefix: ">", text: "engine · TradingView widget (MA · RSI · MACD pre-loaded)", status: "ok", delayMs: 3520 },
-  { prefix: ">", text: "engine · QuantChart canvas renderer · 60fps target", status: "ok", delayMs: 3760 },
-  { prefix: ">", text: "indicators · sma · ema · rsi · macd · bb · adx · atr · ichimoku · stoch · obv · vwap", status: "ok", delayMs: 4000 },
-  { prefix: ">", text: "stats · log_ret · realized vol (cc · pk · gk · yz) · hurst · adf · acf · pacf", status: "ok", delayMs: 4240 },
-  { prefix: ">", text: "regression · Carhart 4-factor (Mkt · SMB · HML · MOM) · risk-free 4.5%", status: "ok", delayMs: 4480 },
-  { prefix: ">", text: "backtester · walk-forward · slippage · borrow rate · intraday-aware", status: "ok", delayMs: 4720 },
-
-  // Phase 5 — Final handshake
-  { prefix: ">", text: "research · 12 modules wired (profile · technicals · financials · holders · options · news)", status: "ok", delayMs: 5040 },
-  { prefix: ">", text: "discovery · gainers · losers · most-active · sector heatmap", status: "ok", delayMs: 5280 },
-  { prefix: ">", text: "scanner · 32-name universe · live IR · beta · drawdown ranks", status: "ok", delayMs: 5520 },
-  { prefix: ">", text: "blotter · paper-trade engine ready · zero capital risk", status: "ok", delayMs: 5760 },
-  { prefix: ">", text: "snapshot · 113 / 144 symbols cached · live feed warming", status: "info", delayMs: 6020 },
-  { prefix: ">", text: "ALL SYSTEMS GO · welcome back, Will", status: "ok", delayMs: 6300 },
+  { prefix: ">", text: "boot · config loaded · 4-tier feed failover engaged", status: "ok", delayMs: 200 },
+  { prefix: ">", text: "feed · Yahoo · CoinGecko · Stooq · Alpha Vantage", status: "ok", delayMs: 380 },
+  { prefix: ">", text: "watchlist · 144 symbols · indices · futures · crypto", status: "ok", delayMs: 580 },
+  { prefix: ">", text: "cache · in-flight dedup + SWR · 30 s batch TTL", status: "ok", delayMs: 780 },
+  { prefix: ">", text: "engine · TradingView + QuantChart canvas (60 fps)", status: "ok", delayMs: 980 },
+  { prefix: ">", text: "indicators · sma · ema · rsi · macd · bb · adx · atr · ichimoku", status: "ok", delayMs: 1180 },
+  { prefix: ">", text: "stats · PSR · DSR · HAC · bootstrap · reality check", status: "ok", delayMs: 1380 },
+  { prefix: ">", text: "regression · Carhart 4-factor · Newey-West HAC", status: "ok", delayMs: 1580 },
+  { prefix: ">", text: "backtester · walk-forward · ADV slippage · borrow rate", status: "ok", delayMs: 1780 },
+  { prefix: ">", text: "research · 12 modules · discovery · scanner · blotter", status: "ok", delayMs: 1980 },
+  { prefix: ">", text: "ALL SYSTEMS GO · welcome back, Will", status: "ok", delayMs: 2200 },
 ];
 
-const TOTAL_MS = LINES[LINES.length - 1].delayMs + 700;
+const TOTAL_MS = LINES[LINES.length - 1].delayMs + 400;
 
 export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   const [visible, setVisible] = useState<number>(0);
