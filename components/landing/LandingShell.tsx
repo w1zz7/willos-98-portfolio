@@ -140,6 +140,42 @@ export function LandingShell() {
         <span style={{ opacity: 0.45, letterSpacing: "0.1em" }}>· entry</span>
       </div>
 
+      {/* "Work in progress" badge — top-right corner. The site is actively
+          under development, so the visitor sees a clear visual signal that
+          some pieces may be incomplete or rough. Pulses subtly so it reads
+          as "active" rather than "stuck." */}
+      <div
+        className="pointer-events-none absolute select-none flex items-center gap-[8px]"
+        style={{
+          top: 18,
+          right: 56, // sits to the LEFT of the live-pulse dot at right:24
+          padding: "4px 10px",
+          background: "rgba(255, 204, 0, 0.12)",
+          border: "1px solid rgba(255, 204, 0, 0.55)",
+          borderRadius: 3,
+          fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
+          color: "rgba(255, 230, 130, 0.95)",
+          letterSpacing: "0.18em",
+          fontSize: 10,
+          textTransform: "uppercase",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "#ffcc00",
+            boxShadow: "0 0 6px #ffcc00",
+            animation: "landing-pulse 1.6s ease-in-out infinite",
+          }}
+        />
+        <span>Work in Progress</span>
+      </div>
+
       {/* "click to enter" hint — fades in after 1.5s. */}
       <div
         className="pointer-events-none absolute left-1/2 -translate-x-1/2 select-none"

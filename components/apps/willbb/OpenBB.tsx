@@ -231,6 +231,19 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
   const [watchQuotes, setWatchQuotes] = useState<Quote[]>([]);
   const [chart, setChart] = useState<ChartResponse | null>(null);
   const [loadingChart, setLoadingChart] = useState(false);
+  // `slowLoading` flips true after the chart fetch has been pending for
+  // ~1.5 s. We show a subtle "first load can take a few seconds" notice
+  // so the user knows the wait is the upstream Yahoo round-trip, not a
+  // dead app. Reset on every loadingChart toggle.
+  const [slowLoading, setSlowLoading] = useState(false);
+  useEffect(() => {
+    if (!loadingChart) {
+      setSlowLoading(false);
+      return;
+    }
+    const id = window.setTimeout(() => setSlowLoading(true), 1500);
+    return () => window.clearTimeout(id);
+  }, [loadingChart]);
   const [chartErr, setChartErr] = useState<string | null>(null);
   const [degraded, setDegraded] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
@@ -481,6 +494,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
             range={range}
             setRange={setRange}
             loading={loadingChart}
+            slowLoading={slowLoading}
             error={chartErr}
           />
         )}
@@ -694,6 +708,7 @@ function MarketsTab({
   range,
   setRange,
   loading,
+  slowLoading,
   error,
 }: {
   watchlist: SymbolMeta[];
@@ -704,8 +719,11 @@ function MarketsTab({
   range: (typeof RANGES)[number];
   setRange: (r: (typeof RANGES)[number]) => void;
   loading: boolean;
+  /** Pending fetch has been running > 1.5 s — surface a "please wait" hint. */
+  slowLoading: boolean;
   error: string | null;
 }) {
+  void loading;
   const byKey = new Map(watchQuotes.map((q) => [q.symbol, q]));
   const focusQ = byKey.get(focused);
   return (
@@ -748,6 +766,39 @@ function MarketsTab({
         className="flex-1 min-w-0 flex flex-col"
         style={{ background: COLORS.panel }}
       >
+        {/* Slow-loading banner — only renders if the chart fetch has been
+            pending > 1.5 s. Tells the user the wait is the upstream Yahoo
+            round-trip on a cold cache, not a stuck app. The first cold
+            fetch for a never-before-seen symbol can be 1–6 s; everything
+            after sits in cache and resolves in ~5 ms. */}
+        {slowLoading && (
+          <div
+            className="px-[14px] py-[5px] text-[11px] shrink-0 flex items-center gap-[8px]"
+            style={{
+              background: "rgba(51,187,255,0.12)",
+              borderBottom: "1px solid " + COLORS.brand,
+              color: COLORS.text,
+              fontFamily: FONT_UI,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: COLORS.brand,
+                boxShadow: "0 0 6px " + COLORS.brand,
+                animation: "willbb-livepulse 1.4s ease-in-out infinite",
+              }}
+            />
+            <span style={{ flex: 1 }}>
+              <strong style={{ color: COLORS.brand }}>Loading market data —</strong>{" "}
+              first fetch for a new symbol can take a few seconds while we
+              warm the cache. Subsequent loads are instant.
+            </span>
+          </div>
+        )}
         {/* Chart header */}
         <div
           className="px-[16px] py-[12px] flex items-end justify-between gap-[12px]"
