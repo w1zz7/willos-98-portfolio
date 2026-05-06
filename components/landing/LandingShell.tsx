@@ -143,12 +143,18 @@ export function LandingShell() {
       {/* "Work in progress" badge — top-right corner. The site is actively
           under development, so the visitor sees a clear visual signal that
           some pieces may be incomplete or rough. Pulses subtly so it reads
-          as "active" rather than "stuck." */}
+          as "active" rather than "stuck."
+
+          Mirrors the brand watermark at top-left (top:18 / left:22) — same
+          baseline, same edge inset, so the two corner elements feel like
+          symmetric anchors rather than one floating loose. The live-pulse
+          dot lives INSIDE the badge so we don't have a second cyan dot
+          floating at a slightly-different y. */}
       <div
         className="pointer-events-none absolute select-none flex items-center gap-[8px]"
         style={{
           top: 18,
-          right: 56, // sits to the LEFT of the live-pulse dot at right:24
+          right: 22,
           padding: "4px 10px",
           background: "rgba(255, 204, 0, 0.12)",
           border: "1px solid rgba(255, 204, 0, 0.55)",
@@ -211,22 +217,6 @@ export function LandingShell() {
       >
         Will Zhang · Drexel LeBow · 2029
       </div>
-
-      {/* Pulsing dot in the corner for "live" feel. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute"
-        style={{
-          top: 22,
-          right: 24,
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: "#33BBFF",
-          boxShadow: "0 0 12px #33BBFF",
-          animation: "landing-pulse 1.6s ease-in-out infinite",
-        }}
-      />
 
       <style>{`
         @keyframes landing-pulse {
