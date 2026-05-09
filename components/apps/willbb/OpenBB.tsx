@@ -277,46 +277,44 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     });
   }, [focused]);
 
-  // Pre-warm the Research tab's data universe on terminal open so that
-  // when the user eventually clicks "Research" the panel paints with zero
-  // network wait. Three parallel buckets:
+  // Lightweight terminal-open prewarm. The previous version aggressively
+  // prefetched 32 decile-sort symbols × 2y daily bars + 12 correlation
+  // symbols × 3 mo bars on terminal mount — that single fan-out tripped
+  // Yahoo's per-IP rate limiter and made the FOCUSED symbol's chart fetch
+  // (the one the user is actually staring at) take 12 s as a side effect.
   //
-  //   1. Carhart 4-factor ETFs (SPY / IWM / IUSV / IUSG / MTUM) — used by
-  //      Cockpit's rolling-beta and StrategyLab's factor regression.
-  //   2. Correlation-matrix universe (12 mega-caps) — used by Scanner's
-  //      12-asset rolling Pearson r heatmap. 3 mo daily bars each.
-  //   3. Decile-sort universe (32 large-caps) — used by Scanner's
-  //      cross-sectional decile factor lab. 2 yr daily bars each.
+  // The right model: only prewarm what the user is highly likely to look at
+  // FIRST. Pre-warming heavier tabs (Cross-Section's decile factory) gets
+  // deferred to the moment the user clicks that specific tab. The browser
+  // fetches it then in <1 s on warm cache — fine. Recruiters spend their
+  // first 30 s on Markets + Equity Research; by the time they click
+  // Cross-Section, the focused-symbol cache is already warm.
   //
-  // We also ping QuantDesk's lazy chunk so its JS is in the browser cache
-  // when the tab activates — saves ~120 ms of waterfall on click.
-  //
-  // Runs ONCE on mount and is fire-and-forget. Even if Yahoo is slow, the
-  // background warmups don't block the Markets-tab paint.
+  // What we DO prewarm:
+  //   1. SPY @ 1mo — used by Cockpit for the rolling-beta benchmark.
+  //   2. JS chunks for the lazy-loaded tabs (QuantDesk / Equity / Discovery).
+  //   3. Equity Research profile + statistics for the FOCUSED symbol —
+  //      these are tiny payloads that paint the headline Equity card instantly.
   useEffect(() => {
     Promise.resolve().then(() => {
-      // Tier 1: factor ETFs (5 calls).
-      ["SPY", "IWM", "IUSV", "IUSG", "MTUM"].forEach((s) =>
-        prefetchChart(s, "1mo", "1d"),
-      );
-      // Tier 2: correlation universe (12 calls @ 3mo).
-      ["SPY", "QQQ", "NVDA", "AAPL", "MSFT", "GOOG", "AMZN", "META", "TSLA", "AMD", "NFLX", "AVGO"]
-        .forEach((s) => prefetchChart(s, "3mo", "1d"));
-      // Tier 3: decile universe (32 calls @ 2y) — biggest payload, lowest
-      // priority. Stagger by 100 ms steps so the network panel doesn't show
-      // a 32-request waterfall spike right at terminal open.
-      const decileSyms = [
-        "AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "META", "TSLA", "AMD",
-        "AVGO", "NFLX", "ORCL", "CRM", "INTC", "CSCO", "PYPL", "QCOM",
-        "BAC", "JPM", "V", "MA", "UNH", "JNJ", "PFE", "MRK",
-        "WMT", "HD", "PG", "KO", "PEP", "MCD", "NKE", "DIS",
-      ];
-      decileSyms.forEach((s, i) =>
-        window.setTimeout(() => prefetchChart(s, "2y", "1d"), i * 50),
-      );
-      // QuantDesk JS chunk warmup — kick off the import() now so the lazy
-      // dynamic import resolves from cache when the Research tab activates.
+      // Single benchmark fetch — needed by Cockpit's beta calculation.
+      prefetchChart("SPY", "1mo", "1d");
+
+      // Kick off the dynamic-import resolution for each lazy-loaded tab
+      // so the JS chunk is in browser cache by the time the user clicks.
+      // ~50 ms saved per tab vs. cold-loading at click time. Fire-and-forget.
       void import("./quantdesk/QuantDesk");
+      void import("./EquityResearch");
+      void import("./Discovery");
+
+      // Pre-warm the Equity Research headline cards for the focused symbol.
+      // Both endpoints are < 200 KB and resolve in ~1.5 s on a cold IP.
+      // By the time the recruiter clicks the tab, the cards paint instantly.
+      ["profile", "statistics"].forEach((module) => {
+        fetch(
+          `/api/markets/equity?module=${module}&symbol=${encodeURIComponent(focused)}`,
+        ).catch(() => {});
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

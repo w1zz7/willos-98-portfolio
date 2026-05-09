@@ -97,14 +97,18 @@ export function LandingShell() {
       ref={wrapRef}
       className="fixed inset-0 z-[100000] overflow-hidden"
       style={{
-        background: "radial-gradient(ellipse at center, #0a0d12 0%, #000 70%)",
+        // Slightly cooler bias on the radial — old CRT phosphors tend toward a
+        // hint of blue-green at full black. Pure #000 reads as flat OLED; this
+        // reads as "old monitor in a dark room."
+        background:
+          "radial-gradient(ellipse at center, #08111a 0%, #02030a 55%, #000005 100%)",
         opacity: fading ? 0 : 1,
         transition: "opacity 220ms ease-out",
         cursor: "pointer",
       }}
       aria-label="Welcome — click to enter"
     >
-      {/* Optional faint scanlines for that CRT vibe. */}
+      {/* CRT scanlines — every 3px, very subtle. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -112,6 +116,47 @@ export function LandingShell() {
           background:
             "repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 3px)",
           mixBlendMode: "screen",
+        }}
+      />
+
+      {/* Film grain — animated SVG noise. SVG `feTurbulence` generates a
+          fractal noise field; we tile it and animate via CSS. The
+          mix-blend-mode "overlay" stamps the noise over the image without
+          tinting flat areas. ~6 KB; rendered once and animated by transform
+          so the GPU handles it. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 landing-grain"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.7 0 0 0 0 0.7 0 0 0 0 0.7 0 0 0 0.45 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+          opacity: 0.08,
+          mixBlendMode: "overlay",
+        }}
+      />
+
+      {/* Slow horizontal sync line — a ~3px-tall bright band that travels
+          down the screen every 6.5s, like a TV that's just barely losing
+          v-hold. Pure flavor. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 landing-sync"
+        style={{
+          height: 3,
+          background:
+            "linear-gradient(180deg, transparent 0%, rgba(51,187,255,0.18) 30%, rgba(255,255,255,0.10) 50%, rgba(51,187,255,0.18) 70%, transparent 100%)",
+          mixBlendMode: "screen",
+        }}
+      />
+
+      {/* Soft CRT vignette on the corners — a radial darkening that anchors
+          the strip to the center. Sits OVER the canvas but under the chrome. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%)",
         }}
       />
 
@@ -182,46 +227,118 @@ export function LandingShell() {
         <span>Work in Progress</span>
       </div>
 
-      {/* "click to enter" hint — fades in after 1.5s. */}
-      <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 select-none"
-        style={{
-          bottom: 56,
-          fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
-          color: "rgba(255,255,255,0.78)",
-          letterSpacing: "0.22em",
-          fontSize: 12,
-          textTransform: "uppercase",
-          opacity: hintVisible ? 1 : 0,
-          transform: hintVisible ? "translate(-50%, 0)" : "translate(-50%, 6px)",
-          transition: "opacity 700ms ease-out, transform 700ms ease-out",
-        }}
-      >
-        <span style={{ color: "#33BBFF" }}>›</span>{" "}
-        click anywhere to enter{" "}
-        <span style={{ color: "#33BBFF" }}>‹</span>
-      </div>
+      {/* Vintage status bar at the bottom — single horizontal strip, three
+          sections (left | center | right), full viewport width. Replaces the
+          previous floating "click anywhere" hint + tagline pair which sat at
+          slightly-mismatched bottom insets (56 vs 30) and didn't read as a
+          unified element. The status bar reads like the bottom of an old
+          terminal/DOS shell — clearly anchored, balanced, and period-correct.
 
-      {/* Tagline — fades in with the hint. */}
+          Sections:
+            LEFT    [POWER●] WILLOS-98 v1.0 · MOBIUS LOADER · READY
+            CENTER  ›  click anywhere to enter  ‹       (the action prompt)
+            RIGHT   WILL ZHANG · DREXEL LEBOW · 2029  (identity stamp)
+
+          Border-top + faint background separates it from the canvas without
+          breaking the immersion. Fades in with the rest of the chrome. */}
       <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 select-none text-center"
+        className="pointer-events-none absolute inset-x-0 bottom-0 select-none"
         style={{
-          bottom: 30,
+          height: 36,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 22px",
           fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
-          color: "rgba(255,255,255,0.35)",
-          letterSpacing: "0.14em",
           fontSize: 10,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.78) 100%)",
+          borderTop: "1px solid rgba(51,187,255,0.18)",
           opacity: hintVisible ? 1 : 0,
-          transition: "opacity 800ms ease-out 200ms",
+          transition: "opacity 700ms ease-out 100ms",
+          color: "rgba(255,255,255,0.55)",
         }}
       >
-        Will Zhang · Drexel LeBow · 2029
+        {/* Left — system identifier with a "power on" LED */}
+        <div className="flex items-center gap-[10px]">
+          <span
+            aria-hidden
+            style={{
+              display: "inline-block",
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#5dd39e",
+              boxShadow: "0 0 6px #5dd39e",
+              animation: "landing-led 2.2s ease-in-out infinite",
+            }}
+          />
+          <span style={{ color: "rgba(255,255,255,0.78)" }}>WillOS-98</span>
+          <span style={{ color: "rgba(255,255,255,0.18)" }}>│</span>
+          <span style={{ color: "rgba(255,255,255,0.45)" }}>Mobius Loader v1.0</span>
+          <span style={{ color: "rgba(255,255,255,0.18)" }}>│</span>
+          <span style={{ color: "#5dd39e" }}>[ READY ]</span>
+        </div>
+
+        {/* Center — the action prompt. Slightly larger + subtle blink to
+            telegraph "this is what you do next." */}
+        <div
+          className="landing-prompt"
+          style={{
+            color: "rgba(255,255,255,0.92)",
+            letterSpacing: "0.22em",
+            fontSize: 11,
+          }}
+        >
+          <span style={{ color: "#33BBFF" }}>›</span>{" "}
+          click anywhere to enter{" "}
+          <span style={{ color: "#33BBFF" }}>‹</span>
+        </div>
+
+        {/* Right — identity stamp */}
+        <div style={{ color: "rgba(255,255,255,0.40)" }}>
+          Will Zhang · Drexel LeBow · 2029
+        </div>
       </div>
 
       <style>{`
         @keyframes landing-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.45; transform: scale(0.7); }
+        }
+        @keyframes landing-led {
+          0%, 100% { opacity: 1; }
+          47%, 53% { opacity: 0.35; }
+          50% { opacity: 1; }
+        }
+        @keyframes landing-prompt-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
+        }
+        .landing-prompt {
+          animation: landing-prompt-blink 2.4s ease-in-out infinite;
+        }
+        @keyframes landing-grain-shift {
+          0% { transform: translate(0, 0); }
+          25% { transform: translate(-3%, 2%); }
+          50% { transform: translate(2%, -2%); }
+          75% { transform: translate(-2%, -3%); }
+          100% { transform: translate(0, 0); }
+        }
+        .landing-grain {
+          background-size: 160px 160px;
+          animation: landing-grain-shift 1.2s steps(4) infinite;
+        }
+        @keyframes landing-sync-travel {
+          0% { top: -4%; opacity: 0; }
+          12% { opacity: 1; }
+          88% { opacity: 1; }
+          100% { top: 104%; opacity: 0; }
+        }
+        .landing-sync {
+          animation: landing-sync-travel 6.5s linear infinite;
         }
       `}</style>
     </div>

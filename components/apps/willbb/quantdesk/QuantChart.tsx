@@ -364,7 +364,16 @@ export default function QuantChart({
     startIdx: number;
     widthCss: number;
     visibleAtStart: number;
+    /** Most recent client X (for velocity tracking on release). */
+    lastClientX: number;
+    /** Timestamp (ms) of the most recent move sample. */
+    lastTime: number;
+    /** Pixels-per-millisecond velocity, smoothed across move samples. */
+    velocity: number;
   } | null>(null);
+  /** Inertia animation handle — runs after the user releases a drag with
+   *  enough velocity. Ref so we can cancel it from any handler. */
+  const inertiaRafRef = useRef<number | null>(null);
 
   // Reset pan/zoom on bar count change.
   const lastBarsLenRef = useRef<number>(bars.length);
@@ -432,27 +441,78 @@ export default function QuantChart({
     }
     function onMove(e: MouseEvent) {
       if (!dragRef.current) return;
-      const { startClientX, startIdx, widthCss, visibleAtStart } = dragRef.current;
+      const d = dragRef.current;
       const { dx: dxNow, barsLen } = panRef.current;
-      const cssDeltaX = e.clientX - startClientX;
+      const cssDeltaX = e.clientX - d.startClientX;
       // dxNow is in CSS pixels per bar (geo.dx already in css coords).
       const dragDeltaBars = -cssDeltaX / dxNow;
       const newStart = Math.max(
         0,
         Math.min(
-          barsLen - visibleAtStart,
-          Math.round(startIdx + dragDeltaBars),
+          barsLen - d.visibleAtStart,
+          Math.round(d.startIdx + dragDeltaBars),
         ),
       );
       pendingPanRef.current = newStart;
+      // Track instantaneous velocity (px/ms) with exponential smoothing so
+      // a single jittery sample doesn't dominate the inertia kick. The
+      // smoothed velocity is used by onUp to seed the inertia animation.
+      const now = performance.now();
+      const dt = Math.max(1, now - d.lastTime);
+      const instVel = (e.clientX - d.lastClientX) / dt;
+      d.velocity = d.velocity * 0.7 + instVel * 0.3;
+      d.lastClientX = e.clientX;
+      d.lastTime = now;
       if (rafIdRef.current == null) {
         rafIdRef.current = window.requestAnimationFrame(flushPan);
       }
     }
     function onUp() {
-      if (dragRef.current) {
+      const d = dragRef.current;
+      if (d) {
+        // Capture velocity for inertia BEFORE we clear the drag state.
+        const vAtRelease = d.velocity;
+        const startIdxAtRelease = pendingPanRef.current ?? d.startIdx;
+        const visibleAtRelease = d.visibleAtStart;
         dragRef.current = null;
         document.body.style.cursor = "";
+        // Inertia: if release velocity exceeds a threshold (~0.25 px/ms,
+        // i.e. fast flick), continue panning with exponential decay over
+        // ~600 ms. TradingView and other production charts have this — it
+        // makes a quick browse feel like throwing the chart left/right
+        // instead of dragging-then-snap-stop.
+        const SPEED_THRESHOLD = 0.25;
+        if (Math.abs(vAtRelease) > SPEED_THRESHOLD) {
+          const { dx: dxNow, barsLen } = panRef.current;
+          let velocity = vAtRelease; // px/ms, signed
+          let lastTs = performance.now();
+          let curStart = startIdxAtRelease;
+          const decay = 0.92; // applied per ~16 ms frame → ~0.5 after 8 frames (130 ms)
+          const tick = () => {
+            const now = performance.now();
+            const dt = now - lastTs;
+            lastTs = now;
+            // Convert per-ms velocity to bars per frame.
+            const dPx = velocity * dt;
+            const dBars = -dPx / dxNow;
+            curStart = Math.max(
+              0,
+              Math.min(barsLen - visibleAtRelease, curStart + dBars),
+            );
+            setViewportStartIdx(Math.round(curStart));
+            // Decay for next frame; assume ~16 ms frame so apply decay^(dt/16).
+            velocity *= Math.pow(decay, dt / 16);
+            if (Math.abs(velocity) > 0.02 && curStart > 0 && curStart < barsLen - visibleAtRelease) {
+              inertiaRafRef.current = window.requestAnimationFrame(tick);
+            } else {
+              inertiaRafRef.current = null;
+            }
+          };
+          if (inertiaRafRef.current != null) {
+            window.cancelAnimationFrame(inertiaRafRef.current);
+          }
+          inertiaRafRef.current = window.requestAnimationFrame(tick);
+        }
       }
       if (rafIdRef.current != null) {
         window.cancelAnimationFrame(rafIdRef.current);
@@ -484,6 +544,7 @@ export default function QuantChart({
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
       if (rafIdRef.current != null) window.cancelAnimationFrame(rafIdRef.current);
+      if (inertiaRafRef.current != null) window.cancelAnimationFrame(inertiaRafRef.current);
     };
   }, []);
 
@@ -607,7 +668,12 @@ export default function QuantChart({
         background: COLORS.panel,
         position: "relative",
         height,
-        cursor: isCustomView ? "grab" : "crosshair",
+        // Always show the grab cursor — communicates "this chart is
+        // draggable" the moment the user hovers, matching TradingView's
+        // affordance. Previously we showed `crosshair` until the user had
+        // already entered a custom view (zoomed/panned), which hid the
+        // primary interaction from first-time visitors.
+        cursor: "grab",
         outline: "none",
         // Avoid touch scroll hijacking the page when the user pans the chart.
         touchAction: "none",
@@ -676,12 +742,21 @@ export default function QuantChart({
         if (e.button !== 0) return;
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
+        // Cancel any in-flight inertia from a previous flick — the user
+        // is grabbing again, they want immediate control.
+        if (inertiaRafRef.current != null) {
+          window.cancelAnimationFrame(inertiaRafRef.current);
+          inertiaRafRef.current = null;
+        }
         const visibleAtStart = visibleBarsState ?? bars.length;
         dragRef.current = {
           startClientX: e.clientX,
           startIdx: viewportStartIdx ?? 0,
           widthCss: rect.width,
           visibleAtStart,
+          lastClientX: e.clientX,
+          lastTime: performance.now(),
+          velocity: 0,
         };
         document.body.style.cursor = "grabbing";
         if (visibleBarsState == null) setVisibleBarsState(bars.length);
@@ -691,12 +766,19 @@ export default function QuantChart({
         if (e.touches.length !== 1) return;
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
+        if (inertiaRafRef.current != null) {
+          window.cancelAnimationFrame(inertiaRafRef.current);
+          inertiaRafRef.current = null;
+        }
         const t = e.touches[0];
         dragRef.current = {
           startClientX: t.clientX,
           startIdx: viewportStartIdx ?? 0,
           widthCss: rect.width,
           visibleAtStart: visibleBarsState ?? bars.length,
+          lastClientX: t.clientX,
+          lastTime: performance.now(),
+          velocity: 0,
         };
         if (visibleBarsState == null) setVisibleBarsState(bars.length);
         if (viewportStartIdx == null) setViewportStartIdx(0);

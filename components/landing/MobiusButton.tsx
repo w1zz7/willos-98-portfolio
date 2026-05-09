@@ -211,6 +211,26 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
     // Tilt the strip stack so the camera catches the half-twist on both;
     // pure top-down would just look like a flat ring.
     <group ref={groupRef} rotation={[-0.5, 0, 0.15]}>
+      {/* WIREFRAME GHOST — a slightly-larger Möbius rendered as a wireframe
+          mesh hovering "around" the solid strip. Reads as a vintage
+          schematic/blueprint outline of the same shape, gives the impression
+          that the cyan strip was extruded from this wireframe template.
+          Counter-rotates slowly on its own axis so it's never aligned
+          identically with the solid strip. Pure flavor; ~zero perf cost. */}
+      <mesh
+        geometry={outerGeometry}
+        scale={[1.18, 1.18, 1.18]}
+        rotation={[0.2, 0, 0]}
+      >
+        <meshBasicMaterial
+          color={CYAN}
+          wireframe
+          transparent
+          opacity={0.14}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
       {/* OUTER strip — the cyan hero. MeshPhysicalMaterial with clearcoat +
           iridescence + envMap reflections from the parent Canvas's Environment. */}
       <mesh ref={meshRef} geometry={outerGeometry} castShadow receiveShadow>
@@ -249,6 +269,20 @@ function MobiusMesh({ hovered, clicked, onAnimationDone }: MobiusMeshProps) {
           iridescenceThicknessRange={[200, 600]}
           envMapIntensity={1.4}
           side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* CORE — a tiny glowing sphere at the center where both strips
+          intersect. Reads as the "energy source" the rotation is winding
+          around. Not animated — its emissive intensity reads through the
+          Bloom pass as a soft star. */}
+      <mesh>
+        <sphereGeometry args={[0.06, 16, 16]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive={CYAN}
+          emissiveIntensity={2.4}
+          toneMapped={false}
         />
       </mesh>
     </group>
