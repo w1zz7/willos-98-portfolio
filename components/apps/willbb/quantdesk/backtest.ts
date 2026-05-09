@@ -79,9 +79,18 @@ export interface BacktestParams {
   startingCapital: number; // dollars
   commissionBps: number; // round-trip commission (split entry+exit at half each)
   positionPct: number; // fraction of equity per trade (e.g., 1.0 = 100%)
-  // Realistic transaction-cost model
+  // Realistic transaction-cost model. All bps figures are charged
+  // separately on entry and exit (so `bidAskBps: 2` = 2 bps on entry +
+  // 2 bps on exit = 4 bps round-trip).
   bidAskBps: number; // half-spread in bps; user pays this on entry AND exit
-  marketImpactBps: number; // sqrt-law coefficient: realized slippage = coef × sqrt(size / ADV)
+  /**
+   * Per-leg market-impact charge in bps. We don't have ADV at backtest
+   * time so this is applied as a FLAT bps cost on each side rather than
+   * a true sqrt-law (cost ∝ √(notional/ADV)). For sub-1% ADV trades on
+   * liquid mid-caps the flat-bps approximation is a reasonable proxy.
+   * Set to 0 for a pure execution-cost test.
+   */
+  marketImpactBps: number;
   borrowCostBpsAnnual: number; // annual borrow rate for short legs (in bps; e.g., 75 = 0.75%/yr)
   // Walk-forward CV (optional)
   walkForward?: {
@@ -308,16 +317,40 @@ export function runBacktest(
   // (on the order of 1e-3) but above the float epsilon, so we don't divide
   // by an effectively-zero value.
   const ZERO_EPS = 1e-12;
+  // Sharpe is by definition computed on EXCESS returns (return minus
+  // risk-free rate), not raw returns. The risk-free is small at the daily
+  // level (4.5% / 252 ≈ 0.018%), comparable to the no-skill drift of a
+  // strategy, so omitting it understates the rejection of the null. We
+  // use the same 4.5% annualized assumption that buildFactorReturns uses
+  // for Carhart Mkt-RF, scaled to the inferred bar cadence.
+  const RF_ANNUALIZED = 0.045;
+  const rfPerBar = RF_ANNUALIZED / barsPerYear;
+  // "Truly idle" detection: strategy made no equity-curve moves AND placed
+  // no trades. In that case the Sharpe/Sortino are undefined and we report
+  // 0 — without this guard the rf subtraction makes idle-cash strategies
+  // report a negative Sharpe (cash is "under-performing" the 4.5% rf rate
+  // every bar), which is technically true but not the intent of the test.
+  // Real strategies that just happened to draw a flat equity curve still
+  // get the rf-adjusted Sharpe because they have nonzero stdR somewhere.
+  const trulyIdle = trades.length === 0 && stdR < ZERO_EPS;
+  const excessMean = trulyIdle ? 0 : (Number.isFinite(meanR) ? meanR - rfPerBar : 0);
   const sharpe =
-    stdR > ZERO_EPS && Number.isFinite(meanR) ? (meanR / stdR) * annFactor : 0;
+    stdR > ZERO_EPS && Number.isFinite(excessMean) ? (excessMean / stdR) * annFactor : 0;
 
-  const downside = dailyRet.filter((r) => r < 0);
-  const dnVar = downside.length > 0
-    ? downside.reduce((a, b) => a + b * b, 0) / downside.length
-    : 0;
+  // Sortino — target downside deviation against the risk-free rate (MAR
+  // = rfPerBar). Sum squared SHORTFALL below the target, divide by TOTAL
+  // window count, take sqrt. Matches Sortino's 1991 definition. Same
+  // total-n convention as indicators.ts (downside-only count would
+  // over-state Sortino for assets with rare deep losses).
+  let dnSumSq = 0;
+  for (const r of dailyRet) {
+    const shortfall = r - rfPerBar;
+    if (shortfall < 0) dnSumSq += shortfall * shortfall;
+  }
+  const dnVar = dailyRet.length > 0 ? dnSumSq / dailyRet.length : 0;
   const dnStd = Math.sqrt(dnVar);
   const sortino =
-    dnStd > ZERO_EPS && Number.isFinite(meanR) ? (meanR / dnStd) * annFactor : 0;
+    dnStd > ZERO_EPS && Number.isFinite(excessMean) ? (excessMean / dnStd) * annFactor : 0;
 
   // Max drawdown — peak guard against the empty-equity-curve case.
   let peak = eqVals[0] ?? startCapital;

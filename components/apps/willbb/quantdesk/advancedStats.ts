@@ -140,6 +140,19 @@ export interface PSRResult {
  * PSR(SR*) = Φ( (SR_obs - SR*) · √(n - 1) /
  *               √( 1 - γ₃·SR_obs + (γ₄ - 1)/4 · SR_obs² ) )
  *
+ * IMPORTANT — γ₄ in the formula is the FULL fourth standardized moment
+ * (kurtosis), not the excess kurtosis. For a Gaussian distribution
+ * γ₃ = 0, γ₄ = 3, so the variance term reduces to 1 + 0.5·SR² — which
+ * is the textbook standard error of a Sharpe estimator under normality
+ * (Lo 2002). Earlier versions of this routine inadvertently used excess
+ * kurtosis here (γ₄ - 3), which under-stated the standard error of SR
+ * by 0.5·SR² and therefore over-stated PSR/DSR confidence. The fix:
+ * convert excess back to full kurtosis as `kurt + 3` before applying
+ * the formula, OR equivalently use `(kurt + 2)/4 · SR²` as the SR²
+ * coefficient. We use the latter to keep `kurt` exposed in the result
+ * as excess (more useful to report; γ_excess = 0 for normal is more
+ * intuitive than γ = 3).
+ *
  * Inputs:
  *   returns       per-period returns (e.g., daily log returns)
  *   srBenchmark   the SR threshold to test against (annualized,
@@ -167,13 +180,15 @@ export function probabilisticSharpe(
   const srPeriod = mu / sigma;
   const sr = srPeriod * Math.sqrt(periodsPerYear);
   const skew = skewness(returns);
-  const kurt = excessKurtosis(returns);
+  const kurt = excessKurtosis(returns); // γ_excess = γ - 3
   // Convert annualized benchmark back to per-period for the comparison.
   const srBenchPeriod = srBenchmark / Math.sqrt(periodsPerYear);
+  // (γ - 1)/4 = ((kurt + 3) - 1)/4 = (kurt + 2)/4 — the correct SR²
+  // coefficient. Reduces to 0.5·SR² under normality (kurt = 0). ✓
   const denom = Math.sqrt(
     Math.max(
       Number.EPSILON,
-      1 - skew * srPeriod + ((kurt) / 4) * srPeriod * srPeriod,
+      1 - skew * srPeriod + ((kurt + 2) / 4) * srPeriod * srPeriod,
     ),
   );
   const z = ((srPeriod - srBenchPeriod) * Math.sqrt(n - 1)) / denom;
@@ -219,11 +234,15 @@ export function deflatedSharpe(
   }
   // Variance of the SR estimator under skew/kurtosis (Mertens 2002):
   //   Var(SR) = ( 1 - γ₃·SR + (γ₄ - 1)/4·SR² ) / (n - 1)
+  // where γ₄ is FULL kurtosis. With excess kurtosis (kurt = γ₄ - 3):
+  //   coefficient on SR² = (kurt + 2)/4
+  // Reduces to 0.5·SR² under normality — matches Lo (2002). See the
+  // detailed comment in probabilisticSharpe above.
   const sr = base.sr / Math.sqrt(periodsPerYear); // back to per-period
   const varSR =
     Math.max(
       Number.EPSILON,
-      1 - base.skew * sr + ((base.kurt) / 4) * sr * sr,
+      1 - base.skew * sr + ((base.kurt + 2) / 4) * sr * sr,
     ) /
     Math.max(1, base.n - 1);
   const sdSR = Math.sqrt(varSR);

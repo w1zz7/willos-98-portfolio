@@ -309,7 +309,12 @@ export default function Cockpit({
     const recent = staticAssetRet.slice(-252).filter((v): v is number => v != null);
     const meanR = recent.reduce((a, b) => a + b, 0) / Math.max(1, recent.length);
     const sdR = Math.sqrt(recent.reduce((a, b) => a + (b - meanR) ** 2, 0) / Math.max(1, recent.length - 1));
-    const sharpe = sdR > 0 ? (meanR / sdR) * Math.sqrt(252) : 0;
+    // Sharpe on the asset's standalone returns, with a 4.5% annualized
+    // risk-free deduction (= ~1.8 bps/day). Without the rf subtraction this
+    // is a "growth ratio" rather than a Sharpe — same convention as
+    // backtest.ts and buildFactorReturns.
+    const RF_DAILY = 0.045 / 252;
+    const sharpe = sdR > 0 ? ((meanR - RF_DAILY) / sdR) * Math.sqrt(252) : 0;
     const annVol = sdR * Math.sqrt(252);
 
     const rvYZ = realized_vol_yz(staticBars, indicators.rv_yz.params.n);

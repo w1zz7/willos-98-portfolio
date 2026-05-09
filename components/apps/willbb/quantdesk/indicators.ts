@@ -248,6 +248,16 @@ export function rolling_corr(s1: Series, s2: Series, n: number = 60): Series {
 /**
  * Rolling Sortino ratio. Penalizes only downside volatility (returns < 0).
  * Annualized × √252.
+ *
+ * Convention: we divide the sum of squared downside returns by the TOTAL
+ * window count `n`, not by the count of strictly-negative observations.
+ * This matches Sortino's original 1991 definition (the "target downside
+ * deviation" formulation), where the denominator is "expected squared
+ * downside" — including the zeros that come from upside periods. Under
+ * the alternate "downside-only count" denominator (used by some
+ * textbooks), an asset with rare-but-deep losses gets an artificially
+ * small denominator and an inflated Sortino. The total-n form gives a
+ * comparable scale to the Sharpe ratio's σ.
  */
 export function sortino(returns: Series, n: number = 60): Series {
   const out: Series = new Array(returns.length).fill(null);
@@ -259,9 +269,11 @@ export function sortino(returns: Series, n: number = 60): Series {
     }
     if (w.length < 5) continue;
     const m = w.reduce((s, v) => s + v, 0) / w.length;
-    const dn = w.filter((v) => v < 0);
-    if (dn.length < 2) continue;
-    const dnVar = dn.reduce((s, v) => s + v * v, 0) / dn.length;
+    // Sum squared downside (only contributions from r < 0) — divide by
+    // TOTAL window length, not just downside count. See header comment.
+    let dnSumSq = 0;
+    for (const v of w) if (v < 0) dnSumSq += v * v;
+    const dnVar = dnSumSq / w.length;
     const dnStd = Math.sqrt(dnVar);
     if (dnStd > 0) out[i] = (m / dnStd) * Math.sqrt(TRADING_DAYS);
   }
@@ -343,41 +355,104 @@ export function hurst(returns: number[]): number {
 }
 
 /**
- * Augmented Dickey-Fuller test statistic (lag-1, no constant). A negative
- * value > critical value means we cannot reject unit-root (non-stationary).
- *   Δy_t = ρ · y_{t-1} + ε_t
+ * Augmented Dickey-Fuller (ADF) test statistic for stationarity.
  *
- * Returns the t-statistic on ρ̂. Critical values: -2.86 (95%), -3.43 (99%).
+ *   Δy_t = α + β·y_{t-1} + Σ_{i=1..p} γ_i·Δy_{t-i} + ε_t
+ *
+ * The test statistic is the t-stat on β̂. Negative values that fall below
+ * the critical value reject the null of a unit root (i.e., the series is
+ * stationary). Critical values for the τ_μ (constant-only) regression:
+ *   -2.57 (90%), -2.86 (95%), -3.43 (99%).
+ *
+ * The function regresses with an intercept (constant term) by default —
+ * essential for series that don't have zero mean (price levels, log
+ * prices, etc.). Without an intercept, the t-stat is biased toward
+ * non-rejection on any series with a non-zero mean.
+ *
+ * `lags` (default 1) is the number of augmenting lagged-difference terms
+ * — set to 0 for the basic Dickey-Fuller test, or higher (e.g., 4 for
+ * monthly data with annual seasonality) when residual autocorrelation
+ * suggests it. The textbook automatic-lag rule is
+ * `floor(12·(T/100)^(1/4))`.
  */
-export function adf_stat(series: number[]): number {
+export function adf_stat(series: number[], lags: number = 1): number {
   const n = series.length;
-  if (n < 30) return 0;
-  // Compute Δy and y_{t-1}
+  if (n < Math.max(30, 4 + lags * 2)) return 0;
+  // Build (Δy, y_{t-1}, Δy_{t-1}, ..., Δy_{t-p}) starting at t = lags + 1.
+  // We need enough leading observations to compute all lagged differences.
+  const startIdx = lags + 1;
   const dy: number[] = [];
-  const ylag: number[] = [];
-  for (let i = 1; i < n; i++) {
-    dy.push(series[i] - series[i - 1]);
-    ylag.push(series[i - 1]);
+  // Each row of X = [1 (intercept), y_{t-1}, Δy_{t-1}, ..., Δy_{t-p}].
+  const X: number[][] = [];
+  for (let t = startIdx; t < n; t++) {
+    const dyT = series[t] - series[t - 1];
+    if (!Number.isFinite(dyT)) continue;
+    const row: number[] = [1, series[t - 1]];
+    let ok = true;
+    for (let p = 1; p <= lags; p++) {
+      const dyLag = series[t - p] - series[t - p - 1];
+      if (!Number.isFinite(dyLag)) { ok = false; break; }
+      row.push(dyLag);
+    }
+    if (!ok) continue;
+    dy.push(dyT);
+    X.push(row);
   }
-  // OLS regression of dy on ylag (no intercept for simplicity)
   const N = dy.length;
-  let sumXY = 0;
-  let sumXX = 0;
-  for (let i = 0; i < N; i++) {
-    sumXY += ylag[i] * dy[i];
-    sumXX += ylag[i] * ylag[i];
+  const k = X[0]?.length ?? 0;
+  if (N < k + 1) return 0;
+  // Solve OLS via the normal equations: β = (X'X)^-1 X'Y.
+  // We need the SE of β[1] (the y_{t-1} coefficient) — that's the ADF
+  // statistic. Build X'X and X'y, then invert via Gauss-Jordan.
+  const XtX: number[][] = Array.from({ length: k }, () => Array(k).fill(0));
+  const XtY: number[] = Array(k).fill(0);
+  for (let t = 0; t < N; t++) {
+    for (let i = 0; i < k; i++) {
+      XtY[i] += X[t][i] * dy[t];
+      for (let j = 0; j < k; j++) XtX[i][j] += X[t][i] * X[t][j];
+    }
   }
-  if (sumXX === 0) return 0;
-  const rho = sumXY / sumXX;
-  // Residuals
+  // Gauss-Jordan inversion of XtX.
+  const aug: number[][] = XtX.map((row, i) => [
+    ...row,
+    ...Array.from({ length: k }, (_, j) => (i === j ? 1 : 0)),
+  ]);
+  for (let col = 0; col < k; col++) {
+    let pivotRow = col;
+    let pivotVal = Math.abs(aug[col][col]);
+    for (let r = col + 1; r < k; r++) {
+      if (Math.abs(aug[r][col]) > pivotVal) {
+        pivotVal = Math.abs(aug[r][col]);
+        pivotRow = r;
+      }
+    }
+    if (pivotVal < 1e-12) return 0; // singular
+    if (pivotRow !== col) [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
+    const pv = aug[col][col];
+    for (let j = 0; j < 2 * k; j++) aug[col][j] /= pv;
+    for (let r = 0; r < k; r++) {
+      if (r === col) continue;
+      const f = aug[r][col];
+      if (Math.abs(f) < 1e-15) continue;
+      for (let j = 0; j < 2 * k; j++) aug[r][j] -= f * aug[col][j];
+    }
+  }
+  const inv = aug.map((row) => row.slice(k));
+  const beta: number[] = Array(k).fill(0);
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j < k; j++) beta[i] += inv[i][j] * XtY[j];
+  }
+  // Residual variance.
   let sse = 0;
-  for (let i = 0; i < N; i++) {
-    const pred = rho * ylag[i];
-    sse += (dy[i] - pred) ** 2;
+  for (let t = 0; t < N; t++) {
+    let yhat = 0;
+    for (let i = 0; i < k; i++) yhat += X[t][i] * beta[i];
+    sse += (dy[t] - yhat) ** 2;
   }
-  const sigma2 = sse / Math.max(1, N - 1);
-  const seRho = Math.sqrt(sigma2 / sumXX);
-  return seRho > 0 ? rho / seRho : 0;
+  const sigma2 = sse / Math.max(1, N - k);
+  // SE of β[1] (the y_{t-1} coefficient).
+  const seBeta = Math.sqrt(Math.max(0, sigma2 * inv[1][1]));
+  return seBeta > 0 ? beta[1] / seBeta : 0;
 }
 
 /**
