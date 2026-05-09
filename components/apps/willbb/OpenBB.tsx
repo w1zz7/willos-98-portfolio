@@ -498,7 +498,7 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
       <TickerStrip quotes={stripQuotes} symbols={INDEX_STRIP} />
       {degraded && (
         <div
-          className="px-[16px] py-[6px] text-[12px] shrink-0"
+          className="px-[14px] py-[6px] text-[12px] shrink-0"
           style={{
             background: COLORS.brandSoft,
             borderBottom: "1px solid " + COLORS.brand,
@@ -832,7 +832,7 @@ function MarketsTab({
             after sits in cache and resolves in ~5 ms. */}
         {slowLoading && (
           <div
-            className="px-[16px] py-[6px] text-[11px] shrink-0 flex items-center gap-[8px]"
+            className="px-[14px] py-[6px] text-[11px] shrink-0 flex items-center gap-[8px]"
             style={{
               background: "rgba(51,187,255,0.12)",
               borderBottom: "1px solid " + COLORS.brand,
@@ -860,7 +860,7 @@ function MarketsTab({
         )}
         {/* Chart header */}
         <div
-          className="px-[16px] py-[12px] flex items-end justify-between gap-[12px]"
+          className="px-[14px] py-[12px] flex items-end justify-between gap-[12px]"
           style={{ borderBottom: "1px solid " + COLORS.border }}
         >
           <div>
@@ -1134,7 +1134,7 @@ function StatusBar({
 }) {
   return (
     <div
-      className="px-[10px] py-[3px] flex justify-between text-[11px] shrink-0"
+      className="px-[14px] py-[3px] flex justify-between text-[11px] shrink-0"
       style={{
         borderTop: "1px solid " + COLORS.border,
         background: "#0c1218",

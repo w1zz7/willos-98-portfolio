@@ -116,8 +116,23 @@ function CapabilityStrip() {
         whiteSpace: "nowrap",
       }}
     >
-      <span style={{ color: RED, fontWeight: 700 }}>·</span>
-      <span style={{ color: COLORS.textDim, fontWeight: 600 }}>QUANT LAB</span>
+      {/* Pulsing red dot — same animation as the Research tab badge so the
+          eye carries the "this is the differentiated pane" cue from the
+          tab bar down into the body. */}
+      <span
+        aria-hidden
+        style={{
+          display: "inline-block",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: RED,
+          boxShadow: "0 0 6px " + RED,
+          flexShrink: 0,
+          animation: "willbb-livepulse 1.4s ease-in-out infinite",
+        }}
+      />
+      <span style={{ color: COLORS.text, fontWeight: 700 }}>QUANT LAB</span>
       <span style={{ color: COLORS.borderSoft }}>│</span>
       {items.map((it, i) => (
         <span

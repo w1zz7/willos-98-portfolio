@@ -56,7 +56,7 @@ const LINES: Line[] = [
   { prefix: ">", text: "WillBB Markets Terminal · v1.0 · build 2026.05", status: "info", delayMs: 0 },
   { prefix: ">", text: "boot · config loaded · 4-tier feed failover engaged", status: "ok", delayMs: 200 },
   { prefix: ">", text: "feed · Yahoo · CoinGecko · Stooq · Alpha Vantage", status: "ok", delayMs: 380 },
-  { prefix: ">", text: "watchlist · 144 symbols · indices · futures · crypto", status: "ok", delayMs: 580 },
+  { prefix: ">", text: "watchlist · 40 curated · indices · futures · crypto", status: "ok", delayMs: 580 },
   { prefix: ">", text: "cache · in-flight dedup + SWR · 30 s batch TTL", status: "ok", delayMs: 780 },
   { prefix: ">", text: "engine · TradingView + QuantChart canvas (60 fps)", status: "ok", delayMs: 980 },
   { prefix: ">", text: "indicators · sma · ema · rsi · macd · bb · adx · atr · ichimoku", status: "ok", delayMs: 1180 },
