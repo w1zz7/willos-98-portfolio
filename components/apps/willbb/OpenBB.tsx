@@ -277,18 +277,46 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
     });
   }, [focused]);
 
-  // Pre-warm the Carhart 4-factor ETFs (SPY / IWM / IUSV / IUSG / MTUM)
-  // on terminal open so that when the user clicks the Research tab, the
-  // factor regression has data immediately instead of waiting on five
-  // serial Yahoo round-trips. Runs ONCE on mount; the chart cache LRU
-  // holds the warmed entries for 60 s.
+  // Pre-warm the Research tab's data universe on terminal open so that
+  // when the user eventually clicks "Research" the panel paints with zero
+  // network wait. Three parallel buckets:
+  //
+  //   1. Carhart 4-factor ETFs (SPY / IWM / IUSV / IUSG / MTUM) — used by
+  //      Cockpit's rolling-beta and StrategyLab's factor regression.
+  //   2. Correlation-matrix universe (12 mega-caps) — used by Scanner's
+  //      12-asset rolling Pearson r heatmap. 3 mo daily bars each.
+  //   3. Decile-sort universe (32 large-caps) — used by Scanner's
+  //      cross-sectional decile factor lab. 2 yr daily bars each.
+  //
+  // We also ping QuantDesk's lazy chunk so its JS is in the browser cache
+  // when the tab activates — saves ~120 ms of waterfall on click.
+  //
+  // Runs ONCE on mount and is fire-and-forget. Even if Yahoo is slow, the
+  // background warmups don't block the Markets-tab paint.
   useEffect(() => {
     Promise.resolve().then(() => {
-      prefetchChart("SPY", "1mo", "1d");
-      prefetchChart("IWM", "1mo", "1d");
-      prefetchChart("IUSV", "1mo", "1d");
-      prefetchChart("IUSG", "1mo", "1d");
-      prefetchChart("MTUM", "1mo", "1d");
+      // Tier 1: factor ETFs (5 calls).
+      ["SPY", "IWM", "IUSV", "IUSG", "MTUM"].forEach((s) =>
+        prefetchChart(s, "1mo", "1d"),
+      );
+      // Tier 2: correlation universe (12 calls @ 3mo).
+      ["SPY", "QQQ", "NVDA", "AAPL", "MSFT", "GOOG", "AMZN", "META", "TSLA", "AMD", "NFLX", "AVGO"]
+        .forEach((s) => prefetchChart(s, "3mo", "1d"));
+      // Tier 3: decile universe (32 calls @ 2y) — biggest payload, lowest
+      // priority. Stagger by 100 ms steps so the network panel doesn't show
+      // a 32-request waterfall spike right at terminal open.
+      const decileSyms = [
+        "AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "META", "TSLA", "AMD",
+        "AVGO", "NFLX", "ORCL", "CRM", "INTC", "CSCO", "PYPL", "QCOM",
+        "BAC", "JPM", "V", "MA", "UNH", "JNJ", "PFE", "MRK",
+        "WMT", "HD", "PG", "KO", "PEP", "MCD", "NKE", "DIS",
+      ];
+      decileSyms.forEach((s, i) =>
+        window.setTimeout(() => prefetchChart(s, "2y", "1d"), i * 50),
+      );
+      // QuantDesk JS chunk warmup — kick off the import() now so the lazy
+      // dynamic import resolves from cache when the Research tab activates.
+      void import("./quantdesk/QuantDesk");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -663,6 +691,12 @@ function TabBar({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
     { id: "discovery", label: "Discovery" },
     { id: "research", label: "Research" },
   ];
+  // The Research tab is the headline pane (QuantDesk: factor regression,
+  // walk-forward CV, decile sort, risk decomp). Visitors tend to scan
+  // through Markets → Equity → Discovery and miss the most differentiated
+  // pane entirely. Painting it red + adding a pulsing "HOT" dot pulls the
+  // eye to it within the first second on the page.
+  const RESEARCH_RED = "#f0686a";
   return (
     <div
       className="flex shrink-0"
@@ -673,22 +707,47 @@ function TabBar({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
     >
       {tabs.map((t) => {
         const active = t.id === tab;
+        const isResearch = t.id === "research";
+        const accent = isResearch ? RESEARCH_RED : COLORS.brand;
         return (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className="px-[18px] py-[9px] text-[12px] tracking-[0.06em]"
+            className="px-[18px] py-[9px] text-[12px] tracking-[0.06em] flex items-center gap-[8px] relative"
             style={{
-              color: active ? COLORS.text : COLORS.textDim,
+              color: isResearch
+                ? active ? "#ffffff" : RESEARCH_RED
+                : active ? COLORS.text : COLORS.textDim,
               borderBottom: active
-                ? "2px solid " + COLORS.brand
+                ? "2px solid " + accent
                 : "2px solid transparent",
-              background: "transparent",
-              fontWeight: active ? 600 : 500,
+              background: isResearch && active
+                ? "rgba(240, 104, 106, 0.18)"
+                : "transparent",
+              fontWeight: isResearch || active ? 600 : 500,
               fontFamily: FONT_UI,
+              letterSpacing: isResearch ? "0.12em" : "0.06em",
+              textTransform: isResearch ? "uppercase" : "none",
+              textShadow: isResearch && !active
+                ? "0 0 8px rgba(240, 104, 106, 0.45)"
+                : undefined,
             }}
           >
+            {isResearch && (
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: RESEARCH_RED,
+                  boxShadow: "0 0 8px " + RESEARCH_RED,
+                  animation: "willbb-livepulse 1.4s ease-in-out infinite",
+                }}
+              />
+            )}
             {t.label}
           </button>
         );

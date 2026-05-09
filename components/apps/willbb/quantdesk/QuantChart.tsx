@@ -706,14 +706,18 @@ export default function QuantChart({
         if (!rect) return;
         const xRel = e.clientX - rect.left;
         const yRel = e.clientY - rect.top;
-        const localIdx = Math.floor((xRel - PADDING_LEFT) / dx);
-        if (localIdx >= 0 && localIdx < visBars.length) {
-          scheduleHover(
-            viewStart + localIdx,
-            { x: xScale(localIdx), y: yRel },
-            { x: xRel, y: yRel },
-          );
-        }
+        // Round (not floor) the cursor → bar mapping so the bar that
+        // "snaps" is whichever is NEAREST to the cursor, not whichever
+        // bar's left edge the cursor most-recently crossed. Halves the
+        // visible mismatch between the bar-snapped tooltip and the
+        // cursor-tracking crosshair line.
+        const localIdx = Math.round((xRel - PADDING_LEFT - dx / 2) / dx);
+        const clampedIdx = Math.max(0, Math.min(visBars.length - 1, localIdx));
+        scheduleHover(
+          viewStart + clampedIdx,
+          { x: xScale(clampedIdx), y: yRel },
+          { x: xRel, y: yRel },
+        );
       }}
     >
       {/* Canvas layer — the hot path. */}
@@ -994,13 +998,18 @@ export default function QuantChart({
           );
         })}
 
-        {/* Hover crosshair */}
-        {hoverIdx != null && hoverPx && (
+        {/* Hover crosshair — vertical line tracks ACTUAL cursor x (hoverClient.x),
+            not the bar-center xScale(...). Snapping to bar centers made the
+            crosshair drift up to dx/2 px from the cursor (visible especially
+            at higher zoom, where dx grows >40 px), which read as "the crosshair
+            is broken." The data-bar tooltip + date label DO snap to the active
+            bar (correct semantics), but the line itself follows the mouse. */}
+        {hoverIdx != null && hoverPx && hoverClient && (
           <g>
             <line
-              x1={xScale(absToLocal(hoverIdx))}
+              x1={hoverClient.x}
               y1={PADDING_TOP}
-              x2={xScale(absToLocal(hoverIdx))}
+              x2={hoverClient.x}
               y2={totalH - PADDING_BOTTOM}
               stroke={COLORS.text}
               strokeWidth={0.6}

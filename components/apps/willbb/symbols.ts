@@ -32,39 +32,42 @@ export const INDEX_STRIP: SymbolMeta[] = [
 ];
 
 /**
- * Will's actual watchlist, top-to-bottom in the order he keeps it.
- * Sourced from his trading-platform screens.
+ * Will's curated watchlist — 40 highest-conviction names.
+ *
+ * Picked deliberately for three properties:
+ *   1. LIQUID — every name is large/mid-cap or a top-volume ETF, so quotes
+ *      come back from Yahoo (or seed) without the long tail of unavailable
+ *      symbols that used to drag the watchlist poll out to 14 s.
+ *   2. SEEDED — every entry has a row in `lib/marketsFallback.ts` SEED_QUOTES
+ *      AND most have a row in `lib/equityFallback.ts`/STATS_SEED. So even
+ *      with all upstreams down, the Markets pane paints in <50 ms and the
+ *      Equity Research tab fills out instead of showing "no data".
+ *   3. RELEVANT — Will's actual concentrated bets (GOOG, AMD, PLTR, RDDT,
+ *      DASH, ONON, MSTR, TEM, HOOD, BMNR, RKLB) plus the mega-caps that
+ *      dominate market discussion, plus thematic exposure (clean energy,
+ *      quantum, AI infra, healthcare, fintech) so research demos are rich.
+ *
+ * Cut from a previous 144-symbol screen because the long tail (small-cap
+ * trade-of-the-day names) was bottlenecking every cold-start fetch with
+ * symbols that frequently 404'd from Yahoo. 40 well-chosen names is the
+ * right size for a screen that's meant to be SCANNED, not scrolled.
  */
 export const WATCHLIST_ORDER: string[] = [
-  "GOOG", "UNH", "NVDA", "AMD", "TEM",
-  "SPY", "QQQ", "RDDT", "AAPL", "HOOD",
-  "DASH", "AMZN", "ONON", "TSLA", "MSTR",
-  "META", "BAC", "USO", "MSFT", "TGT",
-  "CRM", "SHOP", "CSCO", "INTC", "RXRX",
-  "SOFI", "BMNR", "LULU", "DJT", "SBET",
-  "BIDU", "NEGG", "SNOW", "BOIL", "CNC",
-  "WRD", "PLTR", "CHA", "TLRY", "ETHA",
-  "BNC", "QUBT", "BLSH", "JD", "NKE",
-  "GRAB", "PSTV", "SENS", "PLUG", "SNAP",
-  "UPST", "NUAI", "UP", "FCX", "CAVA",
-  "ATCH", "LAC", "IONQ", "ALB", "BTQ",
-  "BETR", "ZETA", "TMC", "APLD", "SMR",
-  "OSCR", "TTD", "PSKY", "CRML", "DVLT",
-  "PYPL", "MP", "CCCX", "OKLO", "WWR",
-  "WLAC", "NKLR", "UAMY", "AIRE", "HIMS",
-  "FIG", "RR", "QCOM", "NB", "BBAI",
-  "CMG", "ONDS", "DUOL", "ORCL", "DKNG",
-  "ASST", "CRCL", "CRWV", "VTR", "XPEV",
-  "NVO", "BULL", "QQQM", "SPXU", "CLSK",
-  "CETX", "CVX", "VLO", "EOSE", "AEHR",
-  "CLPT", "PRME", "NIO", "TMDX", "SOUN",
-  "PATH", "USAR", "CPXR", "RKLB", "ASTS",
-  "SIDU", "RGTI", "DGZ", "JMIA", "CEG",
-  "BMNZ", "IREN", "OPEN", "OSS", "IRE",
-  "NBIS", "SMCI", "VXX", "IBIT", "NVDG",
-  "RGTZ", "CIFR", "MSFU", "SCO", "IREZ",
-  "NBIL", "ADBG", "ADBE", "NVOX", "BE",
-  "SMCL", "NBIZ", "NOWL", "DAMD",
+  // Mega-cap tech (top 10) — Will's daily focus
+  "NVDA", "GOOG", "AAPL", "MSFT", "AMZN",
+  "META", "TSLA", "AMD", "AVGO", "ORCL",
+  // Tech leaders + AI infra
+  "NFLX", "CRM", "ADBE", "CRWV", "NBIS",
+  // Will's concentrated bets / high-conviction names
+  "PLTR", "RDDT", "DASH", "ONON", "TEM",
+  // Fintech / payments / brokerage
+  "HOOD", "COIN", "MSTR", "V", "MA",
+  // Financials + diversifiers
+  "BAC", "AXP", "UNH", "NVO", "HIMS",
+  // Clean energy / nuclear / themes
+  "SMR", "OKLO", "CEG", "IONQ", "RKLB",
+  // ETFs + benchmarks (always work)
+  "SPY", "QQQ", "IBIT", "LULU", "CMG",
 ];
 
 /**

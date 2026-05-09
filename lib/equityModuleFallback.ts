@@ -14,8 +14,21 @@
  *   institutional, insider, dividends, splits, options, news
  */
 
-import { STATS_SEED, PROFILE_SEED } from "./equityFallback";
+import { STATS_SEED, PROFILE_SEED, getStatsSeed, getProfileSeed } from "./equityFallback";
 import { getSeedQuote } from "./marketsFallback";
+
+// Internal compatibility shim — the generators below were written against
+// the bare STATS_SEED dict. Now that getStatsSeed/getProfileSeed synthesize
+// coherent fallbacks for any symbol in SEED_QUOTES, we route the lookups
+// through them so a generator never returns null for a watchlist symbol.
+function lookupStats(symbol: string): import("./equityFallback").StatsSeed | undefined {
+  const sym = symbol.toUpperCase();
+  return STATS_SEED[sym] ?? getStatsSeed(sym) ?? undefined;
+}
+function lookupProfile(symbol: string): import("./equityFallback").ProfileSeed | undefined {
+  const sym = symbol.toUpperCase();
+  return PROFILE_SEED[sym] ?? getProfileSeed(sym) ?? undefined;
+}
 
 // Fiscal-year ends (rough for known names) - fallback to Dec for the rest.
 const FY_END: Record<string, string> = {
@@ -92,7 +105,7 @@ function quarterEnd(symbol: string, quartersAgo = 0, today: Date = new Date()): 
 // ---------- Income statement ----------
 
 export function generateIncome(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const revTTM = stats.revenueTTM ?? 1e9;
   const grossM = stats.grossMargin ?? 0.4;
@@ -168,7 +181,7 @@ export function generateIncome(symbol: string) {
 // ---------- Balance sheet ----------
 
 export function generateBalance(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const mcap = stats.marketCap;
   const revTTM = stats.revenueTTM ?? mcap * 0.05;
@@ -244,7 +257,7 @@ export function generateBalance(symbol: string) {
 // ---------- Cash flow ----------
 
 export function generateCashflow(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const ni = stats.netIncomeTTM ?? (stats.revenueTTM ?? 1e9) * 0.18;
   const rev = stats.revenueTTM ?? 1e9;
@@ -315,7 +328,7 @@ export function generateCashflow(symbol: string) {
 // ---------- Earnings ----------
 
 export function generateEarnings(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const eps = stats.eps ?? 1.0;
   const rev = stats.revenueTTM ?? 1e9;
@@ -369,7 +382,7 @@ export function generateEarnings(symbol: string) {
 // ---------- Analysts ----------
 
 export function generateAnalysts(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const target = stats.targetMeanPrice;
   if (target == null) return null;
@@ -442,7 +455,7 @@ export function generateAnalysts(symbol: string) {
 // ---------- Share statistics ----------
 
 export function generateShareStats(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   return {
     symbol,
@@ -485,7 +498,7 @@ const TOP_FUNDS = [
 ];
 
 export function generateInstitutional(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   const seed = getSeedQuote(symbol);
   if (!stats || !seed) return null;
   const sharesOut = stats.sharesOutstanding ?? stats.marketCap / seed.price;
@@ -511,9 +524,9 @@ export function generateInstitutional(symbol: string) {
 // ---------- Insider transactions ----------
 
 export function generateInsider(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   const seed = getSeedQuote(symbol);
-  const profile = PROFILE_SEED[symbol];
+  const profile = lookupProfile(symbol);
   if (!stats || !seed) return null;
 
   const insiders = profile?.officers
@@ -588,7 +601,7 @@ export function generateInsider(symbol: string) {
 // ---------- Dividends ----------
 
 export function generateDividends(symbol: string) {
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!stats) return null;
   const rate = stats.dividendRate;
   if (!rate || rate <= 0) return { symbol, source: "seed", dividends: [] };
@@ -637,7 +650,7 @@ export function generateSplits(symbol: string) {
 
 export function generateOptions(symbol: string, expirationISO?: string) {
   const seed = getSeedQuote(symbol);
-  const stats = STATS_SEED[symbol];
+  const stats = lookupStats(symbol);
   if (!seed) return null;
 
   // Build 6 expirations: nearest weekly + monthly Fridays.
@@ -717,7 +730,7 @@ const NEWS_TEMPLATES: Array<{ title: string; publisher: string; type?: string }>
 ];
 
 export function generateNews(symbol: string) {
-  const profile = PROFILE_SEED[symbol];
+  const profile = lookupProfile(symbol);
   const name = profile?.shortName ?? profile?.longName ?? symbol;
   const news = NEWS_TEMPLATES.map((t, i) => {
     const ts = Math.floor(Date.now() / 1000) - i * 4200 - 600;

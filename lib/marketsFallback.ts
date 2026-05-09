@@ -199,6 +199,40 @@ export const SEED_QUOTES: Record<string, SeedQuote> = {
   MP: { symbol: "MP", shortName: "MP Materials", price: 58.42, previousClose: 56.85, currency: "USD", exchange: "NYQ" },
   TMC: { symbol: "TMC", shortName: "TMC the metals company", price: 8.42, previousClose: 8.18, currency: "USD", exchange: "NMS" },
 
+  // ── SPDR Sector ETFs (used by QuantDesk Scanner sector-rotation strip).
+  // Without seeds, the Scanner cold-starts with empty bars while waiting for
+  // Yahoo to fan out 11 round-trips. Approximate prices anchored to the
+  // 5/5/2026 close so they're at least directionally consistent with the
+  // index closes above. ──
+  XLK: { symbol: "XLK", shortName: "Tech Select Sector SPDR", price: 246.85, previousClose: 244.20, currency: "USD", exchange: "PCX" },
+  XLF: { symbol: "XLF", shortName: "Financial Select Sector SPDR", price: 54.62, previousClose: 54.18, currency: "USD", exchange: "PCX" },
+  XLE: { symbol: "XLE", shortName: "Energy Select Sector SPDR", price: 102.40, previousClose: 103.85, currency: "USD", exchange: "PCX" },
+  XLV: { symbol: "XLV", shortName: "Health Care Select SPDR", price: 152.18, previousClose: 151.42, currency: "USD", exchange: "PCX" },
+  XLY: { symbol: "XLY", shortName: "Cons Discretionary SPDR", price: 215.40, previousClose: 213.60, currency: "USD", exchange: "PCX" },
+  XLP: { symbol: "XLP", shortName: "Cons Staples SPDR", price: 84.62, previousClose: 84.18, currency: "USD", exchange: "PCX" },
+  XLI: { symbol: "XLI", shortName: "Industrial Select SPDR", price: 168.40, previousClose: 167.18, currency: "USD", exchange: "PCX" },
+  XLU: { symbol: "XLU", shortName: "Utilities Select SPDR", price: 88.20, previousClose: 87.85, currency: "USD", exchange: "PCX" },
+  XLB: { symbol: "XLB", shortName: "Materials Select SPDR", price: 102.85, previousClose: 102.40, currency: "USD", exchange: "PCX" },
+  XLRE: { symbol: "XLRE", shortName: "Real Estate Select SPDR", price: 48.62, previousClose: 48.40, currency: "USD", exchange: "PCX" },
+  XLC: { symbol: "XLC", shortName: "Communication Select SPDR", price: 124.85, previousClose: 123.42, currency: "USD", exchange: "PCX" },
+  IWM: { symbol: "IWM", shortName: "iShares Russell 2000", price: 238.62, previousClose: 236.40, currency: "USD", exchange: "PCX" },
+
+  // ── Decile-sort universe stragglers (Scanner DECILE_UNIVERSE) ──
+  JPM: { symbol: "JPM", shortName: "JPMorgan Chase", price: 312.40, previousClose: 308.85, currency: "USD", exchange: "NYQ" },
+  JNJ: { symbol: "JNJ", shortName: "Johnson & Johnson", price: 168.42, previousClose: 167.18, currency: "USD", exchange: "NYQ" },
+  PFE: { symbol: "PFE", shortName: "Pfizer", price: 28.62, previousClose: 28.40, currency: "USD", exchange: "NYQ" },
+  MRK: { symbol: "MRK", shortName: "Merck & Co", price: 102.18, previousClose: 101.42, currency: "USD", exchange: "NYQ" },
+  WMT: { symbol: "WMT", shortName: "Walmart", price: 98.40, previousClose: 97.62, currency: "USD", exchange: "NYQ" },
+  HD: { symbol: "HD", shortName: "Home Depot", price: 412.85, previousClose: 408.40, currency: "USD", exchange: "NYQ" },
+  PG: { symbol: "PG", shortName: "Procter & Gamble", price: 168.42, previousClose: 167.18, currency: "USD", exchange: "NYQ" },
+  KO: { symbol: "KO", shortName: "Coca-Cola", price: 72.85, previousClose: 72.40, currency: "USD", exchange: "NYQ" },
+  PEP: { symbol: "PEP", shortName: "PepsiCo", price: 175.18, previousClose: 174.40, currency: "USD", exchange: "NMS" },
+  MCD: { symbol: "MCD", shortName: "McDonald's", price: 318.62, previousClose: 316.40, currency: "USD", exchange: "NYQ" },
+  // Carhart 4-factor ETFs (pre-warmed on terminal mount in OpenBB.tsx)
+  IUSV: { symbol: "IUSV", shortName: "iShares Core S&P US Value", price: 102.85, previousClose: 102.40, currency: "USD", exchange: "PCX" },
+  IUSG: { symbol: "IUSG", shortName: "iShares Core S&P US Growth", price: 142.40, previousClose: 141.18, currency: "USD", exchange: "PCX" },
+  MTUM: { symbol: "MTUM", shortName: "iShares MSCI USA Momentum", price: 248.62, previousClose: 246.40, currency: "USD", exchange: "PCX" },
+
   // Will's screen - speculative / themes
   DJT: { symbol: "DJT", shortName: "Trump Media & Tech", price: 32.42, previousClose: 31.85, currency: "USD", exchange: "NMS" },
   SBET: { symbol: "SBET", shortName: "SharpLink Gaming", price: 14.42, previousClose: 13.85, currency: "USD", exchange: "NMS" },

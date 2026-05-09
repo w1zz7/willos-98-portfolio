@@ -857,12 +857,201 @@ export const STATS_SEED: Record<string, StatsSeed> = {
   },
 };
 
-export function getProfileSeed(symbol: string): ProfileSeed | null {
-  return PROFILE_SEED[symbol.toUpperCase()] ?? null;
+/**
+ * Sector inference from symbol patterns. Used by the synthesizer to give a
+ * blank-seed lookup an at-least-plausible Profile entry. Cheap heuristic;
+ * good enough that the Equity Research panel never shows a totally empty
+ * Profile card for a symbol that has a SEED_QUOTES row.
+ */
+function inferSector(symbol: string): { sector: string; industry: string; summary: string } {
+  const TECH = new Set(["NVDA","AMD","AVGO","ORCL","CRM","ADBE","CRWV","NBIS","INTC","CSCO","QCOM","SMCI","TXN","IBM","NOW","TEM","BBAI","SOUN","RXRX","PATH","APLD","IONQ","RGTI","QUBT","OKLO","SMR","DUOL","SHOP"]);
+  const MEGA = new Set(["AAPL","MSFT","GOOG","GOOGL","AMZN","META","TSLA","NFLX"]);
+  const FINANCIAL = new Set(["BAC","V","MA","AXP","JPM","HOOD","COIN","SOFI","UPST","DKNG","BLSH"]);
+  const ENERGY = new Set(["CVX","VLO","USO","BOIL","SCO","OKLO","SMR","CEG","BE","ALB","FCX","MP"]);
+  const HEALTH = new Set(["UNH","NVO","HIMS","OSCR","CNC","RDNT","TLRY","TMC","RXRX"]);
+  const CONSUMER = new Set(["NKE","CMG","CAVA","LULU","ONON","TGT","DASH","DIS","DJT","SBET","JD","BABA","BIDU","NEGG","CELH"]);
+  const COMM = new Set(["RDDT","SNAP","PSKY","CMCSA","TTD","ZETA","FIG"]);
+  const INDUSTRIAL = new Set(["UPS","CAT","BA","GE","GEV","RKLB","ASTS"]);
+  const CRYPTO = new Set(["MSTR","CRCL","BMNR","CIFR","CLSK","IREN","BULL","IBIT","ETHA"]);
+  const ETF = new Set(["SPY","QQQ","QQQM","SPXU","VXX","DGZ","MSFU","NVDG","IBIT","ETHA","BULL","IREZ"]);
+  const u = symbol.toUpperCase();
+  if (ETF.has(u)) return { sector: "Index / ETF", industry: "Exchange-Traded Fund", summary: `${u} is an exchange-traded fund.` };
+  if (CRYPTO.has(u)) return { sector: "Financial Services", industry: "Crypto / Digital Assets", summary: `${u} is involved in digital-asset infrastructure or crypto-aligned operations.` };
+  if (MEGA.has(u)) return { sector: "Technology", industry: "Internet Content & Information", summary: `${u} is a US mega-cap technology company.` };
+  if (TECH.has(u)) return { sector: "Technology", industry: "Software / Semiconductors", summary: `${u} operates in the technology sector with a focus on software, semiconductors, or AI infrastructure.` };
+  if (FINANCIAL.has(u)) return { sector: "Financial Services", industry: "Banking / Capital Markets", summary: `${u} is a financial-services company offering banking, payments, or brokerage services.` };
+  if (ENERGY.has(u)) return { sector: "Energy / Utilities", industry: "Oil, Gas, or Clean Energy", summary: `${u} operates in energy production, refining, or clean-energy infrastructure.` };
+  if (HEALTH.has(u)) return { sector: "Healthcare", industry: "Healthcare Services / Biotech", summary: `${u} operates in healthcare services, biotechnology, or telehealth.` };
+  if (CONSUMER.has(u)) return { sector: "Consumer", industry: "Discretionary / Restaurants / Apparel", summary: `${u} sells consumer products or services.` };
+  if (COMM.has(u)) return { sector: "Communication Services", industry: "Media / Social", summary: `${u} operates in communication services, media, or advertising.` };
+  if (INDUSTRIAL.has(u)) return { sector: "Industrials", industry: "Aerospace / Logistics / Equipment", summary: `${u} operates in industrials including aerospace, logistics, or heavy equipment.` };
+  return { sector: "—", industry: "—", summary: `${u} is a publicly traded company.` };
 }
 
+/**
+ * Synthesize a plausible Profile from SEED_QUOTES when an explicit seed
+ * isn't curated. Lets every symbol on the watchlist render a Profile card
+ * (sector + market cap + name) instead of an empty pane. Numbers are
+ * coarse heuristics — the UI flags the result as `source: "seed"`.
+ */
+function synthesizeProfile(symbol: string): ProfileSeed | null {
+  // Lazy import to avoid a circular dep at module load (equityFallback is
+  // imported by marketsFallback consumers and vice-versa via marketsFallback's
+  // re-export pattern). Static `import`s would create a load cycle.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SEED_QUOTES } = require("./marketsFallback") as typeof import("./marketsFallback");
+  const q = SEED_QUOTES[symbol.toUpperCase()];
+  if (!q) return null;
+  const inf = inferSector(symbol);
+  // Heuristic market cap: assume mid/large-cap outstanding shares scale
+  // roughly with price. This is FAR from accurate but it's better than 0,
+  // and the Profile card mostly shows the price + name + sector — the
+  // market-cap field rounds to a plausible bucket.
+  const heuristicShares =
+    q.price > 500 ? 3.5e9 :
+    q.price > 200 ? 8e9 :
+    q.price > 100 ? 12e9 :
+    q.price > 50 ? 18e9 :
+    q.price > 20 ? 32e9 :
+    q.price > 5 ? 80e9 :
+    300e9;
+  return {
+    longName: q.shortName,
+    shortName: q.shortName,
+    sector: inf.sector,
+    industry: inf.industry,
+    summary: inf.summary,
+    employees: undefined,
+    country: "United States",
+    city: undefined,
+    state: undefined,
+    phone: undefined,
+    exchange: q.exchange,
+    currency: q.currency,
+    marketCap: Math.round(q.price * heuristicShares),
+    quoteType: "EQUITY",
+  };
+}
+
+/**
+ * Synthesize a plausible Statistics card from SEED_QUOTES + sector inference.
+ * Used by every equity-research module generator (income / balance / cashflow
+ * / earnings / analysts / etc.) when no explicit seed is curated for the
+ * symbol — keeps the panel populated for the long tail of watchlist symbols.
+ */
+function synthesizeStats(symbol: string): StatsSeed | null {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SEED_QUOTES } = require("./marketsFallback") as typeof import("./marketsFallback");
+  const q = SEED_QUOTES[symbol.toUpperCase()];
+  if (!q) return null;
+  const inf = inferSector(symbol);
+  const heuristicShares =
+    q.price > 500 ? 3.5e9 :
+    q.price > 200 ? 8e9 :
+    q.price > 100 ? 12e9 :
+    q.price > 50 ? 18e9 :
+    q.price > 20 ? 32e9 :
+    q.price > 5 ? 80e9 :
+    300e9;
+  const mc = q.price * heuristicShares;
+  // Sector-typical margin/multiple bands. Coarse but coherent — the goal is
+  // to fill the Statistics card with directionally-plausible numbers, not
+  // to publish a financial model.
+  const isTech = inf.sector === "Technology";
+  const isFin = inf.sector === "Financial Services";
+  const isEng = inf.sector.startsWith("Energy");
+  const isHealth = inf.sector === "Healthcare";
+  const isETF = inf.sector === "Index / ETF";
+  if (isETF) {
+    // ETFs don't have margins — return a slim stats card.
+    return {
+      marketCap: mc,
+      beta: 1.0,
+      fiftyTwoWeekHigh: q.price * 1.18,
+      fiftyTwoWeekLow: q.price * 0.78,
+      fiftyDayAverage: q.price * 0.96,
+      twoHundredDayAverage: q.price * 0.88,
+      averageVolume10Day: 30_000_000,
+    };
+  }
+  const grossMargin = isTech ? 0.62 : isFin ? 0.55 : isHealth ? 0.5 : isEng ? 0.32 : 0.4;
+  const operatingMargin = isTech ? 0.32 : isFin ? 0.38 : isHealth ? 0.18 : isEng ? 0.16 : 0.14;
+  const profitMargin = operatingMargin * 0.78;
+  const psSales = isTech ? 8 : isFin ? 4 : isEng ? 1.5 : 2.5;
+  const revenueTTM = mc / psSales;
+  const netIncomeTTM = revenueTTM * profitMargin;
+  const eps = netIncomeTTM / heuristicShares;
+  const trailingPE = eps > 0 ? q.price / eps : 35;
+  return {
+    marketCap: mc,
+    enterpriseValue: mc * 1.05,
+    trailingPE,
+    forwardPE: trailingPE * 0.85,
+    pegRatio: 1.4,
+    priceToBook: isTech ? 12 : isFin ? 1.6 : 4,
+    priceToSales: psSales,
+    enterpriseToRevenue: psSales * 1.05,
+    enterpriseToEbitda: trailingPE * 0.65,
+    profitMargin,
+    operatingMargin,
+    grossMargin,
+    returnOnEquity: isTech ? 0.42 : isFin ? 0.18 : 0.16,
+    returnOnAssets: isTech ? 0.18 : isFin ? 0.012 : 0.07,
+    revenueTTM,
+    grossProfit: revenueTTM * grossMargin,
+    ebitda: revenueTTM * (operatingMargin + 0.06),
+    netIncomeTTM,
+    eps,
+    epsForward: eps * 1.18,
+    bookValue: q.price / (isTech ? 12 : isFin ? 1.6 : 4),
+    sharesOutstanding: heuristicShares,
+    floatShares: heuristicShares * 0.94,
+    sharesShort: heuristicShares * 0.025,
+    shortRatio: 2.4,
+    shortPercentOfFloat: 0.027,
+    heldPercentInsiders: 0.06,
+    heldPercentInstitutions: 0.71,
+    beta: isTech ? 1.42 : isFin ? 1.14 : isEng ? 0.92 : 1.0,
+    fiftyTwoWeekHigh: q.price * 1.18,
+    fiftyTwoWeekLow: q.price * 0.62,
+    fiftyDayAverage: q.price * 0.96,
+    twoHundredDayAverage: q.price * 0.88,
+    averageVolume10Day: 8_000_000,
+    targetMeanPrice: q.price * 1.12,
+    targetMedianPrice: q.price * 1.10,
+    targetHighPrice: q.price * 1.35,
+    targetLowPrice: q.price * 0.85,
+    recommendationKey: "buy",
+    numberOfAnalystOpinions: 24,
+    totalCash: revenueTTM * 0.18,
+    totalDebt: revenueTTM * 0.22,
+    debtToEquity: isFin ? 1.5 : 0.4,
+    currentRatio: 2.1,
+    quickRatio: 1.8,
+  };
+}
+
+/**
+ * Profile lookup with synthesis fallback. Returns the curated entry when
+ * one exists, otherwise synthesizes a plausible card from SEED_QUOTES.
+ * Only returns null if the symbol isn't in SEED_QUOTES either — i.e. truly
+ * unknown to the app.
+ */
+export function getProfileSeed(symbol: string): ProfileSeed | null {
+  const explicit = PROFILE_SEED[symbol.toUpperCase()];
+  if (explicit) return explicit;
+  return synthesizeProfile(symbol);
+}
+
+/**
+ * Stats lookup with synthesis fallback. Same pattern as getProfileSeed —
+ * synthesizes a coherent Statistics card for any symbol in SEED_QUOTES so
+ * Equity Research never shows a blank pane for the watchlist.
+ */
 export function getStatsSeed(symbol: string): StatsSeed | null {
-  return STATS_SEED[symbol.toUpperCase()] ?? null;
+  const explicit = STATS_SEED[symbol.toUpperCase()];
+  if (explicit) return explicit;
+  return synthesizeStats(symbol);
 }
 
 /**

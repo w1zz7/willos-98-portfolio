@@ -50,6 +50,7 @@ export default function QuantDesk({ symbol, setSymbol }: Props) {
       className="flex flex-col h-full"
       style={{ background: COLORS.bg, fontFamily: FONT_UI, color: COLORS.text }}
     >
+      <CapabilityStrip />
       <SubTabBar subTab={subTab} setSubTab={setSubTab} />
 
       <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -76,6 +77,64 @@ export default function QuantDesk({ symbol, setSymbol }: Props) {
         setOpen={setBlotterOpen}
         onClear={() => setPaperTrades([])}
       />
+    </div>
+  );
+}
+
+/**
+ * "Capability strip" — a subtle banner at the top of the Research pane that
+ * lists the heavyweight quantitative tools the desk uses. Reads as a
+ * Bloomberg-style capability badge without being loud or distracting:
+ * monospaced, dim, but with a red/cyan accent on the most differentiated
+ * methods (HAC SE, PSR/DSR, Walk-forward CV, Reality Check). Sets the tone
+ * that this is *quant-grade*, not retail TradingView.
+ */
+function CapabilityStrip() {
+  const RED = "#f0686a";
+  const items: Array<{ label: string; accent?: "red" | "cyan" }> = [
+    { label: "PSR / DSR", accent: "red" },
+    { label: "HAC SE (Newey-West)", accent: "red" },
+    { label: "Carhart 4-factor", accent: "cyan" },
+    { label: "Stationary Bootstrap", accent: "red" },
+    { label: "White Reality Check", accent: "red" },
+    { label: "Walk-forward CV", accent: "cyan" },
+    { label: "Garman-Klass / Yang-Zhang", accent: "cyan" },
+    { label: "ACF / PACF / ADF / Hurst" },
+    { label: "Decile-sort IC factory" },
+    { label: "ADV slippage + borrow" },
+  ];
+  return (
+    <div
+      className="px-[14px] py-[6px] flex items-center gap-[14px] overflow-x-auto shrink-0"
+      style={{
+        background: "linear-gradient(90deg, rgba(240,104,106,0.08) 0%, rgba(51,187,255,0.06) 100%)",
+        borderBottom: "1px solid " + COLORS.border,
+        fontFamily: FONT_MONO,
+        fontSize: 10,
+        letterSpacing: "0.10em",
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ color: RED, fontWeight: 700 }}>·</span>
+      <span style={{ color: COLORS.textDim, fontWeight: 600 }}>QUANT LAB</span>
+      <span style={{ color: COLORS.borderSoft }}>│</span>
+      {items.map((it, i) => (
+        <span
+          key={i}
+          style={{
+            color:
+              it.accent === "red"
+                ? RED
+                : it.accent === "cyan"
+                ? COLORS.brand
+                : COLORS.textFaint,
+            fontWeight: it.accent ? 600 : 500,
+          }}
+        >
+          {it.label}
+        </span>
+      ))}
     </div>
   );
 }
