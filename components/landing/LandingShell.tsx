@@ -247,9 +247,6 @@ export function LandingShell() {
           // Bumped from 36 → 56 px so the bigger fonts (now 13/22/13 px) sit
           // comfortably with vertical breathing room.
           height: 56,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
           padding: "0 28px",
           fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
           fontSize: 13,
@@ -261,10 +258,28 @@ export function LandingShell() {
           opacity: hintVisible ? 1 : 0,
           transition: "opacity 700ms ease-out 100ms",
           color: "rgba(255,255,255,0.6)",
+          // Bar is a positioning container — left/right anchored to its
+          // padded edges, center pinned to viewport midline. Previously the
+          // bar used `justify-content: space-between` which centered the
+          // CTA between the OTHER two sections, not between the viewport
+          // edges. When the left section (WillOS-98 · Loader · [READY]) was
+          // wider than the right section (Will Zhang · Drexel LeBow · 2029),
+          // the CTA drifted ~65 px right of the actual viewport center.
+          position: "absolute",
         }}
       >
-        {/* Left — system identifier with a "power on" LED */}
-        <div className="flex items-center gap-[12px]">
+        {/* Left — system identifier with a "power on" LED. Anchored to
+            the bar's padded left edge via absolute positioning so its
+            width never influences the CTA's centering. */}
+        <div
+          className="flex items-center gap-[12px]"
+          style={{
+            position: "absolute",
+            left: 28,
+            top: "50%",
+            transform: "translateY(-50%)",
+          }}
+        >
           <span
             aria-hidden
             style={{
@@ -284,18 +299,24 @@ export function LandingShell() {
           <span style={{ color: "#5dd39e" }}>[ READY ]</span>
         </div>
 
-        {/* Center — the primary call-to-action. Bumped from 11 → 22 px (2×)
-            so it reads as the obvious "next step" even from across a room.
-            Visitors with average vision used to miss this on their first
-            scan; now it's the visual anchor of the bottom bar. */}
+        {/* Center — the primary call-to-action. Pinned to the TRUE viewport
+            center (left:50% + translate-x:-50%) instead of being flex-spaced
+            between siblings. Bumped from 11 → 22 px (2×) earlier in this
+            session so it reads as the obvious "next step" even from across
+            a room. Subtle blink + cyan textShadow glow make it the anchor. */}
         <div
           className="landing-prompt flex items-center gap-[12px]"
           style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
             color: "#ffffff",
             letterSpacing: "0.28em",
             fontSize: 22,
             fontWeight: 600,
             textShadow: "0 0 14px rgba(51,187,255,0.45)",
+            whiteSpace: "nowrap",
           }}
         >
           <span style={{ color: "#33BBFF", fontSize: 26 }}>›</span>
@@ -303,8 +324,17 @@ export function LandingShell() {
           <span style={{ color: "#33BBFF", fontSize: 26 }}>‹</span>
         </div>
 
-        {/* Right — identity stamp */}
-        <div style={{ color: "rgba(255,255,255,0.5)" }}>
+        {/* Right — identity stamp. Mirror of the left section: anchored
+            to the bar's right padded edge. */}
+        <div
+          style={{
+            position: "absolute",
+            right: 28,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "rgba(255,255,255,0.5)",
+          }}
+        >
           Will Zhang · Drexel LeBow · 2029
         </div>
       </div>
