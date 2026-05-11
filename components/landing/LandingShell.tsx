@@ -171,18 +171,18 @@ export function LandingShell() {
 
       {/* Brand watermark — top-left. */}
       <div
-        className="pointer-events-none absolute top-[18px] left-[22px] flex items-baseline gap-[8px] select-none"
+        className="pointer-events-none absolute top-[20px] left-[24px] flex items-baseline gap-[10px] select-none"
         style={{
           fontFamily: "var(--font-chrome, ui-sans-serif), system-ui",
-          color: "rgba(255,255,255,0.55)",
+          color: "rgba(255,255,255,0.62)",
           letterSpacing: "0.16em",
-          fontSize: 13,
+          fontSize: 16,
           textTransform: "uppercase",
         }}
       >
         <span>WillOS</span>
         <span style={{ color: "#ffcc00" }}>98</span>
-        <span style={{ opacity: 0.45, letterSpacing: "0.1em" }}>· entry</span>
+        <span style={{ opacity: 0.5, letterSpacing: "0.1em", fontSize: 14 }}>· entry</span>
       </div>
 
       {/* "Work in progress" badge — top-right corner. The site is actively
@@ -196,18 +196,18 @@ export function LandingShell() {
           dot lives INSIDE the badge so we don't have a second cyan dot
           floating at a slightly-different y. */}
       <div
-        className="pointer-events-none absolute select-none flex items-center gap-[8px]"
+        className="pointer-events-none absolute select-none flex items-center gap-[10px]"
         style={{
-          top: 18,
-          right: 22,
-          padding: "4px 10px",
+          top: 20,
+          right: 24,
+          padding: "6px 14px",
           background: "rgba(255, 204, 0, 0.12)",
           border: "1px solid rgba(255, 204, 0, 0.55)",
           borderRadius: 3,
           fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
           color: "rgba(255, 230, 130, 0.95)",
           letterSpacing: "0.18em",
-          fontSize: 10,
+          fontSize: 12,
           textTransform: "uppercase",
           backdropFilter: "blur(4px)",
         }}
@@ -216,11 +216,11 @@ export function LandingShell() {
           aria-hidden
           style={{
             display: "inline-block",
-            width: 6,
-            height: 6,
+            width: 8,
+            height: 8,
             borderRadius: "50%",
             background: "#ffcc00",
-            boxShadow: "0 0 6px #ffcc00",
+            boxShadow: "0 0 7px #ffcc00",
             animation: "landing-pulse 1.6s ease-in-out infinite",
           }}
         />
@@ -244,61 +244,67 @@ export function LandingShell() {
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 select-none"
         style={{
-          height: 36,
+          // Bumped from 36 → 56 px so the bigger fonts (now 13/22/13 px) sit
+          // comfortably with vertical breathing room.
+          height: 56,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 22px",
+          padding: "0 28px",
           fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace",
-          fontSize: 10,
+          fontSize: 13,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           background:
-            "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.78) 100%)",
-          borderTop: "1px solid rgba(51,187,255,0.18)",
+            "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.82) 100%)",
+          borderTop: "1px solid rgba(51,187,255,0.22)",
           opacity: hintVisible ? 1 : 0,
           transition: "opacity 700ms ease-out 100ms",
-          color: "rgba(255,255,255,0.55)",
+          color: "rgba(255,255,255,0.6)",
         }}
       >
         {/* Left — system identifier with a "power on" LED */}
-        <div className="flex items-center gap-[10px]">
+        <div className="flex items-center gap-[12px]">
           <span
             aria-hidden
             style={{
               display: "inline-block",
-              width: 7,
-              height: 7,
+              width: 9,
+              height: 9,
               borderRadius: "50%",
               background: "#5dd39e",
-              boxShadow: "0 0 6px #5dd39e",
+              boxShadow: "0 0 8px #5dd39e",
               animation: "landing-led 2.2s ease-in-out infinite",
             }}
           />
-          <span style={{ color: "rgba(255,255,255,0.78)" }}>WillOS-98</span>
-          <span style={{ color: "rgba(255,255,255,0.18)" }}>│</span>
-          <span style={{ color: "rgba(255,255,255,0.45)" }}>Mobius Loader v1.0</span>
-          <span style={{ color: "rgba(255,255,255,0.18)" }}>│</span>
+          <span style={{ color: "rgba(255,255,255,0.82)" }}>WillOS-98</span>
+          <span style={{ color: "rgba(255,255,255,0.22)" }}>│</span>
+          <span style={{ color: "rgba(255,255,255,0.5)" }}>Mobius Loader v1.0</span>
+          <span style={{ color: "rgba(255,255,255,0.22)" }}>│</span>
           <span style={{ color: "#5dd39e" }}>[ READY ]</span>
         </div>
 
-        {/* Center — the action prompt. Slightly larger + subtle blink to
-            telegraph "this is what you do next." */}
+        {/* Center — the primary call-to-action. Bumped from 11 → 22 px (2×)
+            so it reads as the obvious "next step" even from across a room.
+            Visitors with average vision used to miss this on their first
+            scan; now it's the visual anchor of the bottom bar. */}
         <div
-          className="landing-prompt"
+          className="landing-prompt flex items-center gap-[12px]"
           style={{
-            color: "rgba(255,255,255,0.92)",
-            letterSpacing: "0.22em",
-            fontSize: 11,
+            color: "#ffffff",
+            letterSpacing: "0.28em",
+            fontSize: 22,
+            fontWeight: 600,
+            textShadow: "0 0 14px rgba(51,187,255,0.45)",
           }}
         >
-          <span style={{ color: "#33BBFF" }}>›</span>{" "}
-          click anywhere to enter{" "}
-          <span style={{ color: "#33BBFF" }}>‹</span>
+          <span style={{ color: "#33BBFF", fontSize: 26 }}>›</span>
+          click anywhere to enter
+          <span style={{ color: "#33BBFF", fontSize: 26 }}>‹</span>
         </div>
 
         {/* Right — identity stamp */}
-        <div style={{ color: "rgba(255,255,255,0.40)" }}>
+        <div style={{ color: "rgba(255,255,255,0.5)" }}>
           Will Zhang · Drexel LeBow · 2029
         </div>
       </div>
