@@ -56,88 +56,53 @@ export const BIOS_DURATION_MS = 2400;
 export const SPLASH_DURATION_MS = 2200;
 
 /* ------------------------------------------------------------------ */
-/* Stage 3 — Bio playback                                              */
+/* Stage 3 — WHO-IS-WILL.BAT (the "about me" terminal pane)            */
 /*                                                                    */
-/* Markdown-style **bold** markers wrap company / project names; the   */
-/* renderer in BootPlayback.tsx parses these into <span> with weight   */
-/* 700 so they jump out from the streaming log.                        */
+/* This is the introductory paragraph — pure identity, not a resume.   */
+/* Experience and project listings live elsewhere on the desktop      */
+/* (Projects window, About Me window, Resume). This pane is just     */
+/* "who is Will, in his own words" — full sentences, no bullets,    */
+/* no headlines, no quantified credentials.                           */
+/*                                                                    */
+/* Markdown-style **bold** markers wrap key noun phrases the          */
+/* BootPlayback renderer renders as <span style={fontWeight:700}>.    */
 /* ------------------------------------------------------------------ */
 
 export const BIO_LINES: BootLine[] = [
-  // — Identity + drive ————————————————————————————————————————
   {
     delayMs: 0,
-    text: "Hello — I'm an undergrad at **Drexel University** majoring in Finance & MIS",
+    text: "Hello — my name is **Will Zhang**, and this is my portfolio.",
     status: "info",
   },
   {
-    delayMs: 460,
-    text: "Drawn to building tools that make life easier for people and businesses",
-  },
-
-  // — Projects ———————————————————————————————————————————————
-  { delayMs: 1000, text: "That thread runs through my work:", status: "info" },
-  {
-    delayMs: 1380,
-    text: "**Bulletproof AI** — career-prep platform with 11 AI tools",
+    delayMs: 700,
+    text: "I'm an undergraduate at **Drexel University** in Philadelphia, studying Finance and MIS.",
   },
   {
-    delayMs: 1760,
-    text: "  ATS model trained on 200k resumes · 75k+ clicks in first month",
-    ok: true,
+    delayMs: 1500,
+    text: "I'm drawn to the intersection of markets, technology, and clear thinking.",
   },
   {
-    delayMs: 2200,
-    text: "**PhilAIsion** — AI civic agent · 700+ city services via natural language",
+    delayMs: 2300,
+    text: "I love building things that make a real difference for the people who use them.",
   },
   {
-    delayMs: 2580,
-    text: "  1st Place · **Philly CodeFest 2026**",
-    ok: true,
+    delayMs: 3100,
+    text: "I believe in working honestly, staying curious, and shipping work that actually matters.",
   },
   {
-    delayMs: 3020,
-    text: "Trading journal — $315,020 processed · 63.98% gain ratio",
-    ok: true,
+    delayMs: 3900,
+    text: "Outside of school you'll usually find me trading, writing, or out on a golf course.",
   },
   {
-    delayMs: 3400,
-    text: "Hardware Patent — co-invented a water-resistant golf bag",
-    ok: true,
-  },
-
-  // — Work history ———————————————————————————————————————————
-  { delayMs: 3880, text: "Work:", status: "info" },
-  {
-    delayMs: 4220,
-    text: "**Super Lychee Golf Series** · operations · 10+ partners · improved retention",
-  },
-  {
-    delayMs: 4560,
-    text: "**Vovex Golf** · sales · $20k+ revenue",
-  },
-  {
-    delayMs: 4900,
-    text: "**Gen.G Esports** · operations analyst · 150+ tournaments",
-  },
-  {
-    delayMs: 5240,
-    text: "**The Good Idea Fund** · Director of Relations · $100k+ allocated",
-  },
-  {
-    delayMs: 5580,
-    text: "**WOLF Financial** / **Rallies.ai** · advising content for 14.3M followers",
-  },
-  {
-    delayMs: 5920,
-    text: "**Google Developer Group** · AI Technical Lead",
+    delayMs: 4700,
+    text: "Thanks for stopping by — please take a look around.",
     status: "ok",
-    ok: true,
   },
 ];
 
-/** Total Stage 3 duration: last delay + a final 600ms pause to let it sit. */
-export const BIO_DURATION_MS = 6600;
+/** Total Stage 3 duration: last delay + a final 700ms pause to let it sit. */
+export const BIO_DURATION_MS = 5400;
 
 /* ------------------------------------------------------------------ */
 /* Stage 4 — fade to desktop                                           */
