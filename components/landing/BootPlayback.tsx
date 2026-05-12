@@ -994,14 +994,18 @@ function parseBoldSegments(text: string): { bold: boolean; text: string }[] {
 
 function BioLineRow({ line }: { line: BootLine }) {
   const c = COLORS.prompt;
-  const lineColor =
-    line.status === "ok"
-      ? c.ok
-      : line.status === "info"
-      ? c.accent
-      : line.status === "warn"
-      ? c.warn
-      : c.fg;
+  // ABOUT-ME COLOR — every sentence in the WHO-IS-WILL.BAT pane is painted
+  // red so it reads as a single "Will speaking in his own voice" block, not
+  // as system terminal output. Picked #F45252 (matches the Research-tab
+  // brand red used in WillBB) for cross-experience continuity. The
+  // brighter pink-red on bold names jumps another notch above the
+  // sentence body so the eye anchors on the noun phrases.
+  const SENTENCE_RED = "#F45252";
+  const BOLD_RED = "#FF8B8B";
+  // Status-aware override: the final "Thanks for stopping by" line uses
+  // status="ok" — we keep it red too (don't fall through to the legacy
+  // green `c.ok`) so the whole pane stays visually unified.
+  void c;
   // Inline layout (no flex:1) so [ OK ] sits IMMEDIATELY after the text
   // rather than getting stretched to the right margin — matches both
   // real Win98 console output and the existing willBB Markets boot
@@ -1015,20 +1019,21 @@ function BioLineRow({ line }: { line: BootLine }) {
         animation: "boot-line-fade 220ms ease-out forwards",
       }}
     >
-      <span style={{ color: c.fgFaint, opacity: 0.9 }}>
+      <span style={{ color: COLORS.prompt.fgFaint, opacity: 0.9 }}>
         [{((line.delayMs + 100) / 1000).toFixed(2)}s]
       </span>
-      <span style={{ color: lineColor, marginLeft: 8 }}>
+      <span style={{ color: SENTENCE_RED, marginLeft: 8 }}>
         {segments.map((seg, i) =>
           seg.bold ? (
             <span
               key={i}
               style={{
-                color: c.accent,
+                color: BOLD_RED,
                 fontWeight: 700,
-                // Slight letter-spacing tighten + brighter color so the
-                // bolded name reads as the visual anchor of the line.
+                // Slight letter-spacing tighten so the bolded noun phrase
+                // reads as a tight unit (Drexel University, Will Zhang).
                 letterSpacing: "0.01em",
+                textShadow: "0 0 6px rgba(255, 139, 139, 0.45)",
               }}
             >
               {seg.text}
@@ -1039,7 +1044,7 @@ function BioLineRow({ line }: { line: BootLine }) {
         )}
       </span>
       {line.ok && (
-        <span style={{ color: c.ok, fontWeight: "bold", marginLeft: 8 }}>
+        <span style={{ color: BOLD_RED, fontWeight: "bold", marginLeft: 8 }}>
           [ OK ]
         </span>
       )}
