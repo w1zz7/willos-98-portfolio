@@ -32,22 +32,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useWindowStore } from "@/lib/wm/store";
 import {
+  BIO_DURATION_MS,
+  BIO_LINES,
   BIOS_DURATION_MS,
   BIOS_LINES,
   FADE_DURATION_MS,
   SPLASH_DURATION_MS,
   type BootLine,
 } from "./biosLines";
-// MobiusButton is the same R3F scene that used to live on the standalone
-// Landing page (now removed). Reusing it here as the 3D centerpiece of the
-// "Starting Windows 98" splash so the visitor's first impression is the
-// hero mesh inside the period-correct boot frame.
-import { MobiusButton } from "./MobiusButton";
 
-// "bio" stage removed — the WHO-IS-WILL.BAT MS-DOS prompt pane was retired
-// in favor of letting the Win98 splash carry the entire "first impression"
-// via a 3D Mobius scene rendered into the splash itself.
-type Stage = "bios" | "splash" | "fade";
+type Stage = "bios" | "splash" | "bio" | "fade";
 
 /* Authentic Win98 palette references.
  *   - System colors: Win98 default theme (silver chrome, navy title bars)
@@ -109,12 +103,12 @@ export function BootPlayback() {
   const [stage, setStage] = useState<Stage>("bios");
   const [skipVisible, setSkipVisible] = useState(false);
   const [skipping, setSkipping] = useState(false);
-  // splashReady = the splash has been visible long enough to let the
-  // visitor admire the 3D Mobius hero. Once true, the next click /
-  // ESC / Enter / Space advances to desktop. Auto-advance fires
-  // SPLASH_DURATION_MS after splash starts so visitors don't get
-  // stuck if they don't notice the click affordance.
-  const [splashReady, setSplashReady] = useState(false);
+  // bioReady = the bio playback has finished streaming all lines.
+  // We hold the user on the bio screen indefinitely once this is true,
+  // and require a click / keypress to advance to the desktop. This gives
+  // recruiters time to actually read the intro instead of having it
+  // auto-fade out after a fixed timeout.
+  const [bioReady, setBioReady] = useState(false);
   const skippingRef = useRef(false);
 
   /** Force-quit boot — drop straight to desktop. ESC + Skip Intro button. */
@@ -139,30 +133,32 @@ export function BootPlayback() {
   }, [setEntryStage]);
 
   /**
-   * Drive stage transitions on a chained timer.
+   * Drive stage transitions on a single chained timer.
    *
-   * BIOS (auto, 2.4s) → splash (auto, then auto-advance to desktop after
-   * SPLASH_DURATION_MS so the visitor isn't held forever on the 3D scene).
-   * The visitor can also click / ESC / Enter / Space at any point during
-   * the splash to skip to desktop.
+   * BIOS (auto, 2.4s) → splash (auto, 2.2s) → bio (auto-streams, then
+   * holds indefinitely waiting for user click). The bio→fade→desktop
+   * transition is NOT scheduled here — it's driven by advanceToDesktop()
+   * once the user clicks or presses a key on the bio screen.
    */
   useEffect(() => {
     const timers: number[] = [];
     timers.push(window.setTimeout(() => setStage("splash"), BIOS_DURATION_MS));
-    // Mark splash as "click to skip" the moment it starts.
-    timers.push(window.setTimeout(() => setSplashReady(true), BIOS_DURATION_MS + 200));
-    // Auto-advance to desktop after the full splash window.
     timers.push(
       window.setTimeout(
-        () => advanceToDesktop(),
+        () => setStage("bio"),
         BIOS_DURATION_MS + SPLASH_DURATION_MS,
+      ),
+    );
+    // Mark bio as "ready for user input" once all lines have streamed.
+    timers.push(
+      window.setTimeout(
+        () => setBioReady(true),
+        BIOS_DURATION_MS + SPLASH_DURATION_MS + BIO_DURATION_MS,
       ),
     );
     return () => {
       for (const t of timers) window.clearTimeout(t);
     };
-    // advanceToDesktop is stable for the lifetime of the component.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Reveal "skip intro" affordance after 1 s so users discover it. */
@@ -183,14 +179,14 @@ export function BootPlayback() {
         skip();
         return;
       }
-      if ((e.key === "Enter" || e.key === " ") && stage === "splash" && splashReady) {
+      if ((e.key === "Enter" || e.key === " ") && stage === "bio" && bioReady) {
         e.preventDefault();
         advanceToDesktop();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [skip, advanceToDesktop, stage, splashReady]);
+  }, [skip, advanceToDesktop, stage, bioReady]);
 
   /**
    * Click anywhere on the boot surface:
@@ -202,11 +198,11 @@ export function BootPlayback() {
    * trigger this handler.
    */
   const onBackdropClick = () => {
-    if (stage === "splash" && splashReady) advanceToDesktop();
+    if (stage === "bio" && bioReady) advanceToDesktop();
   };
 
   // Cursor flips to a pointer once clicks become meaningful.
-  const showPointerCursor = stage === "splash" && splashReady;
+  const showPointerCursor = stage === "bio" && bioReady;
 
   // Background per stage. Splash is a vertical sky gradient.
   const bgForStage =
@@ -227,7 +223,8 @@ export function BootPlayback() {
       aria-label="Booting WillOS 98"
     >
       {stage === "bios" && <BiosStage />}
-      {(stage === "splash" || stage === "fade") && <SplashStage />}
+      {stage === "splash" && <SplashStage />}
+      {(stage === "bio" || stage === "fade") && <BioStage bioReady={bioReady} />}
 
       {/* "skip intro" bottom-right — Win98 raised button. */}
       {skipVisible && stage !== "fade" && (
@@ -469,9 +466,7 @@ function SplashStage() {
     try {
       audio = new Audio("/sounds/win98-chime.wav");
       audio.volume = 0.45;
-      // First-page autoplay needs a user gesture. Many browsers will reject
-      // this and the .catch handler eats it silently — that's fine, the
-      // visuals stand on their own without the chime.
+      // We're after a user gesture (mobius click) — autoplay is allowed.
       const p = audio.play();
       if (p && typeof p.catch === "function") p.catch(() => {});
     } catch {
@@ -492,66 +487,56 @@ function SplashStage() {
 
   return (
     <div className="absolute inset-0">
-      {/* Cloud strata — soft, drifting. The Win98 LOGO.SYS sky stays as the
-          painterly backdrop. The 3D Mobius mounts in front of it; the
-          contrast between the soft painterly clouds and the sharp metallic
-          3D mesh is exactly the "memory of Win98 meets the present" vibe. */}
+      {/* Cloud strata — soft, drifting. Multiple layered ellipses give the
+          painterly look of the original LOGO.SYS bitmap. */}
       <CloudStrata />
 
-      {/* 3D Mobius scene — same R3F mesh that used to live on the standalone
-          landing page (now removed). Transparent canvas so the clouds show
-          through. clicked=false + a no-op onActivate keeps the strip in its
-          continuous-rotation state — no collapse-on-click, no early advance;
-          the parent BootPlayback drives stage transitions on its own timer. */}
+      {/* The hero stack — 3D Windows flag + wordmark. */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-      >
-        <MobiusButton clicked={false} onActivate={() => {}} reduced={false} />
-      </div>
-
-      {/* The Win98 wordmark — overlaid on top of the 3D scene. The static
-          Win98FlagLogo SVG is dropped (the 3D Mobius is now the hero); the
-          text label stays so the visitor still reads "Microsoft Windows 98"
-          and recognizes the period it's set in. Positioned lower than before
-          so it doesn't intersect the Mobius mesh sitting at the visual
-          center. */}
-      <div
-        className="absolute pointer-events-none"
+        className="absolute"
         style={{
           left: "50%",
-          bottom: 110,
-          transform: "translateX(-50%)",
+          top: "44%",
+          transform: "translate(-50%, -50%)",
           textAlign: "center",
-          fontFamily: FONT_FRANKLIN,
-          color: "#000000",
-          lineHeight: 1,
-          // Soft glow + drop shadow so the dark text reads cleanly against
-          // both bright cloud and dark 3D Mobius backdrops.
-          textShadow:
-            "0 0 12px rgba(255,255,255,0.95), 0 2px 8px rgba(0,0,0,0.25)",
+          // Soft drop shadow under the entire mark, just like LOGO.SYS.
+          filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.35))",
         }}
       >
+        <Win98FlagLogo size={160} />
+        {/* "Microsoft" sat above "Windows 98" on the LOGO.SYS, both centered
+            and baseline-aligned. Two lines, not one — the smaller italic
+            "Microsoft" is its own line above the bigger bold "Windows 98". */}
         <div
           style={{
-            fontWeight: 400,
-            fontStyle: "italic",
-            fontSize: 26,
-            letterSpacing: 0,
-            marginBottom: 4,
-          }}
-        >
-          Microsoft
-        </div>
-        <div
-          style={{
-            fontSize: 56,
-            fontWeight: 700,
-            letterSpacing: "-0.01em",
+            marginTop: 14,
+            fontFamily: FONT_FRANKLIN,
+            color: "#000000",
+            textAlign: "center",
             lineHeight: 1,
           }}
         >
-          Windows<span style={{ marginLeft: 14 }}>98</span>
+          <div
+            style={{
+              fontWeight: 400,
+              fontStyle: "italic",
+              fontSize: 28,
+              letterSpacing: 0,
+              marginBottom: 4,
+            }}
+          >
+            Microsoft
+          </div>
+          <div
+            style={{
+              fontSize: 60,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              lineHeight: 1,
+            }}
+          >
+            Windows<span style={{ marginLeft: 14 }}>98</span>
+          </div>
         </div>
       </div>
 
@@ -559,7 +544,7 @@ function SplashStage() {
           progress indicator. Tiles a horizontal cyan→grey gradient and
           scrolls it across a fixed window. */}
       <div
-        className="absolute pointer-events-none"
+        className="absolute"
         style={{
           left: 24,
           right: 24,
@@ -615,5 +600,449 @@ function CloudStrata() {
       <ellipse cx="1200" cy="620" rx="500" ry="140" fill="url(#cloudA)" />
       <ellipse cx="300" cy="780" rx="500" ry="120" fill="url(#cloudA)" />
     </svg>
+  );
+}
+
+/** 3D-style Windows flag — four panels (red top-left, green top-right,
+ *  blue bottom-left, yellow bottom-right) with a wave on the leading edge.
+ *  Done with a SVG path per panel + inner shadow for the "wavy" suggestion. */
+function Win98FlagLogo({ size }: { size: number }) {
+  const w = size;
+  const h = size * 0.85;
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 200 170"
+      aria-hidden
+      style={{ display: "inline-block" }}
+    >
+      <defs>
+        {/* A soft "wave" gradient overlay — lighter on the curl tip. */}
+        <linearGradient id="flagShine" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+          <stop offset="35%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.18" />
+        </linearGradient>
+        {/* Per-quadrant tint: brighter face, darker shadow. */}
+        <linearGradient id="redG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ff5d4a" />
+          <stop offset="100%" stopColor="#c62b1c" />
+        </linearGradient>
+        <linearGradient id="grnG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7be37b" />
+          <stop offset="100%" stopColor="#1f7d2e" />
+        </linearGradient>
+        <linearGradient id="bluG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5ea7ff" />
+          <stop offset="100%" stopColor="#1144aa" />
+        </linearGradient>
+        <linearGradient id="ylwG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffe666" />
+          <stop offset="100%" stopColor="#cc8a14" />
+        </linearGradient>
+      </defs>
+
+      {/* The classic 4-panel flag with a sweeping tilt + waved leading edge.
+          Path forms a parallelogram that's deeper on the right, mimicking
+          the iconic perspective view of the Win9x logo. */}
+      <g transform="translate(20, 18) skewX(-8)">
+        {/* Top-left = Red */}
+        <path d="M 0 0 Q 30 -6 70 0 L 70 70 Q 30 64 0 70 Z" fill="url(#redG)" />
+        {/* Top-right = Green */}
+        <path d="M 76 0 Q 110 -6 150 0 L 150 70 Q 110 64 76 70 Z" fill="url(#grnG)" />
+        {/* Bottom-left = Blue */}
+        <path d="M 0 76 Q 30 70 70 76 L 70 146 Q 30 140 0 146 Z" fill="url(#bluG)" />
+        {/* Bottom-right = Yellow */}
+        <path
+          d="M 76 76 Q 110 70 150 76 L 150 146 Q 110 140 76 146 Z"
+          fill="url(#ylwG)"
+        />
+        {/* Highlight overlay across the whole flag for the "wave" feel. */}
+        <rect x="0" y="-8" width="150" height="160" fill="url(#flagShine)" />
+      </g>
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 3 — MS-DOS Prompt window framing the bio playback             */
+/* ------------------------------------------------------------------ */
+
+function BioStage({ bioReady }: { bioReady: boolean }) {
+  const [visible, setVisible] = useState(0);
+
+  useEffect(() => {
+    const timers = BIO_LINES.map((line, i) =>
+      window.setTimeout(() => setVisible((v) => Math.max(v, i + 1)), line.delayMs),
+    );
+    return () => {
+      for (const t of timers) window.clearTimeout(t);
+    };
+  }, []);
+
+  return (
+    // Surface = teal Win98 desktop wallpaper underneath; the MS-DOS Prompt
+    // window floats on top.
+    <div
+      className="absolute inset-0"
+      style={{
+        background:
+          "url('/wallpaper/golf-course.svg') center bottom / cover no-repeat, #008080",
+        imageRendering: "pixelated",
+      }}
+    >
+      {/* The classic Win98 MS-DOS Prompt window. */}
+      <div
+        className="absolute"
+        style={{
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          // Wider + taller frame than the legacy 900×560 so the bumped
+          // terminal font (22 px, was 14 px) has horizontal breathing room
+          // for long sentences and vertical room for all 7 lines + the
+          // header + the trailing prompt. 1100×680 still caps at 90vw/85vh.
+          width: "min(1100px, 90vw)",
+          height: "min(680px, 85vh)",
+          background: COLORS.win.chromeBg,
+          // Win98 raised window border: 2px outer dance.
+          boxShadow:
+            `inset 1px 1px 0 ${COLORS.win.chromeHighlight}, ` +
+            `inset -1px -1px 0 ${COLORS.win.chromeDark}, ` +
+            `inset 2px 2px 0 ${COLORS.win.chromeBg}, ` +
+            `inset -2px -2px 0 ${COLORS.win.chromeShadow}, ` +
+            `0 4px 16px rgba(0,0,0,0.45)`,
+          padding: 3,
+          display: "flex",
+          flexDirection: "column",
+          fontFamily: "'Tahoma', 'Geneva', sans-serif",
+          fontSize: 11,
+          color: "#000",
+        }}
+      >
+        {/* Title bar — navy, white text, classic Win98 control buttons. */}
+        <div
+          style={{
+            background:
+              `linear-gradient(90deg, ${COLORS.win.titleBar} 0%, #1084d0 100%)`,
+            color: COLORS.win.titleBarText,
+            padding: "3px 4px 3px 4px",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontWeight: "bold",
+          }}
+        >
+          <MsDosIcon />
+          <span style={{ flex: 1 }}>MS-DOS Prompt — WHO-IS-WILL.BAT</span>
+          <Win98ChromeButton label="_" />
+          <Win98ChromeButton label="□" />
+          <Win98ChromeButton label="×" emphasised />
+        </div>
+
+        {/* Toolbar — Mark / Copy / Paste / Full Screen / Properties etc.
+            The real Win98 MS-DOS Prompt window had this row of small icons
+            below the menu strip; included here as a visual accent so the
+            window feels lived-in, not like an empty stub. */}
+        <div
+          style={{
+            background: COLORS.win.chromeBg,
+            padding: "2px 4px",
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            borderBottom: `1px solid ${COLORS.win.chromeShadow}`,
+            // Win98 raised toolbar separator above.
+            boxShadow: `inset 0 1px 0 ${COLORS.win.chromeHighlight}`,
+          }}
+        >
+          {[
+            { glyph: "■", title: "Mark" },
+            { glyph: "⧉", title: "Copy" },
+            { glyph: "⎘", title: "Paste" },
+            { glyph: "⤢", title: "Full Screen" },
+            { glyph: "⧈", title: "Properties" },
+            { glyph: "A", title: "Font" },
+          ].map((b) => (
+            <span
+              key={b.title}
+              title={b.title}
+              style={{
+                width: 22,
+                height: 22,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: COLORS.win.chromeBg,
+                color: "#000",
+                fontSize: 12,
+                fontFamily: "'Tahoma', sans-serif",
+                boxShadow:
+                  `inset 1px 1px 0 ${COLORS.win.chromeHighlight}, ` +
+                  `inset -1px -1px 0 ${COLORS.win.chromeShadow}`,
+              }}
+            >
+              {b.glyph}
+            </span>
+          ))}
+        </div>
+
+        {/* Menu strip — File / Edit / View / etc. */}
+        <div
+          style={{
+            background: COLORS.win.chromeBg,
+            padding: "2px 6px",
+            display: "flex",
+            gap: 12,
+            fontSize: 11,
+            color: "#000",
+            borderBottom: `1px solid ${COLORS.win.chromeShadow}`,
+          }}
+        >
+          {["File", "Edit", "View", "Help"].map((m, i) => (
+            <span key={m}>
+              <span style={{ textDecoration: "underline" }}>{m[0]}</span>
+              {m.slice(1)}
+              {i === 0 && <span />}
+            </span>
+          ))}
+        </div>
+
+        {/* The actual MS-DOS terminal pane — sunken, black bg, silver text.
+            Font bumped from 14 → 22 px (line-height 20 → 30) so the
+            who-is-will.txt narrative is legible from across a room — the
+            recruiter shouldn't have to lean in to read the intro. */}
+        <div
+          className="flex-1 min-h-0 overflow-hidden relative"
+          style={{
+            background: COLORS.prompt.bg,
+            color: COLORS.prompt.fg,
+            fontFamily: FONT_DOS,
+            fontSize: 22,
+            lineHeight: "30px",
+            padding: "14px 18px",
+            // Sunken inner border.
+            boxShadow:
+              `inset 1px 1px 0 ${COLORS.win.chromeShadow}, ` +
+              `inset -1px -1px 0 ${COLORS.win.chromeHighlight}, ` +
+              `inset 2px 2px 0 #000, ` +
+              `inset -2px -2px 0 ${COLORS.win.chromeBg}`,
+          }}
+        >
+          {/* Faux DOS prompt header — spacings scaled with the bumped
+              22 px font so it still reads as the classic DOS startup. */}
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 8 }}>
+            Microsoft(R) Windows 98
+          </div>
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 20 }}>
+            <span>(C)Copyright Microsoft Corp 1981-1998.</span>
+          </div>
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 6 }}>
+            C:\WINDOWS&gt; <span style={{ color: COLORS.prompt.accent }}>type</span>{" "}
+            who-is-will.txt
+          </div>
+
+          {/* Streaming bio. */}
+          <div className="relative">
+            {BIO_LINES.slice(0, visible).map((line, i) => (
+              <BioLineRow key={i} line={line} />
+            ))}
+            {/* Mid-stream: blinking cursor. After all lines are visible
+                AND the parent has marked bio "ready": a fresh DOS prompt
+                line + the "press any key to continue" hint that mimics
+                the classic Win98 setup screens. */}
+            {visible < BIO_LINES.length ? (
+              <span
+                aria-hidden
+                className="inline-block"
+                style={{
+                  width: 13,
+                  height: 22,
+                  background: COLORS.prompt.fg,
+                  animation: "boot-prompt-cursor 0.9s steps(2) infinite",
+                  verticalAlign: "middle",
+                }}
+              />
+            ) : (
+              <div style={{ marginTop: 14 }}>
+                <div>
+                  C:\WINDOWS&gt;
+                  <span
+                    aria-hidden
+                    className="inline-block ml-[6px]"
+                    style={{
+                      width: 9,
+                      height: 14,
+                      background: COLORS.prompt.fg,
+                      animation: "boot-prompt-cursor 0.9s steps(2) infinite",
+                      verticalAlign: "middle",
+                    }}
+                  />
+                </div>
+                {bioReady && (
+                  <div
+                    style={{
+                      marginTop: 22,
+                      color: COLORS.prompt.accent,
+                      // Soft pulse so the eye finds the prompt.
+                      animation: "boot-prompt-cursor 1.2s ease-in-out infinite",
+                    }}
+                  >
+                    &gt; Press any key or click anywhere to continue . . .
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The classic Win98 "MS-DOS Prompt" title-bar icon — a tiny black monitor
+ * with a white "MS-DOS" prompt visible on its screen and a beige base.
+ * Drawn at 16×16 to match the Win98 small-icon size convention.
+ */
+function MsDosIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      {/* Beige monitor base / stand */}
+      <rect x="5" y="13" width="6" height="2" fill="#c0c0c0" stroke="#000" strokeWidth="0.5" />
+      {/* Monitor bezel */}
+      <rect x="1" y="2" width="14" height="11" fill="#c0c0c0" stroke="#000" strokeWidth="0.5" />
+      {/* Screen — black with white "C:\" prompt text */}
+      <rect x="2.5" y="3.5" width="11" height="8" fill="#000000" />
+      <text
+        x="3.4"
+        y="9.6"
+        fontFamily="'Lucida Console', 'Courier New', monospace"
+        fontSize="6"
+        fill="#FFFFFF"
+        fontWeight="bold"
+      >
+        C:\&gt;_
+      </text>
+    </svg>
+  );
+}
+
+/** A small Win98 chrome button used for minimize/maximize/close. */
+function Win98ChromeButton({
+  label,
+  emphasised,
+}: {
+  label: string;
+  emphasised?: boolean;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 16,
+        height: 14,
+        background: emphasised ? "#c0c0c0" : "#c0c0c0",
+        color: "#000",
+        fontFamily: "'Tahoma', sans-serif",
+        fontSize: 10,
+        lineHeight: 1,
+        boxShadow:
+          `inset 1px 1px 0 ${COLORS.win.chromeHighlight}, ` +
+          `inset -1px -1px 0 ${COLORS.win.chromeDark}`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+/**
+ * Tiny markdown-bold parser. Splits a line on `**...**` boundaries and
+ * returns alternating plain / bold segments. Used to highlight company
+ * and project names in the bio playback.
+ *
+ * Examples:
+ *   "**Bulletproof AI** — career platform"
+ *      → [{bold:true, text:"Bulletproof AI"}, {bold:false, text:" — career platform"}]
+ *   "**WOLF Financial** / **Rallies.ai** · advising 14.3M followers"
+ *      → 5 segments alternating bold/plain
+ *
+ * Plain text passes through unchanged. Unmatched/unclosed `**` markers
+ * just render as literal characters (no error, no swallowed content).
+ */
+function parseBoldSegments(text: string): { bold: boolean; text: string }[] {
+  const out: { bold: boolean; text: string }[] = [];
+  const pattern = /\*\*([^*]+?)\*\*/g;
+  let lastIdx = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      out.push({ bold: false, text: text.slice(lastIdx, match.index) });
+    }
+    out.push({ bold: true, text: match[1] });
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < text.length) {
+    out.push({ bold: false, text: text.slice(lastIdx) });
+  }
+  return out;
+}
+
+function BioLineRow({ line }: { line: BootLine }) {
+  const c = COLORS.prompt;
+  const lineColor =
+    line.status === "ok"
+      ? c.ok
+      : line.status === "info"
+      ? c.accent
+      : line.status === "warn"
+      ? c.warn
+      : c.fg;
+  // Inline layout (no flex:1) so [ OK ] sits IMMEDIATELY after the text
+  // rather than getting stretched to the right margin — matches both
+  // real Win98 console output and the existing willBB Markets boot
+  // screen cadence we're echoing here.
+  const segments = parseBoldSegments(line.text);
+  return (
+    <div
+      style={{
+        whiteSpace: "pre-wrap",
+        opacity: 0,
+        animation: "boot-line-fade 220ms ease-out forwards",
+      }}
+    >
+      <span style={{ color: c.fgFaint, opacity: 0.9 }}>
+        [{((line.delayMs + 100) / 1000).toFixed(2)}s]
+      </span>
+      <span style={{ color: lineColor, marginLeft: 8 }}>
+        {segments.map((seg, i) =>
+          seg.bold ? (
+            <span
+              key={i}
+              style={{
+                color: c.accent,
+                fontWeight: 700,
+                // Slight letter-spacing tighten + brighter color so the
+                // bolded name reads as the visual anchor of the line.
+                letterSpacing: "0.01em",
+              }}
+            >
+              {seg.text}
+            </span>
+          ) : (
+            <span key={i}>{seg.text}</span>
+          ),
+        )}
+      </span>
+      {line.ok && (
+        <span style={{ color: c.ok, fontWeight: "bold", marginLeft: 8 }}>
+          [ OK ]
+        </span>
+      )}
+    </div>
   );
 }
