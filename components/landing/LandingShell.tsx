@@ -270,9 +270,14 @@ export function LandingShell() {
       >
         {/* Left — system identifier with a "power on" LED. Anchored to
             the bar's padded left edge via absolute positioning so its
-            width never influences the CTA's centering. */}
+            width never influences the CTA's centering. Hidden below
+            1400 px viewport where the side sections start crashing into
+            the centered CTA (left ~455 px + right ~325 px + CTA ~514 px +
+            56 px padding = 1350 px minimum no-overlap width; we apply a
+            50 px safety margin). The CTA — the only thing the visitor
+            MUST see — stays centered at every width. */}
         <div
-          className="flex items-center gap-[12px]"
+          className="landing-bar-side flex items-center gap-[12px]"
           style={{
             position: "absolute",
             left: 28,
@@ -325,8 +330,10 @@ export function LandingShell() {
         </div>
 
         {/* Right — identity stamp. Mirror of the left section: anchored
-            to the bar's right padded edge. */}
+            to the bar's right padded edge. Same `.landing-bar-side`
+            class so it hides under the same media-query breakpoint. */}
         <div
+          className="landing-bar-side"
           style={{
             position: "absolute",
             right: 28,
@@ -355,6 +362,30 @@ export function LandingShell() {
         }
         .landing-prompt {
           animation: landing-prompt-blink 2.4s ease-in-out infinite;
+        }
+        /* Below 1500 px viewport the side status-bar sections start crashing
+           into the centered CTA chevrons. (Math: LEFT width 455 + CTA width
+           514 + RIGHT width 325 + 56 px side padding = 1350 minimum, plus
+           safety margin pushes the breakpoint to 1500.) Hide both sides
+           below the threshold and let the CTA stand alone — it's the only
+           thing the visitor MUST see anyway. The identity stamp on the
+           right is duplicated up-top via the brand watermark + the
+           already-streamed bio, so dropping it on smaller screens costs
+           no information. */
+        @media (max-width: 1499px) {
+          .landing-bar-side { display: none !important; }
+        }
+        /* Below 640 px (phone width) shrink the CTA itself so it doesn't
+           overflow the viewport edges with letter-spacing applied. */
+        @media (max-width: 639px) {
+          .landing-prompt {
+            font-size: 16px !important;
+            letter-spacing: 0.18em !important;
+          }
+          .landing-prompt > span:first-child,
+          .landing-prompt > span:last-child {
+            font-size: 19px !important;
+          }
         }
         @keyframes landing-grain-shift {
           0% { transform: translate(0, 0); }
