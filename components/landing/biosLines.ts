@@ -53,7 +53,12 @@ export const BIOS_DURATION_MS = 2400;
 /* Stage 2 — "Starting Windows 98" splash                              */
 /* ------------------------------------------------------------------ */
 
-export const SPLASH_DURATION_MS = 2200;
+// Bumped from 2200 → 3500 ms when the splash gained a full 3D scene
+// (Splash3DScene: wavy 3D flag + extruded 3D wordmark + reflective floor
+// + cinematic camera dolly + bloom/DoF/CA/Vignette post-processing).
+// The dolly itself takes ~2.8 s; we want the camera to land and the
+// settled orbit to play for ~0.5 s before the bio takes over.
+export const SPLASH_DURATION_MS = 3500;
 
 /* ------------------------------------------------------------------ */
 /* Stage 3 — WHO-IS-WILL.BAT (the "about me" terminal pane)            */

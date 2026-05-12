@@ -50,6 +50,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import { easeInCubic, easeOutCubic } from "./easings";
 
 const CYAN = "#33BBFF";
 const GOLD = "#ffcc66"; // accent color — the inner counter-rotating strip
@@ -321,12 +322,7 @@ function CameraOrbit() {
   return null;
 }
 
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3);
-}
-function easeInCubic(t: number) {
-  return t * t * t;
-}
+// Easings shared with Splash3DScene — see ./easings.ts.
 
 interface MobiusButtonProps {
   /** Externally controlled — when true, the click animation plays. */

@@ -31,6 +31,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useWindowStore } from "@/lib/wm/store";
+import { useMediaQuery } from "@/lib/wm/useMediaQuery";
+import { Splash3DScene } from "./Splash3DScene";
 import {
   BIO_DURATION_MS,
   BIO_LINES,
@@ -485,64 +487,33 @@ function SplashStage() {
     };
   }, []);
 
+  // Mobile fidelity-reduce flag — same breakpoint convention as
+  // MobiusButton / LandingShell. Below 768 px we drop the heaviest 3D
+  // pieces (reflective floor, post-processing) so the scene still
+  // renders smoothly on phones.
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   return (
     <div className="absolute inset-0">
       {/* Cloud strata — soft, drifting. Multiple layered ellipses give the
-          painterly look of the original LOGO.SYS bitmap. */}
+          painterly look of the original LOGO.SYS bitmap. Stays as the
+          backdrop; the 3D scene mounts in front with a transparent Canvas
+          so the clouds remain visible through it. */}
       <CloudStrata />
 
-      {/* The hero stack — 3D Windows flag + wordmark. */}
-      <div
-        className="absolute"
-        style={{
-          left: "50%",
-          top: "44%",
-          transform: "translate(-50%, -50%)",
-          textAlign: "center",
-          // Soft drop shadow under the entire mark, just like LOGO.SYS.
-          filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.35))",
-        }}
-      >
-        <Win98FlagLogo size={160} />
-        {/* "Microsoft" sat above "Windows 98" on the LOGO.SYS, both centered
-            and baseline-aligned. Two lines, not one — the smaller italic
-            "Microsoft" is its own line above the bigger bold "Windows 98". */}
-        <div
-          style={{
-            marginTop: 14,
-            fontFamily: FONT_FRANKLIN,
-            color: "#000000",
-            textAlign: "center",
-            lineHeight: 1,
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 400,
-              fontStyle: "italic",
-              fontSize: 28,
-              letterSpacing: 0,
-              marginBottom: 4,
-            }}
-          >
-            Microsoft
-          </div>
-          <div
-            style={{
-              fontSize: 60,
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-              lineHeight: 1,
-            }}
-          >
-            Windows<span style={{ marginLeft: 14 }}>98</span>
-          </div>
-        </div>
+      {/* 3D scene — wavy Windows flag + extruded "Microsoft Windows 98"
+          wordmark + reflective floor + cinematic camera + post-processing.
+          Replaces the previous static SVG Win98FlagLogo + 2D wordmark text.
+          The Canvas is transparent so the painterly cloud sky behind it
+          still reads as the period-correct LOGO.SYS backdrop. */}
+      <div className="absolute inset-0">
+        <Splash3DScene reduced={isMobile} />
       </div>
 
       {/* Bottom-right shifting gradient bar — the LOGO.SYS palette-rotation
           progress indicator. Tiles a horizontal cyan→grey gradient and
-          scrolls it across a fixed window. */}
+          scrolls it across a fixed window. Period-correct chrome the
+          recruiter expects on a Win9x boot screen. */}
       <div
         className="absolute"
         style={{
