@@ -699,8 +699,12 @@ function BioStage({ bioReady }: { bioReady: boolean }) {
           left: "50%",
           top: "50%",
           transform: "translate(-50%, -50%)",
-          width: "min(900px, 90vw)",
-          height: "min(560px, 80vh)",
+          // Wider + taller frame than the legacy 900×560 so the bumped
+          // terminal font (22 px, was 14 px) has horizontal breathing room
+          // for long sentences and vertical room for all 7 lines + the
+          // header + the trailing prompt. 1100×680 still caps at 90vw/85vh.
+          width: "min(1100px, 90vw)",
+          height: "min(680px, 85vh)",
           background: COLORS.win.chromeBg,
           // Win98 raised window border: 2px outer dance.
           boxShadow:
@@ -805,16 +809,19 @@ function BioStage({ bioReady }: { bioReady: boolean }) {
           ))}
         </div>
 
-        {/* The actual MS-DOS terminal pane — sunken, black bg, silver text. */}
+        {/* The actual MS-DOS terminal pane — sunken, black bg, silver text.
+            Font bumped from 14 → 22 px (line-height 20 → 30) so the
+            who-is-will.txt narrative is legible from across a room — the
+            recruiter shouldn't have to lean in to read the intro. */}
         <div
           className="flex-1 min-h-0 overflow-hidden relative"
           style={{
             background: COLORS.prompt.bg,
             color: COLORS.prompt.fg,
             fontFamily: FONT_DOS,
-            fontSize: 14,
-            lineHeight: "20px",
-            padding: "8px 12px",
+            fontSize: 22,
+            lineHeight: "30px",
+            padding: "14px 18px",
             // Sunken inner border.
             boxShadow:
               `inset 1px 1px 0 ${COLORS.win.chromeShadow}, ` +
@@ -823,14 +830,15 @@ function BioStage({ bioReady }: { bioReady: boolean }) {
               `inset -2px -2px 0 ${COLORS.win.chromeBg}`,
           }}
         >
-          {/* Faux DOS prompt header. */}
-          <div style={{ color: COLORS.prompt.fg, marginBottom: 6 }}>
+          {/* Faux DOS prompt header — spacings scaled with the bumped
+              22 px font so it still reads as the classic DOS startup. */}
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 8 }}>
             Microsoft(R) Windows 98
           </div>
-          <div style={{ color: COLORS.prompt.fg, marginBottom: 14 }}>
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 20 }}>
             <span>(C)Copyright Microsoft Corp 1981-1998.</span>
           </div>
-          <div style={{ color: COLORS.prompt.fg, marginBottom: 4 }}>
+          <div style={{ color: COLORS.prompt.fg, marginBottom: 6 }}>
             C:\WINDOWS&gt; <span style={{ color: COLORS.prompt.accent }}>type</span>{" "}
             who-is-will.txt
           </div>
@@ -849,8 +857,8 @@ function BioStage({ bioReady }: { bioReady: boolean }) {
                 aria-hidden
                 className="inline-block"
                 style={{
-                  width: 9,
-                  height: 14,
+                  width: 13,
+                  height: 22,
                   background: COLORS.prompt.fg,
                   animation: "boot-prompt-cursor 0.9s steps(2) infinite",
                   verticalAlign: "middle",
