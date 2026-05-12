@@ -132,7 +132,10 @@ export const useWindowStore = create<WMState>()((set, get) => ({
   focusedId: null,
   nextZ: 10,
   welcomeSeen: false,
-  entryStage: "landing",
+  // Skip "landing" — the Mobius landing was removed in favor of letting
+  // the 3D scene live inside the Win98 splash (Stage 2 of BootPlayback).
+  // Visitors now drop straight into the boot sequence.
+  entryStage: "boot",
   bootComplete: false,
 
   openWindow: (opts) => {
