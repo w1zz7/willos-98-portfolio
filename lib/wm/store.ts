@@ -132,7 +132,12 @@ export const useWindowStore = create<WMState>()((set, get) => ({
   focusedId: null,
   nextZ: 10,
   welcomeSeen: false,
-  entryStage: "landing",
+  // Skip "landing" entirely — the standalone Mobius button page was
+  // retired per user request. PortfolioRoot routes "landing" to the
+  // BootPlayback component as a fallback in case any persisted state
+  // still carries the old value, but new visitors default straight to
+  // the boot sequence.
+  entryStage: "boot",
   bootComplete: false,
 
   openWindow: (opts) => {

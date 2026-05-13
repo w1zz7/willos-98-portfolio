@@ -102,7 +102,13 @@ const FONT_FRANKLIN =
 
 export function BootPlayback() {
   const setEntryStage = useWindowStore.getState().setEntryStage;
-  const [stage, setStage] = useState<Stage>("bios");
+  // Start at the 3D Win98 splash directly. The BIOS POST stage that used
+  // to play here (black screen with green "Detecting Primary Master ..."
+  // text) was removed per user request — they wanted the recruiter to
+  // hit the 3D scene immediately without a black-screen preamble. The
+  // "bios" stage value remains in the Stage union for back-compat with
+  // any persisted timer state.
+  const [stage, setStage] = useState<Stage>("splash");
   const [skipVisible, setSkipVisible] = useState(false);
   const [skipping, setSkipping] = useState(false);
   // bioReady = the bio playback has finished streaming all lines.
@@ -137,25 +143,24 @@ export function BootPlayback() {
   /**
    * Drive stage transitions on a single chained timer.
    *
-   * BIOS (auto, 2.4s) → splash (auto, 2.2s) → bio (auto-streams, then
-   * holds indefinitely waiting for user click). The bio→fade→desktop
+   * splash (auto, SPLASH_DURATION_MS) → bio (auto-streams, then holds
+   * indefinitely waiting for user click). The bio→fade→desktop
    * transition is NOT scheduled here — it's driven by advanceToDesktop()
    * once the user clicks or presses a key on the bio screen.
+   *
+   * The "bios" stage was removed per user request; timings collapse so
+   * the splash starts at t=0 instead of after BIOS_DURATION_MS.
    */
   useEffect(() => {
     const timers: number[] = [];
-    timers.push(window.setTimeout(() => setStage("splash"), BIOS_DURATION_MS));
     timers.push(
-      window.setTimeout(
-        () => setStage("bio"),
-        BIOS_DURATION_MS + SPLASH_DURATION_MS,
-      ),
+      window.setTimeout(() => setStage("bio"), SPLASH_DURATION_MS),
     );
     // Mark bio as "ready for user input" once all lines have streamed.
     timers.push(
       window.setTimeout(
         () => setBioReady(true),
-        BIOS_DURATION_MS + SPLASH_DURATION_MS + BIO_DURATION_MS,
+        SPLASH_DURATION_MS + BIO_DURATION_MS,
       ),
     );
     return () => {
