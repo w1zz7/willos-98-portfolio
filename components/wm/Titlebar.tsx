@@ -49,7 +49,14 @@ export function Titlebar({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onDoubleClick={onDoubleClick}
-      style={{ touchAction: "none", cursor: "default" }}
+      // `cursor: inherit` (NOT "default") so the titlebar picks up the
+      // large custom Win98 arrow cursor set on `body` in globals.css.
+      // Previously this was `cursor: default` which forces the OS default
+      // small arrow — the user noticed that dragging a window reverted
+      // the cursor to the tiny browser-default arrow because the browser
+      // freezes the element's cursor at pointer-down, then uses that for
+      // the entire drag.
+      style={{ touchAction: "none", cursor: "inherit" }}
     >
       <div className="flex items-center gap-[8px] flex-1 min-w-0 px-[2px]">
         {iconUrl && (
