@@ -112,7 +112,27 @@ function cacheKey(symbol: string, range: string, interval: string): string {
  * Keyed by the same cacheKey() the success cache uses, so a fresh hit
  * to the cache short-circuits both layers.
  */
-const inflight = new Map<string, Promise<NextResponse>>();
+/**
+ * In-flight payload (not NextResponse). The dedup map shares the resolved
+ * DATA between concurrent callers; each caller then constructs its own
+ * NextResponse from the data.
+ *
+ * Why not share NextResponse directly: a NextResponse wraps a
+ * ReadableStream body. The first reader (the first caller) consumes the
+ * stream and ships it to the client. A second caller awaiting the SAME
+ * NextResponse promise gets the SAME stream object, but the stream is
+ * already locked / consumed — the second response.json() / pipe call
+ * throws "Invalid state: The ReadableStream is locked", surfacing to the
+ * client as a 500. Sharing the JSON payload + status + headers
+ * separately and letting each caller build its own NextResponse avoids
+ * the stream-aliasing hazard while keeping the upstream-dedup benefit.
+ */
+interface InflightPayload {
+  status: number;
+  data: unknown;
+  headers: Record<string, string>;
+}
+const inflight = new Map<string, Promise<InflightPayload>>();
 
 const UA_LIST = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -365,87 +385,100 @@ export async function GET(req: NextRequest) {
       );
     }
     // In-flight dedup: if another request for the same key is already
-    // running, await its promise instead of starting a duplicate Yahoo
-    // call. We clone the response (NextResponse.json returns a fresh body
-    // each time, but for a serial dedup we can re-emit the same payload).
+    // running, await its PAYLOAD promise. Each caller builds its own
+    // NextResponse from the shared payload so two concurrent requests
+    // don't fight over the same ReadableStream body (see InflightPayload
+    // comment above for the rationale).
     const existing = inflight.get(ck);
-    if (existing) return existing;
-  }
-
-  // Build the response promise once and cache it for concurrent callers.
-  // Cleared in `finally` whether the upstream succeeded or failed.
-  const responsePromise = (async (): Promise<NextResponse> => {
-  const yahoo = await yahooChart(symbol, range, interval);
-  if (yahoo && yahoo.points.length > 0) {
-    successCache.set(ck, { payload: yahoo, at: Date.now() });
-    return NextResponse.json(
-      { ...yahoo, source: "yahoo" },
-      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
-    );
-  }
-
-  // Crypto fallback.
-  if (CG_MAP[symbol.toUpperCase()]) {
-    const cg = await coingeckoChart(symbol, range, interval);
-    if (cg && cg.points.length > 0) {
-      successCache.set(ck, { payload: cg, at: Date.now() });
-      return NextResponse.json(
-        { ...cg, source: "coingecko" },
-        { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } }
-      );
+    if (existing) {
+      const payload = await existing;
+      return NextResponse.json(payload.data, {
+        status: payload.status,
+        headers: payload.headers,
+      });
     }
   }
 
-  // Alpha Vantage fallback (free TIME_SERIES_DAILY, 25 req/day budget).
-  // Keyed-only and aggressively cached upstream — see lib/alphavantage.ts.
-  const av = await alphaVantageChartShim(symbol, range, interval);
-  if (av && av.points.length > 0) {
-    const avPayload: ChartPayload = { ...av, source: "alphavantage" };
-    successCache.set(ck, { payload: avPayload, at: Date.now() });
-    return NextResponse.json(
-      { ...avPayload, message: "real data via Alpha Vantage (daily, 1h cache)" },
-      { headers: { "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=900" } }
-    );
-  }
+  // Build the payload promise once and share it across concurrent
+  // callers. Cleared in `finally` whether the upstream succeeded or failed.
+  const payloadPromise = (async (): Promise<InflightPayload> => {
+    const yahoo = await yahooChart(symbol, range, interval);
+    if (yahoo && yahoo.points.length > 0) {
+      successCache.set(ck, { payload: yahoo, at: Date.now() });
+      return {
+        status: 200,
+        data: { ...yahoo, source: "yahoo" },
+        headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" },
+      };
+    }
 
-  // Stooq fallback (free, no API key, ~15min delay, daily resolution).
-  const stooq = await stooqChartShim(symbol, range, interval);
-  if (stooq && stooq.points.length > 0) {
-    const stooqPayload: ChartPayload = { ...stooq, source: "stooq" };
-    successCache.set(ck, { payload: stooqPayload, at: Date.now() });
-    return NextResponse.json(
-      { ...stooqPayload, message: "real data via Stooq (~15min delay, daily)" },
-      { headers: { "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=600" } }
-    );
-  }
+    // Crypto fallback.
+    if (CG_MAP[symbol.toUpperCase()]) {
+      const cg = await coingeckoChart(symbol, range, interval);
+      if (cg && cg.points.length > 0) {
+        successCache.set(ck, { payload: cg, at: Date.now() });
+        return {
+          status: 200,
+          data: { ...cg, source: "coingecko" },
+          headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" },
+        };
+      }
+    }
 
-  // Synthetic OHLC fallback when ALL real providers are unavailable.
-  // Deterministic GBM keyed off the symbol so the same ticker draws the same
-  // synthetic curve across reloads. The Research terminal needs *some* bars
-  // to drive the indicator math; without this, every panel renders empty.
-  // We deliberately DO NOT cache synthetic responses — the next request
-  // should retry Yahoo immediately (its per-IP rate-limit window may have
-  // reset by then).
-  const synth = synthChart(symbol, range, interval);
-  const synthPayload: ChartPayload = { ...synth, source: "synthetic" };
-  return NextResponse.json(
-    { ...synthPayload, message: "all real providers unavailable; synthetic OHLC" },
-    {
+    // Alpha Vantage fallback (free TIME_SERIES_DAILY, 25 req/day budget).
+    // Keyed-only and aggressively cached upstream — see lib/alphavantage.ts.
+    const av = await alphaVantageChartShim(symbol, range, interval);
+    if (av && av.points.length > 0) {
+      const avPayload: ChartPayload = { ...av, source: "alphavantage" };
+      successCache.set(ck, { payload: avPayload, at: Date.now() });
+      return {
+        status: 200,
+        data: { ...avPayload, message: "real data via Alpha Vantage (daily, 1h cache)" },
+        headers: { "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=900" },
+      };
+    }
+
+    // Stooq fallback (free, no API key, ~15min delay, daily resolution).
+    const stooq = await stooqChartShim(symbol, range, interval);
+    if (stooq && stooq.points.length > 0) {
+      const stooqPayload: ChartPayload = { ...stooq, source: "stooq" };
+      successCache.set(ck, { payload: stooqPayload, at: Date.now() });
+      return {
+        status: 200,
+        data: { ...stooqPayload, message: "real data via Stooq (~15min delay, daily)" },
+        headers: { "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=600" },
+      };
+    }
+
+    // Synthetic OHLC fallback when ALL real providers are unavailable.
+    // Deterministic GBM keyed off the symbol so the same ticker draws the same
+    // synthetic curve across reloads. The Research terminal needs *some* bars
+    // to drive the indicator math; without this, every panel renders empty.
+    // We deliberately DO NOT cache synthetic responses — the next request
+    // should retry Yahoo immediately (its per-IP rate-limit window may have
+    // reset by then).
+    const synth = synthChart(symbol, range, interval);
+    const synthPayload: ChartPayload = { ...synth, source: "synthetic" };
+    return {
       status: 200,
+      data: { ...synthPayload, message: "all real providers unavailable; synthetic OHLC" },
       headers: { "Cache-Control": "no-store" },
-    }
-  );
+    };
   })();
 
   // Register the in-flight promise so concurrent callers can share it,
   // and remove it once the upstream completes (success OR failure).
   if (!bypassCache) {
-    inflight.set(ck, responsePromise);
-    responsePromise.finally(() => {
-      if (inflight.get(ck) === responsePromise) inflight.delete(ck);
+    inflight.set(ck, payloadPromise);
+    payloadPromise.finally(() => {
+      if (inflight.get(ck) === payloadPromise) inflight.delete(ck);
     });
   }
-  return responsePromise;
+  const payload = await payloadPromise;
+  return NextResponse.json(payload.data, {
+    status: payload.status,
+    headers: payload.headers,
+  });
 }
 
 /**
