@@ -375,6 +375,26 @@ export default function QuantChart({
    *  enough velocity. Ref so we can cancel it from any handler. */
   const inertiaRafRef = useRef<number | null>(null);
 
+  /**
+   * Two-finger pinch state. When the user pinches with two fingers on
+   * touch devices, we zoom anchored at the midpoint of the two contacts
+   * — matching the gesture mobile users expect from native chart apps
+   * (TradingView, Yahoo Finance, Bloomberg). NULL when no pinch is
+   * active. Single-finger touches still pan via the dragRef path.
+   */
+  const pinchRef = useRef<{
+    /** Pixel distance between the two touch points at gesture start. */
+    startDist: number;
+    /** Visible bar count at gesture start. Pinch scales this. */
+    startVisible: number;
+    /** Viewport start index at gesture start (so the zoom is anchored). */
+    startStartIdx: number;
+    /** Mid-x of the two touch points relative to container left, in CSS px. */
+    midClientX: number;
+    /** Container width in CSS px at gesture start. */
+    widthCss: number;
+  } | null>(null);
+
   // Reset pan/zoom on bar count change.
   const lastBarsLenRef = useRef<number>(bars.length);
   useEffect(() => {
@@ -525,14 +545,68 @@ export default function QuantChart({
     }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
-    // Touch support — same logic, single-finger drag pans the chart.
+
+    // ─── Touch support ──────────────────────────────────────────────
+    //
+    // 1 finger  → pan (handled by dragRef path; reuse mouse onMove)
+    // 2 fingers → pinch-zoom anchored at the midpoint, like every
+    //             native mobile chart. The midpoint coordinate is
+    //             converted into a local bar index, and the zoom math
+    //             reuses cursorXtoLocalIdx + wheelZoom from
+    //             chartGeometry so the touch and mouse-wheel paths
+    //             produce identical viewport transitions.
     function onTouchMove(e: TouchEvent) {
+      // ─── PINCH ───
+      if (e.touches.length >= 2 && pinchRef.current) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const curDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const startDist = pinchRef.current.startDist;
+        if (startDist < 1) return;
+        // Spread fingers → zoom IN (fewer visible bars).
+        // Pinch fingers → zoom OUT (more visible bars).
+        // Visible count scales INVERSELY with the distance ratio.
+        const ratio = startDist / curDist;
+        const { startVisible, startStartIdx, midClientX, widthCss } = pinchRef.current;
+        const { barsLen } = panRef.current;
+        const newVisible = Math.max(
+          20,
+          Math.min(barsLen, Math.round(startVisible * ratio)),
+        );
+        if (newVisible === startVisible) return;
+        // Anchor: the bar UNDER THE MIDPOINT stays at the same screen X
+        // through the zoom (same math as wheel-zoom in onWheel below).
+        const innerW = widthCss - PADDING_LEFT - PADDING_RIGHT;
+        const startDx = innerW / Math.max(1, startVisible);
+        const localIdxAtMid = Math.max(
+          0,
+          Math.min(startVisible - 1, Math.floor((midClientX - PADDING_LEFT) / startDx)),
+        );
+        const absUnderMid = startStartIdx + localIdxAtMid;
+        const cursorFrac = startVisible > 1 ? localIdxAtMid / (startVisible - 1) : 0;
+        const newStart = Math.max(
+          0,
+          Math.min(barsLen - newVisible, Math.round(absUnderMid - cursorFrac * (newVisible - 1))),
+        );
+        setVisibleBarsState(newVisible);
+        setViewportStartIdx(newStart);
+        return;
+      }
+      // ─── PAN ─── (single finger)
       if (!dragRef.current || e.touches.length === 0) return;
       const t = e.touches[0];
       onMove({ clientX: t.clientX, clientY: t.clientY } as MouseEvent);
     }
-    function onTouchEnd() {
-      onUp();
+    function onTouchEnd(e: TouchEvent) {
+      // Clear pinch state when finger count drops below 2.
+      if (e.touches.length < 2 && pinchRef.current) {
+        pinchRef.current = null;
+      }
+      // Clear drag state when no fingers remain.
+      if (e.touches.length === 0) {
+        onUp();
+      }
     }
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd);
@@ -763,13 +837,37 @@ export default function QuantChart({
         if (viewportStartIdx == null) setViewportStartIdx(0);
       }}
       onTouchStart={(e) => {
-        if (e.touches.length !== 1) return;
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
         if (inertiaRafRef.current != null) {
           window.cancelAnimationFrame(inertiaRafRef.current);
           inertiaRafRef.current = null;
         }
+        // ─── 2-finger pinch start ───
+        // Stash the initial distance + visible count + viewport start
+        // so the touchMove handler can compute the zoom ratio anchored
+        // at the pinch midpoint. Cancels any in-flight single-finger
+        // pan so the two gestures don't fight.
+        if (e.touches.length >= 2) {
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+          pinchRef.current = {
+            startDist: dist,
+            startVisible: visibleBarsState ?? bars.length,
+            startStartIdx: viewportStartIdx ?? 0,
+            midClientX: midX,
+            widthCss: rect.width,
+          };
+          // Drop any single-finger drag in progress.
+          dragRef.current = null;
+          if (visibleBarsState == null) setVisibleBarsState(bars.length);
+          if (viewportStartIdx == null) setViewportStartIdx(0);
+          return;
+        }
+        // ─── 1-finger pan start ───
+        if (e.touches.length !== 1) return;
         const t = e.touches[0];
         dragRef.current = {
           startClientX: t.clientX,

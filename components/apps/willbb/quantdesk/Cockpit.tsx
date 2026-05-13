@@ -464,7 +464,12 @@ export default function Cockpit({
           <QuantChart
             bars={bars}
             overlays={overlays}
-            height={440}
+            // Bumped 440 → 540 so the candles + sub-panes have proper
+            // breathing room on standard 900-px viewports (the previous
+            // 440 left ~260 px of empty space below the candles before
+            // the Realized-Vol panel kicked in). Still scrolls if the
+            // user wants to see the ACF/PACF panels below.
+            height={540}
             livePrice={livePrice}
             livePrevClose={livePrevClose}
             watermark={symbol.toUpperCase()}

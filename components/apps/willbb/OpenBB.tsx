@@ -224,7 +224,11 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
       return false;
     }
   });
-  const [tab, setTab] = useState<TabId>("markets");
+  // Default to the Research tab — it's the most differentiated surface
+  // (quant primitives: PSR/DSR/HAC/Carhart/walk-forward/decile IC factory)
+  // and the recruiter should land directly on it instead of having to
+  // discover it via the tab bar. Markets stays one click away.
+  const [tab, setTab] = useState<TabId>("research");
   const [focused, setFocused] = useState<string>(watchlist[0]?.symbol ?? "NVDA");
   const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[1]);
   const [stripQuotes, setStripQuotes] = useState<Quote[]>([]);
@@ -746,20 +750,10 @@ function TabBar({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
                 : undefined,
             }}
           >
-            {isResearch && (
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: RESEARCH_RED,
-                  boxShadow: "0 0 8px " + RESEARCH_RED,
-                  animation: "willbb-livepulse 1.4s ease-in-out infinite",
-                }}
-              />
-            )}
+            {/* Bullet dot removed at user request — the red label,
+                uppercase tracking, glow, and active background-tint are
+                enough visual differentiation for the Research tab without
+                the extra pulsing dot competing for attention. */}
             {t.label}
           </button>
         );
