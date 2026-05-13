@@ -284,8 +284,13 @@ function ReflectiveFloor() {
 // + slightly right for an "approaching the desk" feel).
 // ──────────────────────────────────────────────────────────────────────
 
-const CAM_START = new THREE.Vector3(0, 0.95, 5.6);
-const CAM_END = new THREE.Vector3(0.35, 0.5, 4.0);
+// Wider framing — the previous CAM_END (z=4.0) combined with the 38° FOV
+// pushed the camera too close, cropping the bottom of the "Windows 98"
+// wordmark on standard viewports. Pulled CAM_END back to z=6.4 and the
+// dolly now SHRINKS the framing slightly (start z=7.2 → end z=6.4)
+// rather than zooming in, so the whole composition stays in frame.
+const CAM_START = new THREE.Vector3(0, 1.2, 7.2);
+const CAM_END = new THREE.Vector3(0.25, 0.7, 6.4);
 const DOLLY_DURATION_S = 2.8;
 
 function CinematicCamera() {
@@ -335,7 +340,7 @@ export interface Splash3DSceneProps {
 export function Splash3DScene({ reduced = false }: Splash3DSceneProps) {
   return (
     <Canvas
-      camera={{ position: [0, 0.95, 5.6], fov: 38 }}
+      camera={{ position: [0, 1.2, 7.2], fov: 50 }}
       dpr={[1, reduced ? 1.5 : 2]}
       frameloop="always"
       gl={{
