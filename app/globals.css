@@ -502,3 +502,25 @@ img.pixelated,
   0%   { transform: scale(1);   opacity: 0.7; }
   100% { transform: scale(2.6); opacity: 0;   }
 }
+
+/* ---- willBB loading affordances --------------------------------------
+   `willbb-spin` is a continuous rotation for the small spinner glyph in
+   the Markets chart pane's "Loading data" badge. `willbb-skeleton-pulse`
+   gives the stat-grid placeholder cells a gentle breathing animation so
+   the visitor immediately reads them as "data en route" rather than
+   "empty bug". Both intentionally subtle — recruiter shouldn't feel
+   like the app is slow, just like things are loading attentively.
+   ---------------------------------------------------------------------- */
+@keyframes willbb-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes willbb-skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1;    }
+}
+
+.willbb-skeleton {
+  animation: willbb-skeleton-pulse 1.1s ease-in-out infinite;
+}

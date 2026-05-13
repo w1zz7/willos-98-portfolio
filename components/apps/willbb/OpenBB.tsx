@@ -266,13 +266,27 @@ export default function WillBBTerminal({ window: _w }: { window: WindowState }) 
   // watchlist click also pre-populates the cache before tab switch.
   useEffect(() => {
     if (!focused) return;
-    // Only warm 1mo (default Cockpit range) + 1y (most common second click).
-    // 5Y is large enough that warming it preemptively is wasteful — cover via
-    // the hover-prefetch on the range button instead.
+    // Warm EVERY range button on the Markets-tab chart pane so any range
+    // click after the first paint resolves from the in-memory cache
+    // (~5 ms) instead of waiting on Yahoo (~1.8 s cold). With the chart
+    // success cache at 90 s, all 6 ranges live in cache through any
+    // realistic recruiter session. Staggered 80 ms apart so the network
+    // panel doesn't show a 6-request waterfall spike.
+    //
+    // The ^GSPC market series is needed by Cockpit's beta/IR calculation
+    // when the user clicks the Research tab — also prewarmed.
     Promise.resolve().then(() => {
-      prefetchChart(focused, "1mo", "1d");
-      prefetchChart(focused, "1y", "1d");
-      // ^GSPC for Cockpit's beta/IR market series.
+      const ranges = [
+        { r: "5d", i: "60m" },
+        { r: "1mo", i: "1d" },
+        { r: "3mo", i: "1d" },
+        { r: "6mo", i: "1d" },
+        { r: "1y", i: "1d" },
+        { r: "5y", i: "1wk" },
+      ];
+      ranges.forEach((spec, idx) => {
+        window.setTimeout(() => prefetchChart(focused, spec.r, spec.i), idx * 80);
+      });
       prefetchChart("^GSPC", "1mo", "1d");
     });
   }, [focused]);
@@ -780,7 +794,6 @@ function MarketsTab({
   slowLoading: boolean;
   error: string | null;
 }) {
-  void loading;
   const byKey = new Map(watchQuotes.map((q) => [q.symbol, q]));
   const focusQ = byKey.get(focused);
   return (
@@ -943,13 +956,52 @@ function MarketsTab({
 
         {/* Chart body - TradingView widget (their data feed, full toolbar) */}
         <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             <TradingViewChart
               symbol={focused}
               interval={range.tv}
               range={range.tvRange}
               height="100%"
             />
+            {/* Subtle chart-area spinner — fades in when our stat-grid fetch
+                is pending so the user has an immediate signal that data is
+                en route. TradingView's widget has its own internal loading
+                state but it's silent the first ~200 ms; this fills that gap.
+                Positioned top-right so it doesn't cover the chart center. */}
+            {loading && !chart && (
+              <div
+                className="absolute pointer-events-none flex items-center gap-[8px]"
+                style={{
+                  top: 12,
+                  right: 14,
+                  zIndex: 5,
+                  padding: "4px 10px",
+                  background: "rgba(21,21,24,0.85)",
+                  border: "1px solid " + COLORS.borderSoft,
+                  borderRadius: 3,
+                  fontFamily: FONT_UI,
+                  fontSize: 10,
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: COLORS.textDim,
+                }}
+                aria-busy="true"
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    border: "1.5px solid " + COLORS.brand,
+                    borderTopColor: "transparent",
+                    animation: "willbb-spin 0.8s linear infinite",
+                  }}
+                />
+                <span>Loading data</span>
+              </div>
+            )}
           </div>
 
           {/* Stat grid (sourced from our markets proxy) + chart-fetch fault notice */}
@@ -964,6 +1016,43 @@ function MarketsTab({
               }}
             >
               stat grid: {error}
+            </div>
+          )}
+          {/* Loading skeleton — 9 pulsing placeholder cells while the chart
+              endpoint is pending. Replaces the previous "blank space"
+              that gave the user no signal anything was loading. Mirrors the
+              real stat grid's 3-column layout so when the data lands the
+              cells swap in place with no layout shift. */}
+          {!chart && !error && loading && (
+            <div
+              className="grid grid-cols-3 gap-[1px] mt-[14px]"
+              style={{ background: COLORS.border }}
+              aria-busy="true"
+              aria-label="loading market data"
+            >
+              {["Open", "High", "Low", "Prev close", "52w high", "52w low", "Volume", "Currency", "Exchange"].map((label) => (
+                <div
+                  key={label}
+                  className="px-[12px] py-[8px]"
+                  style={{ background: COLORS.panelDeep }}
+                >
+                  <div
+                    className="text-[10px] uppercase tracking-[0.14em]"
+                    style={{ color: COLORS.textFaint, fontFamily: FONT_UI }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    className="mt-[6px] willbb-skeleton"
+                    style={{
+                      height: 14,
+                      width: "60%",
+                      background: COLORS.borderSoft,
+                      borderRadius: 2,
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           )}
           {/* Stat grid */}
